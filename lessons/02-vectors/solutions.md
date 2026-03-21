@@ -8,11 +8,8 @@
 
 ## Solution 2: Dot product by hand
 
-```text
-[1, 2, 3] . [4, 5, 6]
-= 1*4 + 2*5 + 3*6
-= 4 + 10 + 18
-= 32
+```math
+[1, 2, 3] \cdot [4, 5, 6] = 1 \cdot 4 + 2 \cdot 5 + 3 \cdot 6 = 32
 ```
 
 Rust:
@@ -31,17 +28,17 @@ fn dot(a: &[f64], b: &[f64]) -> f64 {
 
 ## Solution 3: Matrix-vector multiplication by hand
 
-```text
-W x = [2*4 + 0*5, 1*4 + 3*5]
-    = [8, 19]
+```math
+Wx = \begin{bmatrix} 2 \cdot 4 + 0 \cdot 5 \\ 1 \cdot 4 + 3 \cdot 5 \end{bmatrix}
+= \begin{bmatrix} 8 \\ 19 \end{bmatrix}
 ```
 
 ## Solution 4: Sigmoid and loss
 
-1. `sigmoid(0.0) = 0.5`
+1. $\sigma(0) = 0.5$
 2. Squared error:
 
-```text
+```math
 (0.25 - 1.0)^2 = (-0.75)^2 = 0.5625
 ```
 

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="rust-ml logo" width="900">
+</p>
+
 # Rust ML Systems from First Principles
 
 A beginner course for learning machine learning as a translation problem:

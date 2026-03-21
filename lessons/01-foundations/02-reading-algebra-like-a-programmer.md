@@ -20,7 +20,7 @@ A variable is a named quantity.
 
 ### Subscripts
 
-`x_1`, `x_2`, `x_i` mean "the first", "the second", or "the i-th" element of `x`.
+$x_1$, $x_2$, and $x_i$ mean "the first", "the second", or "the i-th" element of $x$.
 
 They do not mean multiplication.
 
@@ -28,32 +28,32 @@ They do not mean multiplication.
 
 Superscripts can mean different things depending on context.
 
-- `x^2` means "x squared"
-- `x^(1)` often means "training example 1"
+- $x^2$ means "x squared"
+- $x^{(1)}$ often means "training example 1"
 
 The parentheses matter.
 
 ### Sum notation
 
-`sum_{i=1}^n a_i` means "add all the terms from the first to the n-th."
+$\sum_{i=1}^{n} a_i$ means "add all the terms from the first to the n-th."
 
 ### Function notation
 
-`f(x)` means "apply function `f` to input `x`."
+$f(x)$ means "apply function $f$ to input $x$."
 
-In ML, `y_hat = f(x; theta)` often means:
+In ML, $\hat{y} = f(x; \theta)$ often means:
 
-- `x` is the input
-- `theta` is the set of learned parameters
-- `y_hat` is the prediction
+- $x$ is the input
+- $\theta$ is the set of learned parameters
+- $\hat{y}$ is the prediction
 
 ### Hat notation
 
-`y_hat` means predicted `y`, not true `y`.
+$\hat{y}$ means predicted $y$, not true $y$.
 
 ### Dot product
 
-`w . x` means multiply matching entries and add them all together.
+$w \cdot x$ means multiply matching entries and add them all together.
 
 ### Matrix
 
@@ -61,13 +61,13 @@ A matrix is a rectangular table of numbers.
 
 ### Shape notation
 
-`x in R^3` means `x` is a vector of length 3 with real-valued entries.
+$x \in \mathbb{R}^3$ means $x$ is a vector of length 3 with real-valued entries.
 
-`W in R^(2 x 3)` means `W` is a matrix with 2 rows and 3 columns.
+$W \in \mathbb{R}^{2 \times 3}$ means $W$ is a matrix with 2 rows and 3 columns.
 
 ### Transpose
 
-`K^T` means rows become columns and columns become rows.
+$K^T$ means rows become columns and columns become rows.
 
 ### Derivative
 
@@ -75,23 +75,25 @@ A derivative tells you how fast one quantity changes when another quantity chang
 
 ### Partial derivative
 
-`dL/dw` in code-friendly form means "how much the loss changes if I nudge `w`."
+$dL/dw$ in code-friendly form means "how much the loss changes if I nudge $w$."
 
 ## Algebra Form
 
-```text
-x = 3
-x = [x_1, x_2, x_3]
-x^2
-x^(1), x^(2), x^(3)
-sum_{i=1}^n a_i
-f(x)
-y_hat = f(x; theta)
-w . x = sum_i w_i x_i
-W in R^(2 x 3)
-K^T
-d/dx x^2 = 2x
-partial L / partial w
+```math
+\begin{aligned}
+x &= 3 \\
+x &= [x_1, x_2, x_3] \\
+x^2 \\
+x^{(1)}, x^{(2)}, x^{(3)} \\
+\sum_{i=1}^{n} a_i \\
+f(x) \\
+\hat{y} &= f(x; \theta) \\
+w \cdot x &= \sum_i w_i x_i \\
+W &\in \mathbb{R}^{2 \times 3} \\
+K^T \\
+\frac{d}{dx} x^2 &= 2x \\
+\frac{\partial L}{\partial w}
+\end{aligned}
 ```
 
 ## Rust Form
@@ -158,8 +160,8 @@ then algebra becomes readable instead of intimidating.
 
 Translate each item into English:
 
-1. `x_2`
-2. `y_hat`
-3. `sum_{i=1}^n a_i`
-4. `w . x`
-5. `partial L / partial b`
+1. $x_2$
+2. $\hat{y}$
+3. $\sum_{i=1}^{n} a_i$
+4. $w \cdot x$
+5. $\frac{\partial L}{\partial b}$

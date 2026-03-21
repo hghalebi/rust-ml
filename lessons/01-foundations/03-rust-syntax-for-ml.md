@@ -47,15 +47,12 @@ Loops are how we spell repeated arithmetic in ordinary beginner Rust.
 
 ## Algebra Form
 
-```text
-parameter update:
-w := w - eta * (partial L / partial w)
-
-model structure:
-neuron = {w1, w2, b}
-
-forward pass:
-z = w1x1 + w2x2 + b
+```math
+\begin{aligned}
+w &\leftarrow w - \eta \frac{\partial L}{\partial w} \\
+\text{neuron} &= \{w_1, w_2, b\} \\
+z &= w_1 x_1 + w_2 x_2 + b
+\end{aligned}
 ```
 
 ## Rust Form

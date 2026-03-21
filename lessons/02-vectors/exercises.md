@@ -12,8 +12,8 @@ For each item, say whether it is a scalar, vector, or matrix:
 
 Compute:
 
-```text
-[1, 2, 3] . [4, 5, 6]
+```math
+[1, 2, 3] \cdot [4, 5, 6]
 ```
 
 Then write the equivalent Rust loop.
@@ -22,19 +22,18 @@ Then write the equivalent Rust loop.
 
 Compute:
 
-```text
-W = [ [2, 0],
-      [1, 3] ]
+```math
+W = \begin{bmatrix} 2 & 0 \\ 1 & 3 \end{bmatrix}
 
-x = [4, 5]
+x = \begin{bmatrix} 4 \\ 5 \end{bmatrix}
 ```
 
-Find `W x`.
+Find $Wx$.
 
 ## Exercise 4: Sigmoid and loss
 
-1. What is `sigmoid(0.0)`?
-2. If `y_hat = 0.25` and `y = 1.0`, what is the squared error loss?
+1. What is $\sigma(0)$?
+2. If $\hat{y} = 0.25$ and $y = 1.0$, what is the squared error loss?
 
 ## Exercise 5: Read the update
 

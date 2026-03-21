@@ -22,8 +22,8 @@ Multiply matching positions, then add the results.
 
 If:
 
-- `a = [1, 2]`
-- `b = [3, 4]`
+- $a = [1, 2]$
+- $b = [3, 4]$
 
 then:
 
@@ -39,23 +39,32 @@ That means the output has one number per row.
 
 ## Algebra Form
 
-```text
-sum_{i=1}^n a_i
+Sum:
 
-a . b = sum_{i=1}^n a_i b_i
+```math
+\sum_{i=1}^{n} a_i
+```
 
-W x
+Dot product:
+
+```math
+a \cdot b = \sum_{i=1}^{n} a_i b_i
+```
+
+Matrix-vector multiplication:
+
+```math
+Wx
 ```
 
 Example:
 
-```text
-W = [ [1, 2],
-      [3, 4] ]
+```math
+W = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}
 
-x = [5, 6]
+x = \begin{bmatrix} 5 \\ 6 \end{bmatrix}
 
-W x = [17, 39]
+Wx = \begin{bmatrix} 17 \\ 39 \end{bmatrix}
 ```
 
 ## Rust Form
@@ -100,6 +109,6 @@ The surrounding architecture changes. The arithmetic family does not.
 
 ## Short Practice
 
-1. Compute `dot([2, 1], [4, 3])` by hand.
+1. Compute $[2, 1] \cdot [4, 3]$ by hand.
 2. If a matrix has 3 rows, how long is the output of `mat_vec_mul`?
 3. Explain matrix-vector multiplication in one sentence without using the word "matrix."

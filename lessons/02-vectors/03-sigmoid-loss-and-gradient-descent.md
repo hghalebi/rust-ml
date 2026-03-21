@@ -42,15 +42,22 @@ That is the intuition behind:
 
 ## Algebra Form
 
-```text
-sigmoid:
-sigma(x) = 1 / (1 + e^(-x))
+Sigmoid:
 
-loss:
-L = (y_hat - y)^2
+```math
+\sigma(x) = \frac{1}{1 + e^{-x}}
+```
 
-gradient descent:
-w := w - eta * (partial L / partial w)
+Loss:
+
+```math
+L = (\hat{y} - y)^2
+```
+
+Gradient descent:
+
+```math
+w \leftarrow w - \eta \frac{\partial L}{\partial w}
 ```
 
 ## Rust Form
@@ -77,6 +84,6 @@ That is the backbone of the neuron module that comes next.
 
 ## Short Practice
 
-1. What is `sigmoid(0.0)`?
-2. If `y_hat = 0.8` and `y = 1.0`, what is the squared error?
+1. What is $\sigma(0)$?
+2. If $\hat{y} = 0.8$ and $y = 1.0$, what is the squared error?
 3. Read `w = w - learning_rate * d_loss_d_w` aloud in ordinary English.

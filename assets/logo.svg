@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1536 1024" role="img" aria-labelledby="title desc">
+  <title id="title">rust-ml logo</title>
+  <desc id="desc">A dark rectangular logo with a green arrow mark, blue and orange nodes, and the rust-ml wordmark.</desc>
+  <rect width="1536" height="1024" fill="#0f151c" rx="24" ry="24"/>
+
+  <g transform="translate(410 520)">
+    <polygon points="0,-44 64,0 18,0" fill="#23945a"/>
+    <polygon points="0,44 64,0 18,0" fill="#1d7f4f"/>
+    <circle cx="92" cy="0" r="18" fill="#3478db"/>
+    <path d="M112 0 H142" stroke="#a7adb5" stroke-width="6" stroke-linecap="round"/>
+    <path d="M134 -8 L146 0 L134 8" fill="none" stroke="#a7adb5" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="160" cy="0" r="16" fill="#ff5b2a"/>
+  </g>
+
+  <g font-family="Inter, Arial, Helvetica, sans-serif" font-weight="800" font-size="124">
+    <text x="620" y="560" fill="#f2f2f2">rust</text>
+    <text x="845" y="560" fill="#8c939d">-</text>
+    <text x="895" y="560" fill="#ff5b2a">ml</text>
+  </g>
+</svg>

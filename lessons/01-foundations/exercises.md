@@ -12,7 +12,7 @@ Translate this idea into algebra and Rust:
 
 Suppose algebra says:
 
-```text
+```math
 x = [x_1, x_2, x_3]
 ```
 
@@ -22,23 +22,23 @@ Write Rust that stores those values in a vector and reads the first and third en
 
 Explain each expression in one short English sentence:
 
-1. `x^(2)`
-2. `sum_{i=1}^n a_i`
-3. `y_hat`
-4. `partial L / partial w`
+1. $x^{(2)}$
+2. $\sum_{i=1}^{n} a_i$
+3. $\hat{y}$
+4. $\frac{\partial L}{\partial w}$
 
 ## Exercise 4: Write a dot product
 
 Write a Rust function signature and loop body for:
 
-```text
-w . x = sum_i w_i x_i
+```math
+w \cdot x = \sum_i w_i x_i
 ```
 
 ## Exercise 5: Model as a struct
 
 Write a `Neuron` struct with fields `w1`, `w2`, and `b`, and add a `forward` method that computes:
 
-```text
-z = w1x1 + w2x2 + b
+```math
+z = w_1 x_1 + w_2 x_2 + b
 ```

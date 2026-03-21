@@ -4,8 +4,8 @@
 
 Algebra:
 
-```text
-z = w1x1 + w2x2 + b
+```math
+z = w_1 x_1 + w_2 x_2 + b
 ```
 
 Rust:
@@ -27,10 +27,10 @@ Math starts at 1. Rust starts at 0.
 
 ## Solution 3: Read the notation
 
-1. `x^(2)` usually means "training example number two" when the parentheses are part of the notation.
-2. `sum_{i=1}^n a_i` means "add all the `a_i` terms from the first one to the n-th one."
-3. `y_hat` means "predicted `y`."
-4. `partial L / partial w` means "how much the loss changes when `w` changes a little."
+1. $x^{(2)}$ usually means "training example number two" when the parentheses are part of the notation.
+2. $\sum_{i=1}^{n} a_i$ means "add all the $a_i$ terms from the first one to the n-th one."
+3. $\hat{y}$ means "predicted $y$."
+4. $\frac{\partial L}{\partial w}$ means "how much the loss changes when $w$ changes a little."
 
 ## Solution 4: Write a dot product
 

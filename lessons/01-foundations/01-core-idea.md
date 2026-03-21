@@ -30,8 +30,8 @@ In words:
 
 ## Algebra Form
 
-```text
-z = w1x1 + w2x2 + b
+```math
+z = w_1 x_1 + w_2 x_2 + b
 ```
 
 This says the same thing in compressed mathematical form.
@@ -64,8 +64,8 @@ Translate this sentence into algebra and then Rust:
 
 Expected target shape:
 
-```text
-z = ...
+```math
+z = \dots
 ```
 
 ```rust

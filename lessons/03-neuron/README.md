@@ -25,7 +25,9 @@ Build the smallest useful model:
 
 Be able to explain and implement:
 
-```text
-z = w . x + b
-y_hat = sigma(z)
+```math
+\begin{aligned}
+z &= w \cdot x + b \\
+\hat{y} &= \sigma(z)
+\end{aligned}
 ```

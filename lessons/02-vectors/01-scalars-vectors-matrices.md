@@ -33,16 +33,22 @@ In ML, these are not abstract decorations. They are the containers that hold:
 
 ## Algebra Form
 
-```text
-scalar:
+Scalar:
+
+```math
 x = 2.5
+```
 
-vector:
-x = [1, 2, 3]
+Vector:
 
-matrix:
-W = [ [1, 2],
-      [3, 4] ]
+```math
+x = \begin{bmatrix} 1 \\ 2 \\ 3 \end{bmatrix}
+```
+
+Matrix:
+
+```math
+W = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}
 ```
 
 ## Rust Form
