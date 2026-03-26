@@ -69,5 +69,5 @@ z = \dots
 ```
 
 ```rust
-let z = ...;
+let z = /* your expression here */ 0.0;
 ```

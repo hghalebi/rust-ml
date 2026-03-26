@@ -33,6 +33,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - [Lessons index](lessons/README.md)
 - [01 Foundations](lessons/01-foundations/README.md)
 - [02 Vectors](lessons/02-vectors/README.md)
+- [07 Transformer](lessons/07-transformer/README.md)
 
 ### Scaffolded now
 
@@ -40,7 +41,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - [04 Learning](lessons/04-learning/README.md)
 - [05 MLP](lessons/05-mlp/README.md)
 - [06 Attention](lessons/06-attention/README.md)
-- [07 Transformer](lessons/07-transformer/README.md)
+- [Reference material](references/README.md)
 - [Code strategy](code/README.md)
 - [Book placeholder](book/README.md)
 
@@ -49,6 +50,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 ```text
 rust-ml/
 ├── lessons/   # canonical course content
+├── references/ # transcripts and supporting source material
 ├── code/      # future runnable examples and crates
 ├── book/      # future mdBook/site wrapper
 └── README.md
