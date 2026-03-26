@@ -28,6 +28,7 @@ After this module starts taking shape, you should be able to:
 - [Bahdanau et al. (2014)](../../references/papers/bahdanau-neural-machine-translation-2014.pdf)
 - [Luong et al. (2015)](../../references/papers/luong-effective-approaches-attention-nmt-2015.pdf)
 - [Vaswani et al. (2017)](../../references/papers/vaswani-attention-is-all-you-need-2017.pdf)
+- [Raschka: LLMs From Scratch](../../references/repos/llms-from-scratch.md)
 
 ## Prerequisite
 

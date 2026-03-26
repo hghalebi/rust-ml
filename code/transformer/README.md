@@ -4,6 +4,8 @@ Status: active.
 
 This directory is now a real Rust crate that implements a tiny typed Transformer-style block with both standard self-attention and a simplified linear-attention variant.
 
+The current crate also uses a newtype-heavy public API so meaning-bearing primitives are modeled explicitly instead of being passed around as raw `f32` and `usize` values.
+
 ## Owns
 
 - lesson module: [07 Transformer](../../lessons/07-transformer/README.md)
@@ -12,6 +14,7 @@ This directory is now a real Rust crate that implements a tiny typed Transformer
 
 - provide a small, readable Rust implementation of:
   - vectors and matrices
+  - newtype-wrapped scalars, dimensions, counts, and indexes
   - linear layers
   - sequences
   - standard self-attention

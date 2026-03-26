@@ -1,6 +1,7 @@
 //! Neural-network building blocks for the tiny Transformer crate.
 
 use crate::math::{Matrix, MatrixMN, Vector, VectorN};
+use crate::types::Scalar;
 
 /// A dynamic linear layer computing `y = Wx + b`.
 #[derive(Debug, Clone)]
@@ -12,7 +13,11 @@ pub struct Linear {
 impl Linear {
     /// Creates a linear layer with weight shape `[out_dim, in_dim]`.
     pub fn new(weight: Matrix, bias: Vector) -> Self {
-        assert_eq!(weight.rows(), bias.len(), "linear: bias/output mismatch");
+        assert_eq!(
+            weight.rows().get(),
+            bias.len().get(),
+            "linear: bias/output mismatch"
+        );
         Self { weight, bias }
     }
 
@@ -24,43 +29,43 @@ impl Linear {
 
 /// Applies ReLU element-wise to a vector.
 pub fn relu(v: &Vector) -> Vector {
-    v.map(|x| x.max(0.0))
+    v.map(|x| x.max(Scalar::ZERO))
 }
 
-/// Computes a numerically stable softmax over a slice.
-pub fn softmax(xs: &[f32]) -> Vec<f32> {
+/// Computes a numerically stable softmax over model scalars.
+pub fn softmax(xs: &[Scalar]) -> Vec<Scalar> {
     assert!(!xs.is_empty(), "softmax: input cannot be empty");
-    let max = xs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let exps: Vec<f32> = xs.iter().map(|x| (x - max).exp()).collect();
-    let sum: f32 = exps.iter().sum();
+    let max = xs.iter().copied().fold(Scalar::NEG_INFINITY, Scalar::max);
+    let exps: Vec<Scalar> = xs.iter().map(|x| (*x - max).exp()).collect();
+    let sum: Scalar = exps.iter().copied().sum();
     exps.into_iter().map(|e| e / sum).collect()
 }
 
 /// Applies a positive feature map used by simple linear-attention variants.
 pub fn phi(v: &Vector) -> Vector {
-    let eps = 1e-6;
-    v.map(|x| x.max(0.0) + eps)
+    let eps = Scalar::from(1e-6);
+    v.map(|x| x.max(Scalar::ZERO) + eps)
 }
 
 /// Computes a simple layer normalization without learned affine terms.
 pub fn layer_norm(x: &Vector) -> Vector {
-    let n = x.len() as f32;
-    let mean: f32 = x.as_slice().iter().sum::<f32>() / n;
-    let var: f32 = x
+    let n = Scalar::from(x.len().get() as f32);
+    let mean: Scalar = x.as_slice().iter().copied().sum::<Scalar>() / n;
+    let var: Scalar = x
         .as_slice()
         .iter()
-        .map(|v| {
-            let d = v - mean;
-            d * d
+        .map(|value| {
+            let delta = *value - mean;
+            delta * delta
         })
-        .sum::<f32>()
+        .sum::<Scalar>()
         / n;
 
-    let eps = 1e-5;
+    let eps = Scalar::from(1e-5);
     Vector::new(
         x.as_slice()
             .iter()
-            .map(|v| (v - mean) / (var + eps).sqrt())
+            .map(|value| (*value - mean) / (var + eps).sqrt())
             .collect(),
     )
 }
@@ -80,8 +85,8 @@ impl FeedForward {
 
     /// Applies the feed-forward network to one vector.
     pub fn forward(&self, x: &Vector) -> Vector {
-        let h = relu(&self.l1.forward(x));
-        self.l2.forward(&h)
+        let hidden = relu(&self.l1.forward(x));
+        self.l2.forward(&hidden)
     }
 }
 

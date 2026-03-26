@@ -116,6 +116,7 @@ cargo test --manifest-path code/transformer/Cargo.toml
 That crate covers:
 
 - vectors and matrices
+- newtype-based scalars and structural dimensions
 - linear layers
 - sequences
 - standard self-attention
@@ -148,3 +149,4 @@ The repo keeps supporting source material in [references/](references/README.md)
 - Bahdanau et al. (2014)
 - Luong et al. (2015)
 - Vaswani et al. (2017)
+- Sebastian Raschka's *LLMs From Scratch* repository as an external inspiration source for attention, GPT, and educational sequencing

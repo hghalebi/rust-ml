@@ -1,20 +1,27 @@
 //! Math primitives used by the tiny Transformer crate.
 
-/// A dynamically sized vector of `f32` values.
+use crate::types::{ColumnCount, ColumnIndex, Dimension, RowCount, RowIndex, Scalar};
+
+/// A dynamically sized vector of model scalars.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Vector {
-    data: Vec<f32>,
+    data: Vec<Scalar>,
 }
 
 impl Vector {
-    /// Creates a vector from owned data.
-    pub fn new(data: Vec<f32>) -> Self {
+    /// Creates a vector from owned scalar data.
+    pub fn new(data: Vec<Scalar>) -> Self {
         Self { data }
     }
 
+    /// Creates a vector from primitive boundary values.
+    pub fn from_f32s(data: Vec<f32>) -> Self {
+        Self::new(data.into_iter().map(Scalar::from).collect())
+    }
+
     /// Returns the length of the vector.
-    pub fn len(&self) -> usize {
-        self.data.len()
+    pub fn len(&self) -> Dimension {
+        Dimension::new(self.data.len())
     }
 
     /// Returns true when the vector contains no values.
@@ -23,12 +30,12 @@ impl Vector {
     }
 
     /// Computes the dot product with another vector of equal length.
-    pub fn dot(&self, other: &Vector) -> f32 {
+    pub fn dot(&self, other: &Vector) -> Scalar {
         assert_eq!(self.len(), other.len(), "dot: dimension mismatch");
         self.data
             .iter()
             .zip(other.data.iter())
-            .map(|(a, b)| a * b)
+            .map(|(a, b)| *a * *b)
             .sum()
     }
 
@@ -39,7 +46,7 @@ impl Vector {
             self.data
                 .iter()
                 .zip(other.data.iter())
-                .map(|(a, b)| a + b)
+                .map(|(a, b)| *a + *b)
                 .collect(),
         )
     }
@@ -47,75 +54,89 @@ impl Vector {
     /// Applies a scalar function to every element.
     pub fn map<F>(&self, f: F) -> Vector
     where
-        F: Fn(f32) -> f32,
+        F: Fn(Scalar) -> Scalar,
     {
         Vector::new(self.data.iter().copied().map(f).collect())
     }
 
     /// Scales every element by a scalar factor.
-    pub fn scale(&self, s: f32) -> Vector {
-        self.map(|x| x * s)
+    pub fn scale(&self, scale: Scalar) -> Vector {
+        self.map(|value| value * scale)
     }
 
     /// Borrows the underlying data as a slice.
-    pub fn as_slice(&self) -> &[f32] {
+    pub fn as_slice(&self) -> &[Scalar] {
         &self.data
     }
 }
 
-/// A row-major dynamic matrix of `f32` values.
+/// A row-major dynamic matrix of model scalars.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Matrix {
-    rows: usize,
-    cols: usize,
-    data: Vec<f32>,
+    rows: RowCount,
+    cols: ColumnCount,
+    data: Vec<Scalar>,
 }
 
 impl Matrix {
-    /// Creates a matrix from row and column counts plus row-major data.
-    pub fn new(rows: usize, cols: usize, data: Vec<f32>) -> Self {
-        assert_eq!(rows * cols, data.len(), "matrix: invalid data length");
+    /// Creates a matrix from row and column counts plus row-major scalar data.
+    pub fn new(rows: RowCount, cols: ColumnCount, data: Vec<Scalar>) -> Self {
+        assert_eq!(
+            rows.get() * cols.get(),
+            data.len(),
+            "matrix: invalid data length"
+        );
         Self { rows, cols, data }
     }
 
+    /// Creates a matrix from primitive boundary values.
+    pub fn from_f32s(rows: RowCount, cols: ColumnCount, data: Vec<f32>) -> Self {
+        Self::new(rows, cols, data.into_iter().map(Scalar::from).collect())
+    }
+
     /// Creates a zero matrix.
-    pub fn zeros(rows: usize, cols: usize) -> Self {
+    pub fn zeros(rows: RowCount, cols: ColumnCount) -> Self {
         Self {
             rows,
             cols,
-            data: vec![0.0; rows * cols],
+            data: vec![Scalar::ZERO; rows.get() * cols.get()],
         }
     }
 
     /// Returns the number of rows.
-    pub fn rows(&self) -> usize {
+    pub fn rows(&self) -> RowCount {
         self.rows
     }
 
     /// Returns the number of columns.
-    pub fn cols(&self) -> usize {
+    pub fn cols(&self) -> ColumnCount {
         self.cols
     }
 
     /// Reads one matrix entry.
-    pub fn get(&self, r: usize, c: usize) -> f32 {
-        self.data[r * self.cols + c]
+    pub fn get(&self, row: RowIndex, column: ColumnIndex) -> Scalar {
+        self.data[row.get() * self.cols.get() + column.get()]
     }
 
     /// Writes one matrix entry.
-    pub fn set(&mut self, r: usize, c: usize, value: f32) {
-        self.data[r * self.cols + c] = value;
+    pub fn set(&mut self, row: RowIndex, column: ColumnIndex, value: Scalar) {
+        self.data[row.get() * self.cols.get() + column.get()] = value;
     }
 
     /// Multiplies the matrix by a vector.
     pub fn mul_vec(&self, x: &Vector) -> Vector {
-        assert_eq!(self.cols, x.len(), "mul_vec: dimension mismatch");
+        assert_eq!(
+            self.cols.get(),
+            x.len().get(),
+            "mul_vec: dimension mismatch"
+        );
 
-        let mut out = vec![0.0; self.rows];
-        for (r, slot) in out.iter_mut().enumerate() {
-            let mut sum = 0.0;
-            for c in 0..self.cols {
-                sum += self.get(r, c) * x.as_slice()[c];
+        let mut out = vec![Scalar::ZERO; self.rows.get()];
+        for (row, slot) in out.iter_mut().enumerate() {
+            let mut sum = Scalar::ZERO;
+            for column in 0..self.cols.get() {
+                sum +=
+                    self.get(RowIndex::new(row), ColumnIndex::new(column)) * x.as_slice()[column];
             }
             *slot = sum;
         }
@@ -124,10 +145,17 @@ impl Matrix {
 
     /// Returns the transposed matrix.
     pub fn transpose(&self) -> Matrix {
-        let mut out = Matrix::zeros(self.cols, self.rows);
-        for r in 0..self.rows {
-            for c in 0..self.cols {
-                out.set(c, r, self.get(r, c));
+        let mut out = Matrix::zeros(
+            RowCount::new(self.cols.get()),
+            ColumnCount::new(self.rows.get()),
+        );
+        for row in 0..self.rows.get() {
+            for column in 0..self.cols.get() {
+                out.set(
+                    RowIndex::new(column),
+                    ColumnIndex::new(row),
+                    self.get(RowIndex::new(row), ColumnIndex::new(column)),
+                );
             }
         }
         out
@@ -138,13 +166,13 @@ impl Matrix {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VectorN<const N: usize> {
     /// Fixed-size vector data.
-    pub data: [f32; N],
+    pub data: [Scalar; N],
 }
 
 impl<const N: usize> VectorN<N> {
     /// Computes the dot product with another vector of the same size.
-    pub fn dot(&self, other: &Self) -> f32 {
-        let mut sum = 0.0;
+    pub fn dot(&self, other: &Self) -> Scalar {
+        let mut sum = Scalar::ZERO;
         for i in 0..N {
             sum += self.data[i] * other.data[i];
         }
@@ -153,7 +181,7 @@ impl<const N: usize> VectorN<N> {
 
     /// Adds another vector of the same size.
     pub fn add(&self, other: &Self) -> Self {
-        let mut out = [0.0; N];
+        let mut out = [Scalar::ZERO; N];
         for (i, slot) in out.iter_mut().enumerate() {
             *slot = self.data[i] + other.data[i];
         }
@@ -162,9 +190,9 @@ impl<const N: usize> VectorN<N> {
 
     /// Applies a ReLU element-wise.
     pub fn relu(&self) -> Self {
-        let mut out = [0.0; N];
+        let mut out = [Scalar::ZERO; N];
         for (i, slot) in out.iter_mut().enumerate() {
-            *slot = self.data[i].max(0.0);
+            *slot = self.data[i].max(Scalar::ZERO);
         }
         Self { data: out }
     }
@@ -174,17 +202,17 @@ impl<const N: usize> VectorN<N> {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MatrixMN<const R: usize, const C: usize> {
     /// Fixed-size matrix data in row-major nested-array form.
-    pub data: [[f32; C]; R],
+    pub data: [[Scalar; C]; R],
 }
 
 impl<const R: usize, const C: usize> MatrixMN<R, C> {
     /// Multiplies the matrix by a compile-time-sized vector.
     pub fn mul_vec(&self, x: &VectorN<C>) -> VectorN<R> {
-        let mut out = [0.0; R];
-        for (r, slot) in out.iter_mut().enumerate() {
-            let mut sum = 0.0;
-            for c in 0..C {
-                sum += self.data[r][c] * x.data[c];
+        let mut out = [Scalar::ZERO; R];
+        for (row, slot) in out.iter_mut().enumerate() {
+            let mut sum = Scalar::ZERO;
+            for column in 0..C {
+                sum += self.data[row][column] * x.data[column];
             }
             *slot = sum;
         }

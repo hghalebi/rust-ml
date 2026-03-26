@@ -2,6 +2,7 @@
 
 use crate::math::{Matrix, Vector};
 use crate::nn::{FeedForward, Linear, layer_norm, phi, softmax};
+use crate::types::{ColumnCount, ColumnIndex, Dimension, RowCount, RowIndex, Scalar, TokenCount};
 
 /// A sequence of token vectors that all share the same model dimension.
 #[derive(Debug, Clone, PartialEq)]
@@ -13,17 +14,17 @@ impl Sequence {
     /// Creates a new non-empty sequence with a consistent token dimension.
     pub fn new(tokens: Vec<Vector>) -> Self {
         assert!(!tokens.is_empty(), "sequence cannot be empty");
-        let d = tokens[0].len();
+        let dimension = tokens[0].len();
         assert!(
-            tokens.iter().all(|t| t.len() == d),
+            tokens.iter().all(|token| token.len() == dimension),
             "all tokens must have same dimension"
         );
         Self { tokens }
     }
 
     /// Returns the number of tokens in the sequence.
-    pub fn len(&self) -> usize {
-        self.tokens.len()
+    pub fn len(&self) -> TokenCount {
+        TokenCount::new(self.tokens.len())
     }
 
     /// Returns true when the sequence is empty.
@@ -32,7 +33,7 @@ impl Sequence {
     }
 
     /// Returns the shared token dimension.
-    pub fn d_model(&self) -> usize {
+    pub fn d_model(&self) -> Dimension {
         self.tokens[0].len()
     }
 
@@ -58,27 +59,25 @@ impl SelfAttention {
 
     /// Applies self-attention to a full sequence.
     pub fn forward(&self, seq: &Sequence) -> Sequence {
-        let qs: Vec<Vector> = seq.tokens().iter().map(|x| self.w_q.forward(x)).collect();
-        let ks: Vec<Vector> = seq.tokens().iter().map(|x| self.w_k.forward(x)).collect();
-        let vs: Vec<Vector> = seq.tokens().iter().map(|x| self.w_v.forward(x)).collect();
+        let queries: Vec<Vector> = seq.tokens().iter().map(|x| self.w_q.forward(x)).collect();
+        let keys: Vec<Vector> = seq.tokens().iter().map(|x| self.w_k.forward(x)).collect();
+        let values: Vec<Vector> = seq.tokens().iter().map(|x| self.w_v.forward(x)).collect();
 
-        let d_k = qs[0].len() as f32;
-        let scale = d_k.sqrt();
+        let scale = Scalar::from(queries[0].len().get() as f32).sqrt();
+        let mut outputs = Vec::with_capacity(seq.len().get());
 
-        let mut outputs = Vec::with_capacity(seq.len());
-
-        for q in &qs {
-            let scores: Vec<f32> = ks.iter().map(|k| q.dot(k) / scale).collect();
+        for query in &queries {
+            let scores: Vec<Scalar> = keys.iter().map(|key| query.dot(key) / scale).collect();
             let weights = softmax(&scores);
 
-            let mut out = vec![0.0; vs[0].len()];
-            for (weight, v) in weights.iter().zip(vs.iter()) {
-                for (j, value) in v.as_slice().iter().enumerate() {
-                    out[j] += weight * value;
+            let mut output = vec![Scalar::ZERO; values[0].len().get()];
+            for (weight, value_vector) in weights.iter().zip(values.iter()) {
+                for (feature_index, value) in value_vector.as_slice().iter().enumerate() {
+                    output[feature_index] += *weight * *value;
                 }
             }
 
-            outputs.push(Vector::new(out));
+            outputs.push(Vector::new(output));
         }
 
         Sequence::new(outputs)
@@ -101,56 +100,66 @@ impl LinearAttention {
 
     /// Applies linear attention to a full sequence.
     pub fn forward(&self, seq: &Sequence) -> Sequence {
-        let qs: Vec<Vector> = seq
+        let queries: Vec<Vector> = seq
             .tokens()
             .iter()
             .map(|x| phi(&self.w_q.forward(x)))
             .collect();
-        let ks: Vec<Vector> = seq
+        let keys: Vec<Vector> = seq
             .tokens()
             .iter()
             .map(|x| phi(&self.w_k.forward(x)))
             .collect();
-        let vs: Vec<Vector> = seq.tokens().iter().map(|x| self.w_v.forward(x)).collect();
+        let values: Vec<Vector> = seq.tokens().iter().map(|x| self.w_v.forward(x)).collect();
 
-        let d_k = qs[0].len();
-        let d_v = vs[0].len();
+        let key_dimension = Dimension::new(queries[0].len().get());
+        let value_dimension = Dimension::new(values[0].len().get());
 
-        let mut s = Matrix::zeros(d_k, d_v);
-        let mut z = vec![0.0; d_k];
+        let mut summary = Matrix::zeros(
+            RowCount::new(key_dimension.get()),
+            ColumnCount::new(value_dimension.get()),
+        );
+        let mut normalizer = vec![Scalar::ZERO; key_dimension.get()];
 
-        for (k, v) in ks.iter().zip(vs.iter()) {
-            for (i, z_slot) in z.iter_mut().enumerate() {
-                *z_slot += k.as_slice()[i];
-                for j in 0..d_v {
-                    let current = s.get(i, j);
-                    s.set(i, j, current + k.as_slice()[i] * v.as_slice()[j]);
+        for (key, value) in keys.iter().zip(values.iter()) {
+            for (feature_index, normalizer_slot) in normalizer.iter_mut().enumerate() {
+                *normalizer_slot += key.as_slice()[feature_index];
+                for value_index in 0..value_dimension.get() {
+                    let row = RowIndex::new(feature_index);
+                    let column = ColumnIndex::new(value_index);
+                    let updated = summary.get(row, column)
+                        + key.as_slice()[feature_index] * value.as_slice()[value_index];
+                    summary.set(row, column, updated);
                 }
             }
         }
 
-        let mut outputs = Vec::with_capacity(seq.len());
+        let mut outputs = Vec::with_capacity(seq.len().get());
 
-        for q in &qs {
-            let mut numerator = vec![0.0; d_v];
-            for (j, slot) in numerator.iter_mut().enumerate() {
-                let mut sum = 0.0;
-                for i in 0..d_k {
-                    sum += q.as_slice()[i] * s.get(i, j);
+        for query in &queries {
+            let mut numerator = vec![Scalar::ZERO; value_dimension.get()];
+            for (value_index, slot) in numerator.iter_mut().enumerate() {
+                let mut sum = Scalar::ZERO;
+                for feature_index in 0..key_dimension.get() {
+                    sum += query.as_slice()[feature_index]
+                        * summary.get(RowIndex::new(feature_index), ColumnIndex::new(value_index));
                 }
                 *slot = sum;
             }
 
-            let denominator: f32 = q
+            let denominator = query
                 .as_slice()
                 .iter()
-                .zip(z.iter())
-                .map(|(a, b)| a * b)
-                .sum::<f32>()
-                .max(1e-6);
+                .zip(normalizer.iter())
+                .map(|(a, b)| *a * *b)
+                .sum::<Scalar>()
+                .max(Scalar::from(1e-6));
 
-            let out = numerator.into_iter().map(|x| x / denominator).collect();
-            outputs.push(Vector::new(out));
+            let output = numerator
+                .into_iter()
+                .map(|value| value / denominator)
+                .collect();
+            outputs.push(Vector::new(output));
         }
 
         Sequence::new(outputs)
@@ -172,26 +181,26 @@ impl TransformerBlock {
 
     /// Applies attention, residual connections, layer norm, and feed-forward logic.
     pub fn forward(&self, seq: &Sequence) -> Sequence {
-        let attn_out = self.attention.forward(seq);
+        let attention_out = self.attention.forward(seq);
 
-        let after_attn: Vec<Vector> = seq
+        let after_attention: Vec<Vector> = seq
             .tokens()
             .iter()
-            .zip(attn_out.tokens().iter())
-            .map(|(x, a)| layer_norm(&x.add(a)))
+            .zip(attention_out.tokens().iter())
+            .map(|(x, attended)| layer_norm(&x.add(attended)))
             .collect();
 
-        let seq2 = Sequence::new(after_attn);
+        let contextualized = Sequence::new(after_attention);
 
-        let after_ff: Vec<Vector> = seq2
+        let after_feed_forward: Vec<Vector> = contextualized
             .tokens()
             .iter()
             .map(|x| {
-                let ff = self.ff.forward(x);
-                layer_norm(&x.add(&ff))
+                let feed_forward = self.ff.forward(x);
+                layer_norm(&x.add(&feed_forward))
             })
             .collect();
 
-        Sequence::new(after_ff)
+        Sequence::new(after_feed_forward)
     }
 }
