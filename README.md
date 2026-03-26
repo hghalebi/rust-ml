@@ -123,6 +123,23 @@ That crate covers:
 - feed-forward layers
 - a minimal Transformer block
 
+## Quality Automation
+
+The repo now includes two GitHub Actions workflows for quality control:
+
+- `CI` runs deterministic checks for lesson structure, local Markdown links, and authored-section contracts.
+- `CI` also compile-checks Rust snippets embedded in lessons and runs `cargo fmt`, `cargo clippy`, and `cargo test` for the Transformer teaching crate.
+- `Gemini Writing Review` reviews Markdown content on pull requests for English clarity, technical-teaching quality, structural discipline, and beginner friendliness.
+
+The Gemini review is advisory, not a replacement for human judgment. It is designed to catch weak phrasing, excess cognitive load, mismatches between English and code, and places where the teaching flow violates common technical-writing or technical-instruction best practices.
+
+To enable Gemini review in GitHub Actions, configure:
+
+- repository secret `GEMINI_API_KEY`
+- optional repository variable `GEMINI_MODEL` if you want a model other than the default `gemini-2.0-flash`
+
+The workflow writes a review artifact named `gemini-writing-review` so the writing assessment can be read directly from the workflow run.
+
 ## References
 
 The repo keeps supporting source material in [references/](references/README.md), including:

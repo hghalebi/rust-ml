@@ -1,0 +1,69 @@
+name: Gemini Writing Review
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+    inputs:
+      all_markdown:
+        description: Review all Markdown files instead of only changed ones
+        required: false
+        default: false
+        type: boolean
+      max_files:
+        description: Maximum number of Markdown files to review
+        required: false
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  gemini-review:
+    name: Gemini Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Gemini technical-writing review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python3 scripts/gemini_review_markdown.py \
+              --base-sha "${{ github.event.pull_request.base.sha }}" \
+              --head-sha "${{ github.event.pull_request.head.sha }}" \
+              --max-files 10 \
+              --output gemini-writing-review.md
+          else
+            if [ "${{ inputs.all_markdown }}" = "true" ]; then
+              python3 scripts/gemini_review_markdown.py \
+                --all-markdown \
+                --max-files "${{ inputs.max_files }}" \
+                --output gemini-writing-review.md
+            else
+              python3 scripts/gemini_review_markdown.py \
+                --max-files "${{ inputs.max_files }}" \
+                --output gemini-writing-review.md
+            fi
+          fi
+
+      - name: Upload Gemini review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-writing-review
+          path: gemini-writing-review.md
