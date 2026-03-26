@@ -1,2 +1,5 @@
 /code/transformer/target/
 /code/transformer/Cargo.lock
+/gemini-writing-review.md
+__pycache__/
+*.pyc

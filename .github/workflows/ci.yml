@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  course-content:
+    name: Course Content Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Syntax-check quality scripts
+        run: |
+          python3 -m py_compile \
+            scripts/check_course_content.py \
+            scripts/check_lesson_rust_snippets.py \
+            scripts/gemini_review_markdown.py
+
+      - name: Validate lesson structure and local links
+        run: python3 scripts/check_course_content.py
+
+  lesson-snippets:
+    name: Lesson Rust Snippets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Compile-check Rust snippets embedded in lessons
+        run: python3 scripts/check_lesson_rust_snippets.py
+
+  transformer-crate:
+    name: Transformer Crate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: cargo fmt --check
+        run: cargo fmt --manifest-path code/transformer/Cargo.toml --check
+
+      - name: cargo clippy
+        run: cargo clippy --manifest-path code/transformer/Cargo.toml --all-targets --all-features
+
+      - name: cargo test
+        run: cargo test --manifest-path code/transformer/Cargo.toml
