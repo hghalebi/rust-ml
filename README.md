@@ -18,8 +18,11 @@ The goal is not to memorize symbols. The goal is to learn how to read formulas a
 
 ## Start Here
 
-1. [Module 0 in repo form: Foundations](lessons/01-foundations/README.md)
-2. [Module 1 in repo form: Scalars, vectors, and dot products](lessons/02-vectors/README.md)
+1. Read [01 Foundations](lessons/01-foundations/README.md).
+2. Continue with [02 Vectors](lessons/02-vectors/README.md).
+3. Use [Lessons index](lessons/README.md) to see the full course map.
+
+If you specifically want the current Transformer material after the fundamentals, jump to [07 Transformer](lessons/07-transformer/README.md).
 
 The repo uses sequential folder numbers even though the curriculum starts at Module 0:
 
@@ -28,38 +31,50 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 
 ## What Exists Now
 
-### Authored now
+### Authored lessons
 
 - [Lessons index](lessons/README.md)
 - [01 Foundations](lessons/01-foundations/README.md)
 - [02 Vectors](lessons/02-vectors/README.md)
 - [07 Transformer](lessons/07-transformer/README.md)
 
-### Scaffolded now
+### Transformer track now included
 
+- [Lesson 17: A Tiny Transformer (From First Principles)](lessons/07-transformer/01-tiny-transformer-from-first-principles.md)
+- [Lesson 18: Typed Rust Transformer with Linear Attention](lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md)
+- [Lesson 19: Transformer Encoder in Small Chunks](lessons/07-transformer/03-transformer-encoder-in-small-chunks.md)
+- [Transformer exercises](lessons/07-transformer/exercises.md)
+- [Transformer solutions](lessons/07-transformer/solutions.md)
+
+### Executable companion code
+
+- [Code index](code/README.md)
+- [transformer crate](code/transformer/README.md)
+
+### Source material and roadmap
+
+- [Reference material](references/README.md)
 - [03 Neuron](lessons/03-neuron/README.md)
 - [04 Learning](lessons/04-learning/README.md)
 - [05 MLP](lessons/05-mlp/README.md)
 - [06 Attention](lessons/06-attention/README.md)
-- [Reference material](references/README.md)
-- [Code strategy](code/README.md)
 - [Book placeholder](book/README.md)
 
 ## Repo Map
 
 ```text
 rust-ml/
-├── lessons/   # canonical course content
-├── references/ # transcripts and supporting source material
-├── code/      # future runnable examples and crates
-├── book/      # future mdBook/site wrapper
+├── lessons/    # canonical course content
+├── references/ # transcripts and papers used as source material
+├── code/       # runnable companion crates
+├── book/       # future mdBook/site wrapper
 └── README.md
 ```
 
 ## Working Rules For This Repo
 
 - `lessons/` is the source of truth for written teaching content.
-- `code/` follows the lesson progression and will later become runnable Cargo workspace crates.
+- `code/` follows the lesson progression and now includes a real tested `transformer` crate.
 - `book/` is intentionally thin in this pass so the course content does not drift into two competing copies.
 
 ## Learning Strategy
@@ -76,7 +91,11 @@ Each authored lesson follows the same pattern:
 
 That repetition is intentional. Repetition is how the translation dictionary becomes automatic.
 
-The Transformer module also includes one intentionally chunked lesson for lower-cognitive-load study, so learners can build the encoder one small step at a time.
+The Transformer module also includes:
+
+- a typed Rust lesson that bridges architecture and implementation
+- a chunked encoder lesson for lower-cognitive-load study
+- a small companion crate that turns the lesson concepts into runnable Rust
 
 ## Suggested Study Flow
 
@@ -85,3 +104,30 @@ The Transformer module also includes one intentionally chunked lesson for lower-
 3. Do the module exercises without copying from the solutions first.
 4. Use the solution files to check reasoning, naming, and Rust syntax.
 5. Move to the next module only after you can explain each formula out loud in English.
+
+## Running The Code
+
+The current runnable code artifact is the Transformer teaching crate:
+
+```bash
+cargo test --manifest-path code/transformer/Cargo.toml
+```
+
+That crate covers:
+
+- vectors and matrices
+- linear layers
+- sequences
+- standard self-attention
+- simplified linear attention
+- feed-forward layers
+- a minimal Transformer block
+
+## References
+
+The repo keeps supporting source material in [references/](references/README.md), including:
+
+- a Transformer explainer transcript
+- Bahdanau et al. (2014)
+- Luong et al. (2015)
+- Vaswani et al. (2017)
