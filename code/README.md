@@ -19,4 +19,4 @@ Do not use loose standalone `.rs` files as the long-term structure.
 - [neuron](neuron/README.md)
 - [mlp](mlp/README.md)
 - [attention](attention/README.md)
-- [transformer](transformer/README.md)
+- [transformer](transformer/README.md) - now a real tested crate

@@ -1,19 +1,41 @@
 # transformer
 
-Status: planned.
+Status: active.
 
-This directory will become the runnable crate for a tiny transformer-style block.
+This directory is now a real Rust crate that implements a tiny typed Transformer-style block with both standard self-attention and a simplified linear-attention variant.
 
 ## Owns
 
 - lesson module: [07 Transformer](../../lessons/07-transformer/README.md)
 
-## Future Purpose
+## Current Purpose
 
-- combine attention with projection-heavy block structure
-- inspect intermediate tensors and outputs
-- provide a minimal end-to-end transformer example
+- provide a small, readable Rust implementation of:
+  - vectors and matrices
+  - linear layers
+  - sequences
+  - standard self-attention
+  - linear attention
+  - feed-forward layers
+  - a minimal Transformer block
+- give the lessons a concrete code target that can be tested with Cargo
 
-## Packaging Note
+## Run
 
-This will become a Cargo workspace crate when the corresponding lesson is authored and tested.
+```bash
+cargo test --manifest-path code/transformer/Cargo.toml
+```
+
+## Scope
+
+This crate is intentionally educational, not production-grade. It does not include:
+
+- token embeddings
+- positional encoding
+- masking
+- multi-head attention
+- autograd
+- optimizers
+- GPU kernels
+
+The goal is clarity first.

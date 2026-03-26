@@ -26,3 +26,18 @@ For one token $x_i$:
 4. the final residual combines the pre-feed-forward representation with the nonlinear update
 
 This is why a Transformer block can both gather context and preserve identity.
+
+## Solution 6: Standard attention vs linear attention
+
+Standard attention compares each token with every other token explicitly, so with $n$ tokens you get roughly $n^2$ pairwise interactions. Linear attention tries to avoid materializing that full token-to-token matrix by precomputing summaries such as key-value accumulations and then letting each query consult those summaries. That can reduce the sequence-length cost for fixed hidden size.
+
+## Solution 7: Why bother with types?
+
+If everything is just nested `Vec<Vec<f32>>`, it becomes harder to see whether a value is meant to be:
+
+- one token vector
+- a whole sequence
+- a weight matrix
+- a projected representation
+
+A type like `Sequence` tells the reader that the value is a list of same-width token vectors, not just an arbitrary nested list. Const generics go one step further by letting some dimension mistakes fail at compile time instead of later at runtime.

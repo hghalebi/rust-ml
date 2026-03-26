@@ -15,7 +15,7 @@ The folder numbers are sequential for the repository, while the course numbering
 | [05-mlp](05-mlp/README.md) | Module 4 | Planned | Extend one neuron into a small multi-layer network. |
 | [06-attention](06-attention/README.md) | Module 5 | Planned | Represent tokens as vectors and learn how attention scores are formed. |
 | [07-transformer](07-transformer/README.md) | Module 6 | Planned | Understand the compact attention formulation as a batched version of explicit dot-product loops. |
-| [07-transformer](07-transformer/README.md) | Module 7 | Started | Assemble a tiny transformer block from attention, feed-forward layers, and residual structure. |
+| [07-transformer](07-transformer/README.md) | Module 7 | Started | Assemble a tiny transformer block, then grow that picture into a standard encoder and a typed Rust linear-attention variant. |
 
 ## How To Use These Lessons
 

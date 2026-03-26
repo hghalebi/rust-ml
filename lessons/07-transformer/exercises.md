@@ -58,3 +58,25 @@ Choose one token $x_i$ and explain, in English, what happens to it through:
 2. first residual
 3. feed-forward
 4. final residual
+
+## Exercise 6: Standard attention vs linear attention
+
+Explain the difference between these two computation styles:
+
+- compare every token with every other token directly
+- precompute key-value summaries and let each query use them
+
+Questions:
+
+- why is the first pattern quadratic in sequence length?
+- why can the second pattern be cheaper?
+
+## Exercise 7: Why bother with types?
+
+Suppose you model everything as nested `Vec<Vec<f32>>`.
+
+Questions:
+
+- what becomes harder to understand?
+- what does a type like `Sequence` tell the reader immediately?
+- why might const generics be useful in a teaching implementation?

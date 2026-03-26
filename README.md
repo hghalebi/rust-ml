@@ -76,6 +76,8 @@ Each authored lesson follows the same pattern:
 
 That repetition is intentional. Repetition is how the translation dictionary becomes automatic.
 
+The Transformer module also includes one intentionally chunked lesson for lower-cognitive-load study, so learners can build the encoder one small step at a time.
+
 ## Suggested Study Flow
 
 1. Read the module README.

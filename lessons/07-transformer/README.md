@@ -15,10 +15,12 @@ After this module starts taking shape, you should be able to:
 - describe a Transformer block as attention plus feed-forward layers plus residual connections
 - explain what each sublayer contributes
 - trace a toy Transformer block in English, algebra, and Rust
+- explain why linear attention exists and how typed Rust can model Transformer concepts clearly
+- walk through a standard Transformer encoder in small, compile-sized chunks
 
-## Planned Code Artifact
+## Code Artifact
 
-- Future crate: [`code/transformer`](../../code/transformer/README.md)
+- Runnable crate: [`code/transformer`](../../code/transformer/README.md)
 
 ## Reference Material
 
@@ -34,6 +36,8 @@ After this module starts taking shape, you should be able to:
 ## Lessons
 
 1. [Lesson 17: A Tiny Transformer (From First Principles)](01-tiny-transformer-from-first-principles.md)
+2. [Lesson 18: Typed Rust Transformer with Linear Attention](02-typed-rust-transformer-with-linear-attention.md)
+3. [Lesson 19: Transformer Encoder in Small Chunks](03-transformer-encoder-in-small-chunks.md)
 
 ## Practice
 
@@ -48,3 +52,5 @@ This module is still partial. The current lesson gives you the first full Transf
 - feed-forward sublayer
 - residual connections
 - a toy end-to-end block in Rust
+- a typed Rust path from vectors and linear layers to linear attention
+- a standard encoder walkthrough broken into short, low-cognitive-load chunks

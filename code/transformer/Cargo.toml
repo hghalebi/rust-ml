@@ -1,0 +1,9 @@
+[package]
+name = "rust_ml_transformer"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
