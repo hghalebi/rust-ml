@@ -1,6 +1,6 @@
 # neuron
 
-Status: planned.
+Status: planned crate, authored lessons.
 
 This directory will become the runnable crate for the first trainable model.
 
@@ -8,6 +8,11 @@ This directory will become the runnable crate for the first trainable model.
 
 - lesson module: [03 Neuron](../../lessons/03-neuron/README.md)
 - related training concepts: [04 Learning](../../lessons/04-learning/README.md)
+
+## Current lesson status
+
+- Module lessons now exist: [03 Neuron](../../lessons/03-neuron/README.md)
+- Dedicated executable crate still pending
 
 ## Future Purpose
 

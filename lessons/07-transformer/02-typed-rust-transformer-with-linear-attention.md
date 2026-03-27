@@ -1,539 +1,422 @@
-# Lesson 18: Typed Rust Transformer with Linear Attention
+# Lesson 18: Typed Rust Transformer with Expressive Errors
 
 ## Overview
 
-This lesson takes the next step after the tiny Transformer block. Instead of only reading the architecture conceptually, we ask a more engineering-shaped question:
+Now that the encoder shape is on the table, this lesson focuses on the engineering choices behind the companion crate:
 
-How do we model a Transformer block clearly in Rust, with types that make the structure easier to reason about?
+- semantic newtypes instead of anonymous vectors
+- `thiserror` instead of vague failures
+- typed projection layers instead of one giant generic blob
+- a clean place to talk about linear attention without confusing it with the 2017 paper
 
 ## Learning Goals
 
-- explain attention and linear attention from first principles
-- describe why Transformers replaced many recurrent models
-- model vectors, matrices, sequences, and layers as explicit Rust types
-- trace a tiny linear-attention Transformer block in English, algebra, and Rust
-- understand what this educational implementation omits compared with production systems
+- explain why semantic newtypes make attention code easier to read and harder to misuse
+- explain why the crate returns `Result<_, ModelError>` instead of panicking on every mistake
+- trace typed projection layers from `TokenEmbedding` to `Query`, `Key`, and `Value`
+- explain where `LinearAttentionHead` fits relative to standard multi-head attention
+- understand the crate layout that backs the written lessons
 
-## Plain-English Explanation
+## 1. One raw math layer, many semantic model roles
 
-### What is a neural network?
+### English
 
-A neural network is just a function with parameters.
+At the bottom, the model is still made of numbers.
 
-It takes an input:
+So the crate keeps one raw math layer:
 
-```math
-x
-```
+- `DenseVector`
+- `DenseMatrix`
 
-and transforms it into an output:
+Then it wraps important model roles in newtypes:
 
-```math
-\hat{y}
-```
+- `TokenEmbedding`
+- `Query`
+- `Key`
+- `Value`
+- `AttentionOutput`
 
-The parameters are usually weights and biases. Training means adjusting those parameters so the output gets closer to the correct answer.
+That way Rust can tell the difference between concepts that happen to share the same storage.
 
-At a small scale, a neural network keeps repeating the same pattern:
+### Algebra
 
-1. multiply by numbers
-2. add numbers
-3. apply a nonlinearity
-4. repeat
-
-The power comes from composing many simple steps.
-
-### Why did Transformers appear?
-
-Before Transformers, many sequence models used recurrent neural networks.
-
-The RNN idea is simple:
-
-- read one token at a time
-- keep a hidden memory
-- update that memory as you move through the sequence
-
-That works, but it causes two big problems:
-
-- sequential bottleneck: tokens depend on earlier tokens step by step, which makes parallelism hard
-- long-range dependency pain: information from early tokens must survive many updates
-
-Transformers replace that recurrence with attention.
-
-Instead of forcing information to travel through many recurrent steps, each token can directly ask:
-
-- which other tokens matter for me?
-- how much do they matter?
-- how should I combine their information?
-
-### What is attention?
-
-Suppose each token is represented by a vector.
-
-For each token vector $x$, we compute:
-
-- a query vector
-- a key vector
-- a value vector
-
-Intuitively:
-
-- query = what this token is looking for
-- key = what this token offers
-- value = the information this token carries
-
-Then we compare one token's query against all keys, turn those scores into weights, and use the weights to mix the value vectors.
-
-### Why does linear attention exist?
-
-Standard attention compares every token with every other token.
-
-If the sequence length is $n$, the full token-to-token interaction pattern is roughly:
+The raw storage might all live in:
 
 ```math
-O(n^2)
+\mathbb{R}^n
 ```
 
-That becomes expensive for long sequences.
-
-Linear attention tries to rewrite attention so we do not have to build the full pairwise interaction matrix explicitly. Instead, we push the computation into precomputed summaries of keys and values.
-
-That changes the engineering story from:
-
-- compare every token to every token
-
-to:
-
-- build global summaries once
-- let each query consult those summaries
-
-### Why typed Rust helps
-
-Rust forces us to name things precisely. That is useful here.
-
-Instead of throwing nested `Vec<Vec<f32>>` everywhere, we can create types that make the concepts visible:
-
-- `Vector`
-- `Matrix`
-- `Linear`
-- `Sequence`
-- `SelfAttention`
-- `LinearAttention`
-- `FeedForward`
-- `TransformerBlock`
-
-That makes the code read more like the math and less like accidental plumbing.
-
-### The small mental model
-
-The educational crate for this lesson builds the following path:
-
-1. vectors and matrices
-2. linear layers and nonlinearities
-3. sequences of token vectors
-4. standard self-attention
-5. linear attention
-6. a Transformer block with residuals and layer norm
-
-### What is simplified?
-
-This lesson and its crate are intentionally educational.
-
-We skip:
-
-- token embeddings
-- positional encoding
-- causal masking
-- multi-head attention
-- autograd
-- optimizers
-- dropout
-- GPU kernels
-
-The goal is understanding, not production throughput.
-
-## Algebra Form
-
-Neural-network view:
+but the roles are different:
 
 ```math
-\hat{y} = f(x; \theta)
+x \neq q \neq k \neq v
 ```
 
-Attention projections:
+even when each one is represented by a vector.
 
-```math
-q = xW_Q,\quad k = xW_K,\quad v = xW_V
-```
-
-Standard self-attention:
-
-```math
-\text{output}_i = \sum_j \alpha_{ij} v_j
-```
-
-```math
-\alpha_{ij} = \text{softmax}_j\left(\frac{q_i \cdot k_j}{\sqrt{d_k}}\right)
-```
-
-Linear-attention form:
-
-```math
-\text{output}_i =
-\frac{
-\phi(q_i)^T \left(\sum_j \phi(k_j) v_j^T\right)
-}{
-\phi(q_i)^T \left(\sum_j \phi(k_j)\right)
-}
-```
-
-Layer normalization:
-
-```math
-\text{LayerNorm}(x)_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}}
-```
-
-Residual structure:
-
-```math
-\text{output} = x + f(x)
-```
-
-Transformer block view:
-
-```math
-H = \text{LayerNorm}(X + \text{Attention}(X))
-```
-
-```math
-\text{Output} = \text{LayerNorm}(H + F(H))
-```
-
-## Rust Form
-
-Vectors and matrices:
+### Rust
 
 ```rust
-#[derive(Debug, Clone)]
-pub struct Vector {
-    data: Vec<f32>,
-}
+use rust_ml_transformer::{
+    DenseVector, Key, ModelError, Query, TokenEmbedding, Value,
+};
 
-impl Vector {
-    pub fn new(data: Vec<f32>) -> Self {
-        Self { data }
-    }
+fn main() -> Result<(), ModelError> {
+    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
+    let query = Query(DenseVector::new(vec![0.2, 0.5])?);
+    let key = Key(DenseVector::new(vec![0.1, 0.4])?);
+    let value = Value(DenseVector::new(vec![2.0, -1.0])?);
 
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    pub fn dot(&self, other: &Vector) -> f32 {
-        assert_eq!(self.len(), other.len(), "dot: dimension mismatch");
-        self.data
-            .iter()
-            .zip(other.data.iter())
-            .map(|(a, b)| a * b)
-            .sum()
-    }
-
-    pub fn add(&self, other: &Vector) -> Vector {
-        assert_eq!(self.len(), other.len(), "add: dimension mismatch");
-        Vector::new(
-            self.data
-                .iter()
-                .zip(other.data.iter())
-                .map(|(a, b)| a + b)
-                .collect(),
-        )
-    }
-
-    pub fn map<F>(&self, f: F) -> Vector
-    where
-        F: Fn(f32) -> f32,
-    {
-        Vector::new(self.data.iter().copied().map(f).collect())
-    }
-
-    pub fn as_slice(&self) -> &[f32] {
-        &self.data
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Matrix {
-    rows: usize,
-    cols: usize,
-    data: Vec<f32>,
-}
-
-impl Matrix {
-    pub fn new(rows: usize, cols: usize, data: Vec<f32>) -> Self {
-        assert_eq!(rows * cols, data.len(), "matrix: invalid data length");
-        Self { rows, cols, data }
-    }
-
-    pub fn zeros(rows: usize, cols: usize) -> Self {
-        Self {
-            rows,
-            cols,
-            data: vec![0.0; rows * cols],
-        }
-    }
-
-    pub fn get(&self, r: usize, c: usize) -> f32 {
-        self.data[r * self.cols + c]
-    }
-
-    pub fn set(&mut self, r: usize, c: usize, value: f32) {
-        self.data[r * self.cols + c] = value;
-    }
-
-    pub fn mul_vec(&self, x: &Vector) -> Vector {
-        assert_eq!(self.cols, x.len(), "mul_vec: dimension mismatch");
-
-        let mut out = vec![0.0; self.rows];
-        for r in 0..self.rows {
-            let mut sum = 0.0;
-            for c in 0..self.cols {
-                sum += self.get(r, c) * x.as_slice()[c];
-            }
-            out[r] = sum;
-        }
-        Vector::new(out)
-    }
+    println!("{:?}", token.as_slice());
+    println!("{:?}", query.as_slice());
+    println!("{:?}", key.as_slice());
+    println!("{:?}", value.as_slice());
+    Ok(())
 }
 ```
 
-Linear layer and ReLU:
+## 2. Use `thiserror`, not panic soup
+
+### English
+
+Most beginner Transformer bugs are shape bugs.
+
+So the crate does not hide them behind `"something went wrong"`.
+
+It returns `ModelError` values that say:
+
+- which operation failed
+- what the shapes were
+- what relationship should have held
+
+That helps both developers and researchers.
+
+### Algebra
+
+If you want:
+
+```math
+y = Wx
+```
+
+then the matrix width and vector length must match.
+
+If they do not, the operation is invalid.
+
+### Rust
 
 ```rust
-#[derive(Debug, Clone)]
-pub struct Linear {
-    weight: Matrix,
-    bias: Vector,
-}
+use rust_ml_transformer::{DenseMatrix, DenseVector, ModelError};
 
-impl Linear {
-    pub fn forward(&self, x: &Vector) -> Vector {
-        self.weight.mul_vec(x).add(&self.bias)
+fn main() -> Result<(), ModelError> {
+    let matrix = DenseMatrix::from_rows(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+    let vector = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+
+    match matrix.mul_vec(&vector) {
+        Ok(_) => println!("unexpected success"),
+        Err(error) => println!("{error}"),
     }
-}
 
-pub fn relu(v: &Vector) -> Vector {
-    v.map(|x| x.max(0.0))
+    Ok(())
 }
 ```
 
-Sequence type:
+## 3. `TokenSequence` keeps the sequence honest
+
+### English
+
+A Transformer does not process a random list of vectors.
+
+It processes a sequence of token embeddings with one shared model width.
+
+`TokenSequence::new` checks that invariant immediately.
+
+### Algebra
+
+If:
+
+```math
+X \in \mathbb{R}^{n \times d_{model}}
+```
+
+then every token row must have width:
+
+```math
+d_{model}
+```
+
+### Rust
 
 ```rust
-#[derive(Debug, Clone)]
-pub struct Sequence {
-    tokens: Vec<Vector>,
-}
+use rust_ml_transformer::{DenseVector, ModelError, TokenEmbedding, TokenSequence};
 
-impl Sequence {
-    pub fn new(tokens: Vec<Vector>) -> Self {
-        assert!(!tokens.is_empty(), "sequence cannot be empty");
-        let d = tokens[0].len();
-        assert!(tokens.iter().all(|t| t.len() == d));
-        Self { tokens }
-    }
+fn main() -> Result<(), ModelError> {
+    let sequence = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![1.0, 1.0, 0.0])?),
+    ])?;
+
+    println!("tokens = {}", sequence.len());
+    println!("d_model = {}", sequence.d_model());
+    Ok(())
 }
 ```
 
-Standard self-attention:
+## 4. Projection layers tell the story in their type signatures
+
+### English
+
+Instead of a single generic `Linear` that can mean anything, the crate uses typed projection layers:
+
+- `QueryLayer`
+- `KeyLayer`
+- `ValueLayer`
+- `OutputLayer`
+
+That makes the function signature teach the architecture.
+
+### Algebra
+
+For one token embedding `x`:
+
+```math
+q = W_Q x + b_Q
+```
+
+```math
+k = W_K x + b_K
+```
+
+```math
+v = W_V x + b_V
+```
+
+### Rust
 
 ```rust
-#[derive(Debug, Clone)]
-pub struct SelfAttention {
-    w_q: Linear,
-    w_k: Linear,
-    w_v: Linear,
-}
+use rust_ml_transformer::{
+    DenseMatrix, DenseVector, ModelError, ProjectionBias, QueryLayer, QueryProjection,
+    TokenEmbedding,
+};
 
-impl SelfAttention {
-    pub fn forward(&self, seq: &Sequence) -> Sequence {
-        let qs: Vec<Vector> = seq.tokens().iter().map(|x| self.w_q.forward(x)).collect();
-        let ks: Vec<Vector> = seq.tokens().iter().map(|x| self.w_k.forward(x)).collect();
-        let vs: Vec<Vector> = seq.tokens().iter().map(|x| self.w_v.forward(x)).collect();
+fn main() -> Result<(), ModelError> {
+    let layer = QueryLayer::new(
+        QueryProjection(DenseMatrix::from_rows(vec![
+            vec![0.2, 0.1, 0.0, 0.3],
+            vec![0.0, 0.4, 0.1, 0.2],
+        ])?),
+        ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
+    )?;
 
-        let d_k = qs[0].len() as f32;
-        let scale = d_k.sqrt();
+    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
+    let query = layer.forward(&token)?;
 
-        let mut outputs = Vec::with_capacity(seq.len());
-
-        for q in &qs {
-            let scores: Vec<f32> = ks.iter().map(|k| q.dot(k) / scale).collect();
-            let weights = softmax(&scores);
-
-            let mut out = vec![0.0; vs[0].len()];
-            for (weight, v) in weights.iter().zip(vs.iter()) {
-                for (j, value) in v.as_slice().iter().enumerate() {
-                    out[j] += weight * value;
-                }
-            }
-
-            outputs.push(Vector::new(out));
-        }
-
-        Sequence::new(outputs)
-    }
+    println!("{:?}", query.as_slice());
+    Ok(())
 }
 ```
 
-Feature map for linear attention:
+## 5. One typed attention head
 
-```rust
-pub fn phi(v: &Vector) -> Vector {
-    let eps = 1e-6;
-    v.map(|x| x.max(0.0) + eps)
-}
+### English
+
+A standard attention head does exactly three things:
+
+1. project every token to query, key, value
+2. compare each query with all keys
+3. mix the values using the normalized scores
+
+The important part is that the types keep the roles separate all the way through.
+
+### Algebra
+
+For the whole sequence:
+
+```math
+Q = XW_Q,\quad K = XW_K,\quad V = XW_V
 ```
 
-Linear attention:
-
-```rust
-#[derive(Debug, Clone)]
-pub struct LinearAttention {
-    w_q: Linear,
-    w_k: Linear,
-    w_v: Linear,
-}
-
-impl LinearAttention {
-    pub fn forward(&self, seq: &Sequence) -> Sequence {
-        let qs: Vec<Vector> = seq.tokens().iter().map(|x| phi(&self.w_q.forward(x))).collect();
-        let ks: Vec<Vector> = seq.tokens().iter().map(|x| phi(&self.w_k.forward(x))).collect();
-        let vs: Vec<Vector> = seq.tokens().iter().map(|x| self.w_v.forward(x)).collect();
-
-        let d_k = qs[0].len();
-        let d_v = vs[0].len();
-        let mut s = Matrix::zeros(d_k, d_v);
-        let mut z = vec![0.0; d_k];
-
-        for (k, v) in ks.iter().zip(vs.iter()) {
-            for i in 0..d_k {
-                z[i] += k.as_slice()[i];
-                for j in 0..d_v {
-                    let current = s.get(i, j);
-                    s.set(i, j, current + k.as_slice()[i] * v.as_slice()[j]);
-                }
-            }
-        }
-
-        let mut outputs = Vec::with_capacity(seq.len());
-        for q in &qs {
-            let mut numerator = vec![0.0; d_v];
-            for j in 0..d_v {
-                let mut sum = 0.0;
-                for i in 0..d_k {
-                    sum += q.as_slice()[i] * s.get(i, j);
-                }
-                numerator[j] = sum;
-            }
-
-            let denominator: f32 = q
-                .as_slice()
-                .iter()
-                .zip(z.iter())
-                .map(|(a, b)| a * b)
-                .sum::<f32>()
-                .max(1e-6);
-
-            let out = numerator.into_iter().map(|x| x / denominator).collect();
-            outputs.push(Vector::new(out));
-        }
-
-        Sequence::new(outputs)
-    }
-}
+```math
+\mathrm{head}(X) =
+\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
 ```
 
-Transformer block:
+### Rust
 
 ```rust
-#[derive(Debug, Clone)]
-pub struct TransformerBlock {
-    attention: LinearAttention,
-    ff: FeedForward,
-}
+use rust_ml_transformer::{
+    AttentionHead, DenseMatrix, DenseVector, KeyLayer, KeyProjection, ModelError,
+    ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
+    ValueProjection,
+};
 
-impl TransformerBlock {
-    pub fn forward(&self, seq: &Sequence) -> Sequence {
-        let attn_out = self.attention.forward(seq);
-
-        let after_attn: Vec<Vector> = seq
-            .tokens()
-            .iter()
-            .zip(attn_out.tokens().iter())
-            .map(|(x, a)| layer_norm(&x.add(a)))
-            .collect();
-
-        let seq2 = Sequence::new(after_attn);
-
-        let after_ff: Vec<Vector> = seq2
-            .tokens()
-            .iter()
-            .map(|x| {
-                let ff = self.ff.forward(x);
-                layer_norm(&x.add(&ff))
+fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows(
+        (0..dim)
+            .map(|row| {
+                (0..dim)
+                    .map(|col| if row == col { 1.0 } else { 0.0 })
+                    .collect::<Vec<_>>()
             })
-            .collect();
+            .collect(),
+    )
+}
 
-        Sequence::new(after_ff)
-    }
+fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+}
+
+fn main() -> Result<(), ModelError> {
+    let head = AttentionHead::new(
+        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
+        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
+        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+    )?;
+
+    let sequence = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+    ])?;
+
+    let outputs = head.forward(&sequence)?;
+    println!("{:?}", outputs[0].as_slice());
+    Ok(())
 }
 ```
 
-Compile-time-sized teaching types:
+## 6. Where linear attention plugs in
+
+### English
+
+`LinearAttentionHead` is not the original paper.
+
+It is the same architecture slot with a different internal computation.
+
+That keeps the categories clean:
+
+- original Transformer: exact scaled dot-product attention
+- linear attention: efficiency-oriented reformulation
+
+### Algebra
+
+Standard attention:
+
+```math
+\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+```
+
+Linear attention rewrites the computation through feature maps and summary terms:
+
+```math
+\phi(q_i)^T \left(\sum_j \phi(k_j)v_j^T\right)
+```
+
+with a matching normalizer.
+
+### Rust
 
 ```rust
-#[derive(Debug, Clone, Copy)]
-pub struct VectorN<const N: usize> {
-    pub data: [f32; N],
+use rust_ml_transformer::{
+    DenseMatrix, DenseVector, KeyLayer, KeyProjection, LinearAttentionHead, ModelError,
+    ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
+    ValueProjection,
+};
+
+fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows(
+        (0..dim)
+            .map(|row| {
+                (0..dim)
+                    .map(|col| if row == col { 1.0 } else { 0.0 })
+                    .collect::<Vec<_>>()
+            })
+            .collect(),
+    )
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct MatrixMN<const R: usize, const C: usize> {
-    pub data: [[f32; C]; R],
+fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
 }
 
-impl<const R: usize, const C: usize> MatrixMN<R, C> {
-    pub fn mul_vec(&self, x: &VectorN<C>) -> VectorN<R> {
-        let mut out = [0.0; R];
-        for r in 0..R {
-            let mut sum = 0.0;
-            for c in 0..C {
-                sum += self.data[r][c] * x.data[c];
-            }
-            out[r] = sum;
-        }
-        VectorN { data: out }
-    }
+fn main() -> Result<(), ModelError> {
+    let head = LinearAttentionHead::new(
+        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
+        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
+        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+    )?;
+
+    let sequence = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+    ])?;
+
+    let outputs = head.forward(&sequence)?;
+    println!("{:?}", outputs[0].as_slice());
+    Ok(())
 }
 ```
 
-## Why This Matters
+## 7. Why this module stops before const generics
 
-This lesson connects three levels at once:
+### English
 
-- machine-learning intuition
-- Transformer architecture
-- Rust code structure
+You could encode dimensions at compile time:
 
-If you understand this lesson, you no longer have to think of Transformers as mystical giant models. You can think of them as stacks of understandable pieces:
+- `Vector<const N: usize>`
+- `Matrix<const R: usize, const C: usize>`
 
-- attention builds relationships between tokens
-- feed-forward layers transform representations
-- residuals and normalization keep learning stable
-- linear attention is an efficiency-minded reformulation of the same core idea
+That is a good second step.
+
+It is not the best first step for most people learning attention from scratch.
+
+### Algebra
+
+The important thing is still the relationship:
+
+```math
+W \in \mathbb{R}^{m \times n},\quad x \in \mathbb{R}^{n}
+```
+
+not the exact syntax used to enforce it.
+
+### Rust
+
+```text
+// Future direction, not the first lesson:
+//
+// pub struct Vector<const N: usize> {
+//     data: [f32; N],
+// }
+//
+// pub struct Matrix<const R: usize, const C: usize> {
+//     data: [[f32; C]; R],
+// }
+```
+
+## 8. Crate layout
+
+The executable teaching crate is split like this:
+
+```text
+code/transformer/src/
+  error.rs
+  math.rs
+  types.rs
+  attention.rs
+  transformer.rs
+  lib.rs
+```
+
+That separation is deliberate:
+
+- `math.rs` owns raw dense math
+- `types.rs` owns semantic model roles
+- `attention.rs` owns attention-specific logic
+- `transformer.rs` owns encoder-side assembly
 
 ## Short Practice
 
-1. In plain English, what is the difference between standard attention and linear attention?
-2. Why is `Sequence` a useful type instead of a raw `Vec<Vector>` everywhere?
-3. What role does the denominator play in the linear-attention formula?
-4. Why do residual connections make optimization easier?
-5. Which parts of a production Transformer are still missing from this educational implementation?
+1. Why is `Query` a different type from `Value` even though both wrap a `DenseVector`?
+2. What kind of bug becomes easier to diagnose once the crate returns `ModelError` instead of panicking everywhere?
+3. Why is `LinearAttentionHead` a different concept from the original paper even if it occupies the same architectural slot?

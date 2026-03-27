@@ -1,43 +1,102 @@
 # Transformer Solutions
 
-## Solution 1: Print attention weights
+## Solution 1: Trigger a useful shape error
 
-The weights show how strongly each token uses information from the others. Each row should sum to 1 because the weights come from a softmax. Large values indicate the tokens that contribute most to the contextualized output for that row.
+The error should identify:
 
-## Solution 2: Change the embeddings
+- `DenseMatrix::mul_vec` as the failing operation
+- matrix shape `[2, 2]`
+- vector shape `[3]`
 
-Sharper embeddings usually make some dot products stand out more strongly, which can make the attention distribution more concentrated. If the embeddings are more similar to each other, the attention tends to spread more evenly.
+The hint should say that matrix columns must equal vector length.
 
-## Solution 3: Remove the residual connections
+That is exactly the kind of failure message you want when debugging model wiring.
 
-Without residuals, each stage must completely replace the previous representation instead of adding an improvement to it. Conceptually, that means the model loses an easy path for preserving the original signal. In deeper models this usually makes learning harder and less stable.
+## Solution 2: Build a `TokenSequence`
 
-## Solution 4: Replace ReLU with the identity function
+Every token in a `TokenSequence` needs the same width because the model treats the sequence as one matrix:
 
-If ReLU becomes the identity, the feed-forward block becomes only a stack of linear maps. That reduces expressiveness because compositions of linear maps collapse into another linear map. The nonlinearity is what lets the block represent richer transformations.
+```math
+X \in \mathbb{R}^{n \times d_{model}}
+```
 
-## Solution 5: Explain one token end to end
+If one token has width `3` and another has width `4`, there is no single `d_model`.
 
-For one token $x_i$:
+`TokenSequence::new` rejects that immediately.
 
-1. attention builds a contextualized version of the token by mixing information from other tokens
-2. the first residual adds the original token back so the model keeps its earlier signal
-3. the feed-forward layer transforms that token representation independently of the other tokens
-4. the final residual combines the pre-feed-forward representation with the nonlinear update
+## Solution 3: Project one token into query, key, and value
 
-This is why a Transformer block can both gather context and preserve identity.
+Across `QueryLayer`, `KeyLayer`, and `ValueLayer`, the input token embedding is the same.
 
-## Solution 6: Standard attention vs linear attention
+What changes is the learned projection:
 
-Standard attention compares each token with every other token explicitly, so with $n$ tokens you get roughly $n^2$ pairwise interactions. Linear attention tries to avoid materializing that full token-to-token matrix by precomputing summaries such as key-value accumulations and then letting each query consult those summaries. That can reduce the sequence-length cost for fixed hidden size.
+- different weight matrix
+- different bias
+- different semantic output type
 
-## Solution 7: Why bother with types?
+That is why the newtype pattern matters. A `Query` and a `Value` are not interchangeable just because both wrap a `DenseVector`.
 
-If everything is just nested `Vec<Vec<f32>>`, it becomes harder to see whether a value is meant to be:
+## Solution 4: Print attention outputs for one head
 
-- one token vector
-- a whole sequence
-- a weight matrix
-- a projected representation
+The head output tells you the token after it has looked across the sequence.
 
-A type like `Sequence` tells the reader that the value is a list of same-width token vectors, not just an arbitrary nested list. Const generics go one step further by letting some dimension mistakes fail at compile time instead of later at runtime.
+If you want to inspect the internal reasoning more closely, the right things to print are:
+
+- projected queries
+- projected keys
+- raw scaled scores
+- softmax weights
+- final weighted sums
+
+That is the shortest path from "attention feels magical" to "attention is just traceable math."
+
+## Solution 5: Add positional encodings
+
+After positional encoding:
+
+- the token count stays the same
+- `d_model` stays the same
+- the numeric values change
+
+That is the whole point.
+
+The model keeps "what this token is" while also gaining "where this token is."
+
+Without that signal, attention alone does not know whether a token came first or last.
+
+## Solution 6: Run one full encoder block
+
+The output shape must match the input shape:
+
+```math
+n \times d_{model}
+```
+
+That is required because the block adds residual connections:
+
+```math
+X + \mathrm{Attention}(X)
+```
+
+and later:
+
+```math
+A + \mathrm{FFN}(A)
+```
+
+Residual addition only makes sense when both sides have the same width.
+
+## Solution 7: Standard attention versus linear attention
+
+The architectural slot stays the same:
+
+```text
+encoder block -> attention module
+```
+
+What changes is the math inside that slot.
+
+Standard attention forms the exact scaled dot-product interaction pattern.
+Linear attention rewrites the computation through feature-map-based summaries.
+
+That is why linear attention is best understood as a later efficient attention family, not as the definition of the original Transformer paper.

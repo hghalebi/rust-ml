@@ -20,7 +20,8 @@ The goal is not to memorize symbols. The goal is to learn how to read formulas a
 
 1. Read [01 Foundations](lessons/01-foundations/README.md).
 2. Continue with [02 Vectors](lessons/02-vectors/README.md).
-3. Use [Lessons index](lessons/README.md) to see the full course map.
+3. Continue with [03 Neuron](lessons/03-neuron/README.md).
+4. Use [Lessons index](lessons/README.md) to see the full course map.
 
 If you specifically want the current Transformer material after the fundamentals, jump to [07 Transformer](lessons/07-transformer/README.md).
 
@@ -36,12 +37,20 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - [Lessons index](lessons/README.md)
 - [01 Foundations](lessons/01-foundations/README.md)
 - [02 Vectors](lessons/02-vectors/README.md)
+- [03 Neuron](lessons/03-neuron/README.md)
 - [07 Transformer](lessons/07-transformer/README.md)
+
+### Neuron track now included
+
+- [Lesson 4: Rust Essentials for a Tiny Neuron](lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md)
+- [Lesson 5: A Neuron as a Chain of Functions](lessons/03-neuron/02-neuron-as-a-chain-of-functions.md)
+- [Neuron exercises](lessons/03-neuron/exercises.md)
+- [Neuron solutions](lessons/03-neuron/solutions.md)
 
 ### Transformer track now included
 
-- [Lesson 17: A Tiny Transformer (From First Principles)](lessons/07-transformer/01-tiny-transformer-from-first-principles.md)
-- [Lesson 18: Typed Rust Transformer with Linear Attention](lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md)
+- [Lesson 17: What Problem the Transformer Solves](lessons/07-transformer/01-tiny-transformer-from-first-principles.md)
+- [Lesson 18: Typed Rust Transformer with Expressive Errors](lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md)
 - [Lesson 19: Transformer Encoder in Small Chunks](lessons/07-transformer/03-transformer-encoder-in-small-chunks.md)
 - [Transformer exercises](lessons/07-transformer/exercises.md)
 - [Transformer solutions](lessons/07-transformer/solutions.md)
@@ -54,7 +63,6 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 ### Source material and roadmap
 
 - [Reference material](references/README.md)
-- [03 Neuron](lessons/03-neuron/README.md)
 - [04 Learning](lessons/04-learning/README.md)
 - [05 MLP](lessons/05-mlp/README.md)
 - [06 Attention](lessons/06-attention/README.md)
@@ -79,23 +87,16 @@ rust-ml/
 
 ## Learning Strategy
 
-Each authored lesson follows the same pattern:
+The course keeps the same translation goal everywhere:
 
-1. Overview
-2. Learning goals
-3. Plain-English explanation
-4. Algebra form
-5. Rust form
-6. Why this matters
-7. Short practice
+`plain English <-> algebra <-> Rust`
+
+Module 07 now applies that rule in two complementary ways:
+
+- narrative lessons that explain the architecture and the implementation choices
+- a chunked encoder lesson where every concept is written as `English -> Algebra -> Rust`
 
 That repetition is intentional. Repetition is how the translation dictionary becomes automatic.
-
-The Transformer module also includes:
-
-- a typed Rust lesson that bridges architecture and implementation
-- a chunked encoder lesson for lower-cognitive-load study
-- a small companion crate that turns the lesson concepts into runnable Rust
 
 ## Suggested Study Flow
 
@@ -115,13 +116,12 @@ cargo test --manifest-path code/transformer/Cargo.toml
 
 That crate covers:
 
-- vectors and matrices
-- linear layers
-- sequences
-- standard self-attention
-- simplified linear attention
-- feed-forward layers
-- a minimal Transformer block
+- dense vectors and matrices
+- semantic model newtypes such as `TokenEmbedding`, `Query`, `Key`, and `Value`
+- expressive `thiserror` diagnostics for shape mistakes
+- standard self-attention and multi-head attention
+- a simplified linear-attention comparison point
+- positional encodings, layer norm, feed-forward layers, and an encoder block
 
 ## Quality Automation
 
@@ -148,3 +148,4 @@ The repo keeps supporting source material in [references/](references/README.md)
 - Bahdanau et al. (2014)
 - Luong et al. (2015)
 - Vaswani et al. (2017)
+- Sebastian Raschka's *LLMs From Scratch* repository as an external inspiration source for attention, GPT, and educational sequencing

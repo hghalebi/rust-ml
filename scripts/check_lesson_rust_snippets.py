@@ -7,6 +7,7 @@ import re
 import subprocess
 import tempfile
 import textwrap
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -877,6 +878,14 @@ def wrap_known_block(path: str, idx: int, block: str) -> str:
             + textwrap.indent(block, "    ")
             + "\n    let _ = dot(&[1.0, 2.0], &[3.0, 4.0]);\n}\n"
         )
+    if key == "lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md:1":
+        return block + "\n"
+    if key == "lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md:2":
+        return block + "\n"
+    if key == "lessons/03-neuron/02-neuron-as-a-chain-of-functions.md:1":
+        return block + "\n"
+    if key == "lessons/03-neuron/02-neuron-as-a-chain-of-functions.md:2":
+        return block + "\n"
     if key == "lessons/07-transformer/01-tiny-transformer-from-first-principles.md:1":
         return common_f64() + (
             'fn main() { let queries = vec![vec![1.0, 2.0], vec![3.0, 4.0]]; let keys = vec![vec![5.0, 6.0], vec![7.0, 8.0]]; let mut scores = vec![0.0; 2]; let i = 0usize; let j = 1usize; let scale = 2.0_f64; '
@@ -933,11 +942,12 @@ def compile_general_snippets(temp_dir: Path) -> int:
         Path("lessons/02-vectors/01-scalars-vectors-matrices.md"),
         Path("lessons/02-vectors/02-sum-dot-product-and-mat-vec.md"),
         Path("lessons/02-vectors/03-sigmoid-loss-and-gradient-descent.md"),
+        Path("lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md"),
+        Path("lessons/03-neuron/02-neuron-as-a-chain-of-functions.md"),
         Path("lessons/02-vectors/exercises.md"),
         Path("lessons/02-vectors/solutions.md"),
-        Path("lessons/07-transformer/01-tiny-transformer-from-first-principles.md"),
-        Path("lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md"),
-        Path("lessons/07-transformer/exercises.md"),
+        Path("lessons/03-neuron/exercises.md"),
+        Path("lessons/03-neuron/solutions.md"),
     ]
 
     failures: list[str] = []
@@ -964,224 +974,74 @@ def compile_general_snippets(temp_dir: Path) -> int:
         print("\n".join(failures))
         return 1
 
-    print(f"Compiled {count} Rust snippets from authored foundational and Transformer lessons.")
+    print(
+        f"Compiled {count} Rust snippets from the authored foundations, vectors, and neuron lessons."
+    )
     return 0
 
 
 def compile_chunked_transformer_snippets(temp_dir: Path) -> int:
-    parts = chunk_parts()
-    lesson = ROOT / "lessons/07-transformer/03-transformer-encoder-in-small-chunks.md"
-    blocks = extract_blocks(lesson)
-
-    def main_wrap(body: str, suffix: str = "") -> str:
-        body_text = textwrap.indent(body.strip(), "    ")
-        suffix_text = textwrap.indent(suffix, "    ")
-        return "fn main() {\n" + body_text + ("\n" if body.strip() else "") + suffix_text + "\n}\n"
-
-    full_env = combine(
-        parts,
-        "vector",
-        "matrix",
-        "linear",
-        "relu",
-        "sequence",
-        "attention_score",
-        "scaled_attention_score",
-        "softmax",
-        "weighted_sum",
-        "attention_head",
-        "concat",
-        "mha_struct",
-        "mha_impl",
-        "pos_struct",
-        "pos_encode",
-        "pos_add",
-        "residual",
-        "layernorm",
-        "layernorm_seq",
-        "feedforward_struct",
-        "feedforward_token",
-        "feedforward_seq",
-        "block_struct",
-        "block_impl",
-        "encoder",
-    )
+    transformer_paths = [
+        Path("lessons/07-transformer/01-tiny-transformer-from-first-principles.md"),
+        Path("lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md"),
+        Path("lessons/07-transformer/03-transformer-encoder-in-small-chunks.md"),
+        Path("lessons/07-transformer/exercises.md"),
+    ]
 
     failures: list[str] = []
-    for i, block in enumerate(blocks, start=1):
-        if i == 1:
-            src = combine(parts) + block + "\n" + main_wrap("let _ = Vector::new(vec![1.0, 2.0, 3.0]).len();")
-        elif i == 2:
-            src = combine(parts, "vector") + "\n" + main_wrap(block, "let _ = x.len();")
-        elif i == 3:
-            src = (
-                combine(parts, "vector_no_dot")
-                + "\n"
-                + block
-                + "\n"
-                + main_wrap(
-                    "let a = Vector::new(vec![1.0, 2.0]);\nlet b = Vector::new(vec![3.0, 4.0]);\nlet _ = a.dot(&b);"
-                )
-            )
-        elif i == 4:
-            src = combine(parts, "vector") + "\n" + main_wrap(block, "let _ = a.dot(&b);")
-        elif i == 5:
-            src = combine(parts) + block + "\n" + main_wrap("let m = Matrix::new(1, 1, vec![2.0]);\nlet _ = m.get(0, 0);")
-        elif i == 6:
-            src = (
-                combine(parts, "vector", "matrix_no_mul")
-                + "\n"
-                + block
-                + "\n"
-                + main_wrap(
-                    "let m = Matrix::new(2, 2, vec![1.0, 2.0, 3.0, 4.0]);\nlet x = Vector::new(vec![5.0, 6.0]);\nlet _ = m.mul_vec(&x);"
-                )
-            )
-        elif i == 7:
-            src = combine(parts, "vector", "matrix") + "\n" + block + "\n" + main_wrap(
-                "let layer = Linear::new(Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), Vector::new(vec![0.0, 0.0]));\nlet x = Vector::new(vec![1.0, 2.0]);\nlet _ = layer.forward(&x);"
-            )
-        elif i == 8:
-            src = combine(parts, "vector") + "\n" + block + "\n" + main_wrap(
-                "let x = Vector::new(vec![-1.0, 2.0]);\nlet _ = relu(&x);"
-            )
-        elif i == 9:
-            src = combine(parts, "vector", "matrix", "linear", "relu") + "\n" + block + "\n"
-        elif i == 10:
-            src = combine(parts, "vector") + "\n" + block + "\n" + main_wrap(
-                "let seq = Sequence::new(vec![Vector::new(vec![1.0]), Vector::new(vec![2.0])]);\nlet _ = seq.len();"
-            )
-        elif i == 11:
-            src = combine(parts, "vector", "matrix", "linear") + "\n" + block + "\n" + main_wrap(
-                "let proj = AttentionProjections {\n    w_q: Linear::new(Matrix::new(1, 1, vec![1.0]), Vector::new(vec![0.0])),\n    w_k: Linear::new(Matrix::new(1, 1, vec![1.0]), Vector::new(vec![0.0])),\n    w_v: Linear::new(Matrix::new(1, 1, vec![1.0]), Vector::new(vec![0.0])),\n};\nlet x = Vector::new(vec![1.0]);\nlet _ = proj.project(&x);"
-            )
-        elif i == 12:
-            src = combine(parts, "vector") + "\n" + block + "\n" + main_wrap(
-                "let q = Vector::new(vec![1.0, 2.0]);\nlet k = Vector::new(vec![3.0, 4.0]);\nlet _ = attention_score(&q, &k);"
-            )
-        elif i == 13:
-            src = combine(parts, "vector") + "\n" + block + "\n" + main_wrap(
-                "let q = Vector::new(vec![1.0, 2.0]);\nlet k = Vector::new(vec![3.0, 4.0]);\nlet _ = scaled_attention_score(&q, &k);"
-            )
-        elif i == 14:
-            src = combine(parts) + block + "\n" + main_wrap("let _ = softmax(&[1.0, 2.0, 3.0]);")
-        elif i == 15:
-            src = combine(parts, "vector") + "\n" + block + "\n" + main_wrap(
-                "let weights = vec![0.25, 0.75];\nlet values = vec![Vector::new(vec![1.0, 0.0]), Vector::new(vec![0.0, 1.0])];\nlet _ = weighted_sum(&weights, &values);"
-            )
-        elif i == 16:
-            src = combine(parts, "vector", "matrix", "linear", "sequence", "scaled_attention_score", "softmax", "weighted_sum") + "\n" + block + "\n" + main_wrap(
-                "let layer = Linear::new(Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), Vector::new(vec![0.0, 0.0]));\nlet head = AttentionHead { w_q: layer.clone(), w_k: layer.clone(), w_v: layer };\nlet seq = Sequence::new(vec![Vector::new(vec![1.0, 0.0]), Vector::new(vec![0.0, 1.0])]);\nlet _ = head.forward(&seq);"
-            )
-        elif i == 17:
-            src = combine(parts, "vector") + "\n" + block + "\n" + main_wrap(
-                "let _ = concat_vectors(&[Vector::new(vec![1.0]), Vector::new(vec![2.0])]);"
-            )
-        elif i == 18:
-            src = combine(parts, "vector", "matrix", "linear", "sequence", "scaled_attention_score", "softmax", "weighted_sum", "attention_head") + "\n" + block + "\n" + main_wrap(
-                "let layer = Linear::new(Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), Vector::new(vec![0.0, 0.0]));\nlet head = AttentionHead { w_q: layer.clone(), w_k: layer.clone(), w_v: layer.clone() };\nlet _mha = MultiHeadAttention { heads: vec![head], w_o: layer };"
-            )
-        elif i == 19:
-            src = combine(parts, "vector", "matrix", "linear", "sequence", "scaled_attention_score", "softmax", "weighted_sum", "attention_head", "concat", "mha_struct") + "\n" + block + "\n" + main_wrap(
-                "let layer = Linear::new(Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), Vector::new(vec![0.0, 0.0]));\nlet head = AttentionHead { w_q: layer.clone(), w_k: layer.clone(), w_v: layer.clone() };\nlet mha = MultiHeadAttention {\n    heads: vec![head.clone(), head],\n    w_o: Linear::new(Matrix::new(2, 4, vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]), Vector::new(vec![0.0, 0.0])),\n};\nlet seq = Sequence::new(vec![Vector::new(vec![1.0, 0.0]), Vector::new(vec![0.0, 1.0])]);\nlet _ = mha.forward(&seq);"
-            )
-        elif i == 20:
-            src = combine(parts) + block + "\n" + main_wrap("let _ = PositionalEncoding::new(4);")
-        elif i == 21:
-            src = combine(parts, "vector", "sequence", "pos_struct") + "\n" + block + "\n" + main_wrap(
-                "let pe = PositionalEncoding::new(4);\nlet _ = pe.encode_position(2);"
-            )
-        elif i == 22:
-            src = combine(parts, "vector", "sequence", "pos_struct", "pos_encode") + "\n" + block + "\n" + main_wrap(
-                "let pe = PositionalEncoding::new(2);\nlet seq = Sequence::new(vec![Vector::new(vec![1.0, 0.0]), Vector::new(vec![0.0, 1.0])]);\nlet _ = pe.add_to(&seq);"
-            )
-        elif i == 23:
-            src = combine(parts, "vector", "sequence") + "\n" + block + "\n" + main_wrap(
-                "let a = Sequence::new(vec![Vector::new(vec![1.0]), Vector::new(vec![2.0])]);\nlet b = Sequence::new(vec![Vector::new(vec![3.0]), Vector::new(vec![4.0])]);\nlet _ = residual(&a, &b);"
-            )
-        elif i == 24:
-            src = combine(parts, "vector") + "\n" + block + "\n" + main_wrap(
-                "let norm = LayerNorm::new();\nlet x = Vector::new(vec![1.0, 2.0, 3.0]);\nlet _ = norm.forward(&x);"
-            )
-        elif i == 25:
-            src = combine(parts, "vector", "sequence", "layernorm") + "\n" + block + "\n" + main_wrap(
-                "let norm = LayerNorm::new();\nlet seq = Sequence::new(vec![Vector::new(vec![1.0]), Vector::new(vec![2.0])]);\nlet _ = norm.forward_sequence(&seq);"
-            )
-        elif i == 26:
-            src = combine(parts, "vector", "matrix", "linear") + "\n" + block + "\n" + main_wrap(
-                "let layer = Linear::new(Matrix::new(1, 1, vec![1.0]), Vector::new(vec![0.0]));\nlet _ = FeedForward { linear1: layer.clone(), linear2: layer };"
-            )
-        elif i == 27:
-            src = combine(parts, "vector", "matrix", "linear", "relu", "feedforward_struct") + "\n" + block + "\n" + main_wrap(
-                "let layer = Linear::new(Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), Vector::new(vec![0.0, 0.0]));\nlet ff = FeedForward { linear1: layer.clone(), linear2: layer };\nlet x = Vector::new(vec![1.0, -2.0]);\nlet _ = ff.forward_token(&x);"
-            )
-        elif i == 28:
-            src = combine(parts, "vector", "matrix", "linear", "relu", "sequence", "feedforward_struct", "feedforward_token") + "\n" + block + "\n" + main_wrap(
-                "let layer = Linear::new(Matrix::new(1, 1, vec![1.0]), Vector::new(vec![0.0]));\nlet ff = FeedForward { linear1: layer.clone(), linear2: layer };\nlet seq = Sequence::new(vec![Vector::new(vec![1.0]), Vector::new(vec![2.0])]);\nlet _ = ff.forward_sequence(&seq);"
-            )
-        elif i == 29:
-            src = combine(parts, "vector", "matrix", "linear", "relu", "sequence", "scaled_attention_score", "softmax", "weighted_sum", "attention_head", "concat", "mha_struct", "mha_impl", "pos_struct", "pos_encode", "pos_add", "residual", "layernorm", "layernorm_seq", "feedforward_struct", "feedforward_token", "feedforward_seq") + "\n" + block + "\n" + main_wrap("let _ = None::<TransformerEncoderBlock>;")
-        elif i == 30:
-            src = combine(parts, "vector", "matrix", "linear", "relu", "sequence", "scaled_attention_score", "softmax", "weighted_sum", "attention_head", "concat", "mha_struct", "mha_impl", "residual", "layernorm", "layernorm_seq", "feedforward_struct", "feedforward_token", "feedforward_seq", "block_struct") + "\n" + block + "\n" + main_wrap(
-                "let layer2 = Linear::new(Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), Vector::new(vec![0.0, 0.0]));\nlet head = AttentionHead { w_q: layer2.clone(), w_k: layer2.clone(), w_v: layer2.clone() };\nlet mha = MultiHeadAttention {\n    heads: vec![head.clone(), head],\n    w_o: Linear::new(Matrix::new(2, 4, vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]), Vector::new(vec![0.0, 0.0])),\n};\nlet ff = FeedForward { linear1: layer2.clone(), linear2: layer2 };\nlet block = TransformerEncoderBlock { attention: mha, norm1: LayerNorm::new(), feed_forward: ff, norm2: LayerNorm::new() };\nlet seq = Sequence::new(vec![Vector::new(vec![1.0, 0.0]), Vector::new(vec![0.0, 1.0])]);\nlet _ = block.forward(&seq);"
-            )
-        elif i == 31:
-            src = combine(parts, "vector", "matrix", "linear", "relu", "sequence", "scaled_attention_score", "softmax", "weighted_sum", "attention_head", "concat", "mha_struct", "mha_impl", "residual", "layernorm", "layernorm_seq", "feedforward_struct", "feedforward_token", "feedforward_seq", "block_struct", "block_impl") + "\n" + block + "\n" + main_wrap(
-                "let layer2 = Linear::new(Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), Vector::new(vec![0.0, 0.0]));\nlet head = AttentionHead { w_q: layer2.clone(), w_k: layer2.clone(), w_v: layer2.clone() };\nlet mha = MultiHeadAttention {\n    heads: vec![head.clone(), head],\n    w_o: Linear::new(Matrix::new(2, 4, vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]), Vector::new(vec![0.0, 0.0])),\n};\nlet ff = FeedForward { linear1: layer2.clone(), linear2: layer2 };\nlet block = TransformerEncoderBlock { attention: mha, norm1: LayerNorm::new(), feed_forward: ff, norm2: LayerNorm::new() };\nlet encoder = Encoder { blocks: vec![block] };\nlet seq = Sequence::new(vec![Vector::new(vec![1.0, 0.0]), Vector::new(vec![0.0, 1.0])]);\nlet _ = encoder.forward(&seq);"
-            )
-        elif i == 32:
-            src = combine(parts, "vector", "sequence") + "\n" + main_wrap(block, "let _ = seq.len();")
-        elif i == 33:
-            src = combine(parts, "vector", "sequence", "pos_struct", "pos_encode", "pos_add") + "\n" + main_wrap(
-                "let seq = Sequence::new(vec![\n    Vector::new(vec![1.0, 0.0, 1.0, 0.0]),\n    Vector::new(vec![0.0, 1.0, 0.0, 1.0]),\n    Vector::new(vec![1.0, 1.0, 0.0, 0.0]),\n]);\n" + block,
-                "let _ = seq_with_pos.len();",
-            )
-        elif i == 34:
-            src = combine(parts, "vector", "matrix", "linear", "sequence", "scaled_attention_score", "softmax", "weighted_sum", "attention_head") + "\n" + main_wrap(
-                block,
-                "let _ = head.forward(&Sequence::new(vec![\n    Vector::new(vec![1.0, 0.0, 1.0, 0.0]),\n    Vector::new(vec![0.0, 1.0, 0.0, 1.0]),\n]));",
-            )
-        elif i == 35:
-            src = combine(parts, "vector", "matrix", "linear", "sequence", "scaled_attention_score", "softmax", "weighted_sum", "attention_head", "concat", "mha_struct", "mha_impl") + "\n" + main_wrap(
-                "let projector = Linear::new(\n    Matrix::new(\n        4,\n        4,\n        vec![\n            1.0, 0.0, 0.0, 0.0,\n            0.0, 1.0, 0.0, 0.0,\n            0.0, 0.0, 1.0, 0.0,\n            0.0, 0.0, 0.0, 1.0,\n        ],\n    ),\n    Vector::new(vec![0.0, 0.0, 0.0, 0.0]),\n);\nlet head = AttentionHead {\n    w_q: projector.clone(),\n    w_k: projector.clone(),\n    w_v: projector,\n};\n"
-                    + block,
-                "let seq = Sequence::new(vec![\n    Vector::new(vec![1.0, 0.0, 1.0, 0.0]),\n    Vector::new(vec![0.0, 1.0, 0.0, 1.0]),\n]);\nlet _ = mha.forward(&seq);",
-            )
-        elif i == 36:
-            src = combine(parts, "vector", "matrix", "linear", "relu", "sequence", "layernorm", "layernorm_seq", "feedforward_struct", "feedforward_token", "feedforward_seq") + "\n" + main_wrap(
-                block,
-                "let x = Sequence::new(vec![Vector::new(vec![1.0, 2.0, 3.0, 4.0])]);\nlet _ = (ff.forward_sequence(&x), norm1.forward_sequence(&x), norm2.forward_sequence(&x));",
-            )
-        elif i == 37:
-            src = combine(parts, "vector", "matrix", "linear", "relu", "sequence", "scaled_attention_score", "softmax", "weighted_sum", "attention_head", "concat", "mha_struct", "mha_impl", "residual", "layernorm", "layernorm_seq", "feedforward_struct", "feedforward_token", "feedforward_seq", "block_struct", "block_impl") + "\n" + main_wrap(
-                "let projector = Linear::new(\n    Matrix::new(\n        4,\n        4,\n        vec![\n            1.0, 0.0, 0.0, 0.0,\n            0.0, 1.0, 0.0, 0.0,\n            0.0, 0.0, 1.0, 0.0,\n            0.0, 0.0, 0.0, 1.0,\n        ],\n    ),\n    Vector::new(vec![0.0, 0.0, 0.0, 0.0]),\n);\nlet head = AttentionHead { w_q: projector.clone(), w_k: projector.clone(), w_v: projector.clone() };\nlet mha = MultiHeadAttention {\n    heads: vec![head.clone(), head],\n    w_o: Linear::new(\n        Matrix::new(\n            4,\n            8,\n            vec![\n                1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\n                0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\n                0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,\n                0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,\n            ],\n        ),\n        Vector::new(vec![0.0, 0.0, 0.0, 0.0]),\n    ),\n};\nlet ff = FeedForward { linear1: projector.clone(), linear2: projector };\nlet norm1 = LayerNorm::new();\nlet norm2 = LayerNorm::new();\n"
-                    + block,
-                "let seq = Sequence::new(vec![\n    Vector::new(vec![1.0, 0.0, 1.0, 0.0]),\n    Vector::new(vec![0.0, 1.0, 0.0, 1.0]),\n]);\nlet _ = block.forward(&seq);",
-            )
-        elif i == 38:
-            src = full_env + "\n" + main_wrap(
-                "let seq = Sequence::new(vec![\n    Vector::new(vec![1.0, 0.0, 1.0, 0.0]),\n    Vector::new(vec![0.0, 1.0, 0.0, 1.0]),\n    Vector::new(vec![1.0, 1.0, 0.0, 0.0]),\n]);\nlet pe = PositionalEncoding::new(4);\nlet seq_with_pos = pe.add_to(&seq);\nlet projector = Linear::new(\n    Matrix::new(\n        4,\n        4,\n        vec![\n            1.0, 0.0, 0.0, 0.0,\n            0.0, 1.0, 0.0, 0.0,\n            0.0, 0.0, 1.0, 0.0,\n            0.0, 0.0, 0.0, 1.0,\n        ],\n    ),\n    Vector::new(vec![0.0, 0.0, 0.0, 0.0]),\n);\nlet head = AttentionHead { w_q: projector.clone(), w_k: projector.clone(), w_v: projector.clone() };\nlet mha = MultiHeadAttention {\n    heads: vec![head.clone(), head],\n    w_o: Linear::new(\n        Matrix::new(\n            4,\n            8,\n            vec![\n                1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\n                0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\n                0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,\n                0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,\n            ],\n        ),\n        Vector::new(vec![0.0, 0.0, 0.0, 0.0]),\n    ),\n};\nlet ff = FeedForward { linear1: projector.clone(), linear2: projector };\nlet block = TransformerEncoderBlock { attention: mha, norm1: LayerNorm::new(), feed_forward: ff, norm2: LayerNorm::new() };\n"
-                + block
-            )
-        else:
-            raise ValueError(f"Unhandled chunked Transformer block {i}")
+    count = 0
+    target_dir = temp_dir / "transformer-snippet-target"
+    crate_path = (ROOT / "code/transformer").resolve()
 
-        rs_path = temp_dir / f"chunked_{i:02d}.rs"
-        rs_path.write_text(src, encoding="utf-8")
-        result = subprocess.run(
-            ["rustc", "--edition=2024", "--emit=metadata", str(rs_path), "-o", str(rs_path.with_suffix(".rmeta"))],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            failures.append(f"--- lessons/07-transformer/03-transformer-encoder-in-small-chunks.md block {i} ---\n{result.stderr}")
+    for rel_path in transformer_paths:
+        full_path = ROOT / rel_path
+        for idx, block in enumerate(extract_blocks(full_path), start=1):
+            snippet_dir = temp_dir / f"transformer_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "transformer_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_transformer = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
 
     if failures:
         print("\n".join(failures))
         return 1
 
-    print(f"Compiled {len(blocks)} Rust snippets from the chunked Transformer lesson.")
+    print(f"Compiled {count} Rust snippets from the Transformer module against the local crate.")
     return 0
 
 
