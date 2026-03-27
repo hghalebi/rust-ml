@@ -1,22 +1,26 @@
 # 07 Transformer
 
-Status: started.
+Status: active.
 
-This folder maps to course Modules 6 and 7. The first authored lesson here focuses on the Transformer block assembly step.
+This module now teaches the Transformer encoder path in three complementary modes:
+
+1. a narrative lesson about the problem, the paper, and the full encoder rhythm
+2. a typed Rust lesson about semantic newtypes, `thiserror`, and architecture visibility
+3. an ADHD-friendly chunk ladder using `English -> Algebra -> Rust`
 
 ## Goal
 
-Assemble a tiny transformer-style block from the ingredients introduced earlier.
+Understand what the Transformer is solving, how the encoder math works, and how to model that architecture cleanly in Rust.
 
 ## Outcomes
 
-After this module starts taking shape, you should be able to:
+After this module, you should be able to:
 
-- describe a Transformer block as attention plus feed-forward layers plus residual connections
-- explain what each sublayer contributes
-- trace a toy Transformer block in English, algebra, and Rust
-- explain why linear attention exists and how typed Rust can model Transformer concepts clearly
-- walk through a standard Transformer encoder in small, compile-sized chunks
+- explain why attention replaces one-token-at-a-time recurrence
+- read scaled dot-product attention in English, algebra, and Rust
+- trace one encoder block from token sequence to contextualized output
+- explain why semantic newtypes help attention code stay readable
+- explain where linear attention fits without confusing it with the 2017 paper
 
 ## Code Artifact
 
@@ -36,8 +40,8 @@ After this module starts taking shape, you should be able to:
 
 ## Lessons
 
-1. [Lesson 17: A Tiny Transformer (From First Principles)](01-tiny-transformer-from-first-principles.md)
-2. [Lesson 18: Typed Rust Transformer with Linear Attention](02-typed-rust-transformer-with-linear-attention.md)
+1. [Lesson 17: What Problem the Transformer Solves](01-tiny-transformer-from-first-principles.md)
+2. [Lesson 18: Typed Rust Transformer with Expressive Errors](02-typed-rust-transformer-with-linear-attention.md)
 3. [Lesson 19: Transformer Encoder in Small Chunks](03-transformer-encoder-in-small-chunks.md)
 
 ## Practice
@@ -47,11 +51,10 @@ After this module starts taking shape, you should be able to:
 
 ## Current Focus
 
-This module is still partial. The current lesson gives you the first full Transformer-block assembly step:
+The current authored material covers:
 
-- self-attention recap
-- feed-forward sublayer
-- residual connections
-- a toy end-to-end block in Rust
-- a typed Rust path from vectors and linear layers to linear attention
-- a standard encoder walkthrough broken into short, low-cognitive-load chunks
+- the motivation for attention-first sequence modeling
+- the encoder-side math from query/key/value through residuals and normalization
+- a semantic-newtype Rust crate with expressive shape errors
+- a runnable encoder demo
+- a chunked study path for low-cognitive-load review

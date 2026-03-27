@@ -1,225 +1,322 @@
-# Lesson 17: A Tiny Transformer (From First Principles)
+# Lesson 17: What Problem the Transformer Solves
 
 ## Overview
 
-At this point you already understand vectors, dot products, neurons, gradients, computation graphs, and attention. This lesson assembles those parts into something bigger: a Transformer block.
+This lesson resets the Transformer story from the front door:
+
+- what problem it solves
+- what the core math is actually doing
+- what we will build in Rust
+- why this course uses semantic types instead of anonymous tensor soup
+
+The goal is not to memorize the paper. The goal is to stop the architecture from looking mystical.
 
 ## Learning Goals
 
-- explain the structure of a Transformer block from first principles
-- describe how attention, feed-forward layers, and residual connections interact
-- read the block in English, algebra, and Rust
-- recognize what this toy block omits compared with a production Transformer
+- explain why the Transformer replaced many recurrent sequence models
+- read scaled dot-product attention in plain English, algebra, and Rust
+- identify the core encoder-side parts of the original 2017 architecture
+- explain why this module uses semantic runtime types before compile-time shape machinery
+- run a tiny forward-pass encoder demo in the companion crate
 
-## Plain-English Explanation
+## 1. What problem is the Transformer solving?
 
-### The core idea
+### English
 
-A Transformer processes a sequence of vectors:
+Suppose you have a sentence:
+
+`"the cat sat"`
+
+A model wants to understand that:
+
+- `"the"` modifies `"cat"`
+- `"cat"` relates to `"sat"`
+- words influence each other across the sequence
+
+Older sequence models often processed tokens one by one. The Transformer changes the rule:
+
+let every token look at every other token directly
+
+That mechanism is attention.
+
+### Algebra
+
+If the sequence is:
 
 ```math
 X = [x_1, x_2, \ldots, x_n]
 ```
 
-Each $x_i$ is the embedding of one token.
+then token `x_i` should be able to use information from every `x_j`, not only from the previous recurrent state.
 
-Each token does four things:
+### Rust
 
-1. looks at other tokens through attention
-2. updates its representation with that context
-3. passes through a small neural network
-4. keeps some of its original information through residual connections
+```rust
+use rust_ml_transformer::{DenseVector, ModelError, TokenEmbedding, TokenSequence};
 
-### The block structure
+fn main() -> Result<(), ModelError> {
+    let sentence = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0, 1.0])?),
+        TokenEmbedding(DenseVector::new(vec![1.0, 1.0, 0.0, 0.0])?),
+    ])?;
+
+    println!("tokens = {}", sentence.len());
+    println!("d_model = {}", sentence.d_model());
+    Ok(())
+}
+```
+
+## 2. The core math, explained like a patient adult
+
+### English
+
+For each token vector `x`, we build three new views of that token:
+
+- query: what am I looking for?
+- key: what do I offer?
+- value: what information do I carry?
+
+Then we:
+
+1. compare one query with all keys
+2. turn those comparisons into weights
+3. use the weights to mix the values
+
+### Algebra
+
+For one token:
+
+```math
+q = xW_Q,\quad k = xW_K,\quad v = xW_V
+```
+
+For a whole sequence:
+
+```math
+\mathrm{Attention}(Q, K, V) =
+\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+```
+
+### Rust
+
+```rust
+use rust_ml_transformer::{
+    scaled_attention_score, softmax, AttentionScores, DenseVector, Key, ModelError, Query,
+};
+
+fn main() -> Result<(), ModelError> {
+    let query = Query(DenseVector::new(vec![1.0, 2.0])?);
+    let key_a = Key(DenseVector::new(vec![3.0, 4.0])?);
+    let key_b = Key(DenseVector::new(vec![1.0, 0.0])?);
+
+    let scores = AttentionScores(vec![
+        scaled_attention_score(&query, &key_a)?,
+        scaled_attention_score(&query, &key_b)?,
+    ]);
+    let weights = softmax(&scores)?;
+
+    println!("scores = {:?}", scores.0);
+    println!("weights = {:?}", weights.0);
+    Ok(())
+}
+```
+
+## 3. What we will build in Rust
+
+We will build a forward-pass teaching implementation of one Transformer encoder block:
+
+- `DenseVector`
+- `DenseMatrix`
+- `TokenSequence`
+- `QueryLayer`
+- `KeyLayer`
+- `ValueLayer`
+- `AttentionHead`
+- `MultiHeadAttention`
+- `PositionalEncodingTable`
+- `LayerNorm`
+- `FeedForward`
+- `TransformerEncoderBlock`
+
+This is not a training framework.
+
+- no autograd
+- no optimizer
+- no GPU kernel wizardry
+
+Just the architecture, cleanly.
+
+## 4. Design choice: what "typed" means here
+
+There are two kinds of "typed" Rust designs you could use here.
+
+### English
+
+Option A is strict compile-time shapes:
+
+- `Matrix<ROWS, COLS>`
+- `Vector<N>`
+
+Option B is semantic types with runtime shape checks:
+
+- `TokenEmbedding`
+- `Query`
+- `Key`
+- `Value`
+- `TokenSequence`
+
+For a beginner-friendly Transformer, this module starts with option B.
+
+Why?
+
+Because you are learning the model, not auditioning for a role as a hostage negotiator with the compiler.
+
+### Algebra
+
+We still care about dimensions:
+
+```math
+x \in \mathbb{R}^{d_{model}},\quad
+q,k \in \mathbb{R}^{d_k},\quad
+v \in \mathbb{R}^{d_v}
+```
+
+We just check them at runtime while giving the roles explicit names.
+
+### Rust
+
+```rust
+use rust_ml_transformer::{DenseVector, Key, ModelError, Query, TokenEmbedding, Value};
+
+fn main() -> Result<(), ModelError> {
+    let token = TokenEmbedding(DenseVector::new(vec![0.2, 0.7, -0.1, 0.4])?);
+    let query = Query(DenseVector::new(vec![0.3, 0.1])?);
+    let key = Key(DenseVector::new(vec![0.2, 0.5])?);
+    let value = Value(DenseVector::new(vec![1.0, -1.0])?);
+
+    println!("token width = {}", token.len());
+    println!("query width = {}", query.len());
+    println!("key width = {}", key.len());
+    println!("value width = {}", value.len());
+    Ok(())
+}
+```
+
+## 5. Run the full forward-pass demo
+
+The companion crate includes a runnable encoder demo:
+
+```bash
+cargo run --example encoder_demo --manifest-path code/transformer/Cargo.toml
+```
+
+That example builds:
+
+- a 3-token input sequence
+- sinusoidal positional encodings
+- two attention heads
+- a multi-head output projection
+- a feed-forward network
+- one encoder block
+
+and then prints the final contextualized token vectors.
+
+## 6. Read the encoder block in plain English
+
+One encoder block does this:
+
+1. each token looks at the whole sequence through self-attention
+2. the block adds the original token representation back through a residual path
+3. layer normalization stabilizes the result
+4. each token goes through a small feed-forward network on its own
+5. the block adds another residual path
+6. layer normalization stabilizes the result again
+
+That is the rhythm.
+
+## 7. What comes directly from *Attention Is All You Need*?
+
+These parts are directly aligned with the original architecture:
+
+- scaled dot-product attention
+- multi-head attention
+- sinusoidal positional encodings
+- feed-forward layers
+- residual connections
+- layer normalization
+
+This lesson does not build:
+
+- decoder masking
+- encoder-decoder cross-attention
+- dropout
+- learned token embeddings
+- training
+- backpropagation
+
+Because that would turn a teaching lesson into a hostage situation.
+
+## 8. Where linear attention fits
+
+The original paper does **not** use linear attention.
+
+The slot looks like this:
 
 ```text
-Input X
-   ↓
-Self-Attention
-   ↓
-Add (Residual)
-   ↓
-Feed-Forward
-   ↓
-Add (Residual)
-   ↓
-Output
+Transformer block
+  -> attention module
 ```
 
-### Self-attention recap
+In the original paper:
 
-Attention still does the same job as before:
-
-- create queries, keys, and values
-- compare queries to keys
-- turn scores into weights
-- use the weights to mix the value vectors
-
-The important change is where this sits: it is now one sublayer inside a larger block.
-
-### Feed-forward layer
-
-After attention, each token goes through a small neural network independently. This is usually a two-layer projection with a nonlinearity in the middle.
-
-You can think of it like this:
-
-- attention mixes information across tokens
-- feed-forward transforms each token on its own
-
-### Residual connections
-
-Residual connections mean we add the original signal back to the transformed signal.
-
-That gives the block two useful properties:
-
-- the model can preserve information instead of constantly overwriting it
-- optimization becomes easier because each sublayer only needs to learn an improvement, not a full replacement
-
-### Step-by-step intuition
-
-Follow one token $x_i$:
-
-1. attention builds a contextualized version of the token
-2. residual addition preserves the original token alongside that new context
-3. the feed-forward network transforms the token representation
-4. a second residual addition keeps both the earlier state and the new nonlinear transformation
-
-### Why this architecture works
-
-This design separates responsibilities cleanly:
-
-- attention gives global context and token-to-token interaction
-- feed-forward gives nonlinear representation power
-- residual connections give stability and easier learning
-
-### What we are simplifying
-
-This lesson is intentionally not the full Transformer. We leave out:
-
-- multi-head attention
-- positional encoding
-- layer normalization
-- masking
-- training
-
-That is deliberate. Structure first. Details next.
-
-## Algebra Form
-
-Self-attention:
-
-```math
-Q = XW_Q,\quad K = XW_K,\quad V = XW_V
+```text
+attention module = scaled dot-product multi-head attention
 ```
 
-```math
-\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+In an efficient later variant:
+
+```text
+attention module = linear attention
 ```
 
-Feed-forward:
+So the block shape stays similar. The attention mechanism changes.
 
-```math
-F(x) = W_2 \cdot \text{ReLU}(W_1 x)
-```
+## 9. Why this Rust style is clean
 
-Residual structure:
+This module chooses:
 
-```math
-H = X + \text{Attention}(X)
-```
+- explicit domain structs
+- small methods
+- shape checks close to the bug
+- function signatures that tell the story
+- expressive `thiserror` diagnostics instead of panic soup
 
-```math
-\text{Output} = H + F(H)
-```
+It avoids:
 
-Mental model:
+- giant nested `Vec<Vec<Vec<f32>>>`
+- mystery tensor gymnastics
+- cleverness that hides the architecture
 
-```math
-\text{look around} \rightarrow \text{transform} \rightarrow \text{keep original} \rightarrow \text{repeat}
-```
+For a first implementation, readability beats cleverness.
 
-## Rust Form
+## 10. What to study next
 
-Core attention score:
+Study the encoder path in this order:
 
-```rust
-scores[j] = dot(&queries[i], &keys[j]) / scale;
-```
+1. `DenseVector`
+2. `DenseMatrix`
+3. `TokenSequence`
+4. `Query`, `Key`, `Value`
+5. one `AttentionHead`
+6. `MultiHeadAttention`
+7. `PositionalEncodingTable`
+8. `LayerNorm`
+9. `FeedForward`
+10. `TransformerEncoderBlock`
 
-Feed-forward core:
+Once you can explain each of those out loud, the Transformer stops looking magical and starts looking like disciplined engineering.
 
-```rust
-let hidden = mat_vec_mul(&self.w1, x);
-let activated = relu_vec(&hidden);
-mat_vec_mul(&self.w2, &activated)
-```
+## 11. One-sentence summary
 
-Residual core:
-
-```rust
-vec_add(&x[i], &attention_out[i])
-```
-
-Toy block:
-
-```rust
-type Vector = Vec<f64>;
-
-struct TransformerBlock {
-    attention: SelfAttention,
-    ff: FeedForward,
-}
-
-impl TransformerBlock {
-    fn forward(&self, x: &[Vector]) -> Vec<Vector> {
-        // 1. Attention
-        let attention_out = self.attention.forward(x);
-
-        // 2. Residual after attention
-        let mut after_attention = Vec::new();
-        for i in 0..x.len() {
-            after_attention.push(vec_add(&x[i], &attention_out[i]));
-        }
-
-        // 3. Feed-forward
-        let ff_out = self.ff.forward(&after_attention);
-
-        // 4. Final residual
-        let mut final_out = Vec::new();
-        for i in 0..x.len() {
-            final_out.push(vec_add(&after_attention[i], &ff_out[i]));
-        }
-
-        final_out
-    }
-}
-```
-
-## Why This Matters
-
-A neuron computes a dot product:
-
-```math
-z = w \cdot x
-```
-
-Attention also relies on dot products:
-
-```math
-Q \cdot K
-```
-
-The deep connection is that modern language models are still built from the same ingredients you already know. They are just composed into a richer structure.
-
-If you understand this lesson, you understand the skeleton behind GPT-, BERT-, and Transformer-style models:
-
-- tokens interact
-- context is built
-- recurrence is replaced by structure
-
-## Short Practice
-
-1. Explain a Transformer block in one sentence without using the word "Transformer."
-2. Why does the block need both attention and a feed-forward layer?
-3. What information is preserved by the residual connections?
-4. Which parts of the full Transformer are still missing from this toy version?
+A Transformer encoder block lets each token look at other tokens, mix useful information, refine itself with a small neural network, and stay stable through residual connections and normalization.

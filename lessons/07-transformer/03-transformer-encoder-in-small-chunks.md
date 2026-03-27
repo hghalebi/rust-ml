@@ -2,960 +2,859 @@
 
 ## Overview
 
-This lesson takes the standard Transformer encoder path and breaks it into deliberately small pieces.
+This lesson is the low-cognitive-load version.
 
-The rule is simple:
+Rule:
 
 - one idea
 - one tiny code snippet
-- one takeaway
+- one small win
 
-Do not try to hold the whole Transformer in your head at once. Stack small truths until the architecture becomes readable.
+Every chunk uses the same rhythm:
+
+`English -> Algebra -> Rust`
+
+Do not try to hold the whole Transformer in your head at once. Stack tiny truths until the architecture becomes ordinary.
 
 ## Learning Goals
 
-- explain how a Transformer grows out of vectors, matrices, and linear layers
-- trace one attention head from queries and keys to weighted value mixing
-- describe why multi-head attention, positional encoding, residual paths, and layer normalization exist
-- assemble one Transformer encoder block in Rust-sized pieces
-- place linear attention in the correct part of the design space
+- move from vectors and matrices to one encoder block without losing the plot
+- connect each Transformer concept to one compact algebra form
+- use the companion crate as the stable Rust vocabulary for every chunk
+- understand where linear attention fits without mixing it up with the 2017 paper
 
-## Plain-English Explanation
+## Chunk 0: A neural network is just input, math, output
 
-The Transformer is not one giant magical object.
+### English
 
-It is a disciplined stack of smaller ideas:
+At first principles level, a neural network is:
 
-1. vectors represent tokens
-2. matrices transform vectors
-3. linear layers learn projections
-4. attention lets one token score all other tokens
-5. multi-head attention repeats that scoring in parallel
-6. positional encoding tells the model where tokens are
-7. residual paths preserve earlier signal
-8. layer normalization keeps values stable
-9. feed-forward layers refine each token independently
-10. stacking blocks deepens context
+input -> some math -> output
 
-This lesson follows that order.
+The math is mostly:
 
-## Algebra Form
+- multiply
+- add
+- apply a small function like ReLU
 
-Neural-network core:
+That is already enough to start.
+
+### Algebra
 
 ```math
-\text{input} \rightarrow \text{some math} \rightarrow \text{output}
+\mathrm{input} \rightarrow \mathrm{some\ math} \rightarrow \mathrm{output}
 ```
 
-Dot product:
+### Rust
+
+```rust
+use rust_ml_transformer::{DenseVector, ModelError};
+
+fn main() -> Result<(), ModelError> {
+    let input = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+    println!("{:?}", input.as_slice());
+    Ok(())
+}
+```
+
+## Chunk 1: A vector is just a list of numbers
+
+### English
+
+A token embedding starts life as a vector.
+
+Nothing magical yet.
+
+### Algebra
 
 ```math
-a \cdot b = a_1b_1 + a_2b_2 + a_3b_3 + \dots
+x = [x_1, x_2, \ldots, x_n]
 ```
 
-Linear layer:
+### Rust
+
+```rust
+use rust_ml_transformer::{DenseVector, ModelError};
+
+fn main() -> Result<(), ModelError> {
+    let x = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+    println!("len = {}", x.len());
+    println!("{:?}", x.as_slice());
+    Ok(())
+}
+```
+
+## Chunk 2: Newtypes stop the architecture from becoming a pile of vectors
+
+### English
+
+`TokenEmbedding`, `Query`, `Key`, and `Value` are all vectors underneath.
+
+They are **not** the same idea.
+
+The newtype pattern preserves that meaning.
+
+### Algebra
 
 ```math
-y = Wx + b
+x \neq q \neq k \neq v
 ```
 
-Attention score:
+even if each object lives in some vector space.
+
+### Rust
+
+```rust
+use rust_ml_transformer::{DenseVector, ModelError, Query, TokenEmbedding};
+
+fn main() -> Result<(), ModelError> {
+    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
+    let query = Query(DenseVector::new(vec![0.2, 0.5])?);
+
+    println!("token width = {}", token.len());
+    println!("query width = {}", query.len());
+    Ok(())
+}
+```
+
+## Chunk 3: Dot product measures alignment
+
+### English
+
+Two vectors go in.
+
+One number comes out.
+
+That number tells us how much the vectors align.
+
+### Algebra
 
 ```math
-\text{score} = q \cdot k
+a \cdot b = \sum_i a_i b_i
 ```
 
-Scaled attention score:
+### Rust
+
+```rust
+use rust_ml_transformer::{DenseVector, ModelError};
+
+fn main() -> Result<(), ModelError> {
+    let a = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+    let b = DenseVector::new(vec![4.0, 5.0, 6.0])?;
+
+    println!("{}", a.dot(&b)?);
+    Ok(())
+}
+```
+
+## Chunk 4: A matrix is a table of learned weights
+
+### English
+
+A matrix transforms one vector into another.
+
+This is the heart of linear layers.
+
+### Algebra
 
 ```math
-\frac{q \cdot k}{\sqrt{d_k}}
+y = Wx
 ```
 
-Self-attention output:
+### Rust
+
+```rust
+use rust_ml_transformer::{DenseMatrix, ModelError};
+
+fn main() -> Result<(), ModelError> {
+    let matrix = DenseMatrix::from_rows(vec![
+        vec![1.0, 2.0, 3.0],
+        vec![4.0, 5.0, 6.0],
+    ])?;
+
+    println!("rows = {}", matrix.rows());
+    println!("cols = {}", matrix.cols());
+    Ok(())
+}
+```
+
+## Chunk 5: Matrix times vector is the basic neural-network move
+
+### English
+
+Every output row takes a weighted sum of the input vector.
+
+### Algebra
 
 ```math
-\text{output}_i = \sum_j \alpha_{ij} v_j
+y_r = \sum_c W_{r,c} x_c
 ```
 
-Residual connection:
+### Rust
+
+```rust
+use rust_ml_transformer::{DenseMatrix, DenseVector, ModelError};
+
+fn main() -> Result<(), ModelError> {
+    let matrix = DenseMatrix::from_rows(vec![
+        vec![1.0, 0.0, 2.0],
+        vec![0.0, 1.0, 3.0],
+    ])?;
+    let vector = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+
+    let output = matrix.mul_vec(&vector)?;
+    println!("{:?}", output.as_slice());
+    Ok(())
+}
+```
+
+## Chunk 6: The Transformer starts with a sequence
+
+### English
+
+A Transformer does not process one vector.
+
+It processes a sequence of token embeddings.
+
+### Algebra
 
 ```math
-x + f(x)
+X \in \mathbb{R}^{n \times d_{model}}
 ```
 
-Token plus position:
+### Rust
+
+```rust
+use rust_ml_transformer::{DenseVector, ModelError, TokenEmbedding, TokenSequence};
+
+fn main() -> Result<(), ModelError> {
+    let seq = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![1.0, 1.0, 0.0])?),
+    ])?;
+
+    println!("tokens = {}", seq.len());
+    println!("d_model = {}", seq.d_model());
+    Ok(())
+}
+```
+
+## Chunk 7: Query, key, and value are learned projections
+
+### English
+
+For each token embedding `x`, we make:
+
+- query: what am I looking for?
+- key: what do I offer?
+- value: what information do I carry?
+
+### Algebra
 
 ```math
-\text{token representation} = \text{word embedding} + \text{position encoding}
+q = W_Q x + b_Q,\quad
+k = W_K x + b_K,\quad
+v = W_V x + b_V
 ```
 
-Encoder block shape:
+### Rust
+
+```rust
+use rust_ml_transformer::{
+    DenseMatrix, DenseVector, ModelError, ProjectionBias, QueryLayer, QueryProjection,
+    TokenEmbedding,
+};
+
+fn main() -> Result<(), ModelError> {
+    let layer = QueryLayer::new(
+        QueryProjection(DenseMatrix::from_rows(vec![
+            vec![0.2, 0.1, 0.0, 0.3],
+            vec![0.0, 0.4, 0.1, 0.2],
+        ])?),
+        ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
+    )?;
+
+    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
+    let query = layer.forward(&token)?;
+    println!("{:?}", query.as_slice());
+    Ok(())
+}
+```
+
+## Chunk 8: One attention score is one query-key comparison
+
+### English
+
+We compare one query against one key.
+
+Higher score means stronger match.
+
+### Algebra
 
 ```math
-\text{input}
-\rightarrow \text{attention}
-\rightarrow \text{residual + norm}
-\rightarrow \text{feed-forward}
-\rightarrow \text{residual + norm}
+\mathrm{score}(q, k) = \frac{q \cdot k}{\sqrt{d_k}}
 ```
 
-## Rust Form
-
-### Chunk 0. A neural network is just input, math, output
-
-At first principles level, a neural network is just a learned function.
-
-- input goes in
-- arithmetic happens
-- output comes out
-
-The arithmetic is mostly matrix multiplication, bias addition, and a nonlinearity.
-
-### Chunk 1. A vector is a list of numbers
+### Rust
 
 ```rust
-#[derive(Debug, Clone)]
-struct Vector {
-    data: Vec<f32>,
-}
+use rust_ml_transformer::{scaled_attention_score, DenseVector, Key, ModelError, Query};
 
-impl Vector {
-    fn new(data: Vec<f32>) -> Self {
-        Self { data }
-    }
+fn main() -> Result<(), ModelError> {
+    let query = Query(DenseVector::new(vec![1.0, 2.0])?);
+    let key = Key(DenseVector::new(vec![3.0, 4.0])?);
 
-    fn len(&self) -> usize {
-        self.data.len()
-    }
+    println!("{}", scaled_attention_score(&query, &key)?);
+    Ok(())
 }
 ```
 
-Example:
+## Chunk 9: Softmax turns scores into weights
 
-```rust
-let x = Vector::new(vec![1.0, 2.0, 3.0]);
+### English
+
+Raw scores can be any numbers.
+
+Softmax turns them into weights that:
+
+- are positive
+- sum to 1
+
+### Algebra
+
+```math
+\alpha_i = \frac{e^{s_i}}{\sum_j e^{s_j}}
 ```
 
-Takeaway: a token representation starts life as a plain numeric list.
-
-### Chunk 2. Dot product
+### Rust
 
 ```rust
-impl Vector {
-    fn dot(&self, other: &Vector) -> f32 {
-        assert_eq!(self.len(), other.len());
+use rust_ml_transformer::{softmax, AttentionScores, ModelError};
 
-        self.data
-            .iter()
-            .zip(other.data.iter())
-            .map(|(a, b)| a * b)
-            .sum()
-    }
-}
-```
+fn main() -> Result<(), ModelError> {
+    let scores = AttentionScores(vec![2.0, 1.0, 0.1]);
+    let weights = softmax(&scores)?;
 
-Example:
-
-```rust
-let a = Vector::new(vec![1.0, 2.0, 3.0]);
-let b = Vector::new(vec![4.0, 5.0, 6.0]);
-
-println!("{}", a.dot(&b)); // 32.0
-```
-
-Takeaway: dot product measures alignment. Later, attention turns that alignment into a score.
-
-### Chunk 3. A matrix is a table of numbers
-
-```rust
-#[derive(Debug, Clone)]
-struct Matrix {
-    rows: usize,
-    cols: usize,
-    data: Vec<f32>, // row-major
-}
-
-impl Matrix {
-    fn new(rows: usize, cols: usize, data: Vec<f32>) -> Self {
-        assert_eq!(rows * cols, data.len());
-        Self { rows, cols, data }
-    }
-
-    fn get(&self, r: usize, c: usize) -> f32 {
-        self.data[r * self.cols + c]
-    }
+    println!("{:?}", weights.0);
+    Ok(())
 }
 ```
 
-Takeaway: matrices are learned tables that reshape and combine features.
+## Chunk 10: Weighted sum mixes the values
 
-### Chunk 4. Matrix times vector
+### English
+
+After we have attention weights, we mix the value vectors.
+
+This creates the new contextualized representation for one token.
+
+### Algebra
+
+```math
+\mathrm{output} = \sum_i \alpha_i v_i
+```
+
+### Rust
 
 ```rust
-impl Matrix {
-    fn mul_vec(&self, x: &Vector) -> Vector {
-        assert_eq!(self.cols, x.len());
+use rust_ml_transformer::{
+    weighted_sum, AttentionWeights, DenseVector, ModelError, Value,
+};
 
-        let mut out = vec![0.0; self.rows];
+fn main() -> Result<(), ModelError> {
+    let weights = AttentionWeights(vec![0.25, 0.75]);
+    let values = vec![
+        Value(DenseVector::new(vec![1.0, 0.0])?),
+        Value(DenseVector::new(vec![0.0, 2.0])?),
+    ];
 
-        for (r, slot) in out.iter_mut().enumerate() {
-            let mut sum = 0.0;
-
-            for c in 0..self.cols {
-                sum += self.get(r, c) * x.data[c];
-            }
-
-            *slot = sum;
-        }
-
-        Vector::new(out)
-    }
+    let output = weighted_sum(&weights, &values)?;
+    println!("{:?}", output.as_slice());
+    Ok(())
 }
 ```
 
-Takeaway: this is the core computation behind linear layers.
+## Chunk 11: One attention head is the whole self-attention recipe
 
-### Chunk 5. Linear layer
+### English
 
-```rust
-#[derive(Debug, Clone)]
-struct Linear {
-    weight: Matrix,
-    bias: Vector,
-}
+One attention head:
 
-impl Linear {
-    fn new(weight: Matrix, bias: Vector) -> Self {
-        assert_eq!(weight.rows, bias.len());
-        Self { weight, bias }
-    }
+1. projects every token to query, key, value
+2. compares each query with all keys
+3. mixes the values
 
-    fn forward(&self, x: &Vector) -> Vector {
-        let wx = self.weight.mul_vec(x);
+That is self-attention.
 
-        let data = wx
-            .data
-            .iter()
-            .zip(self.bias.data.iter())
-            .map(|(a, b)| a + b)
-            .collect();
+### Algebra
 
-        Vector::new(data)
-    }
-}
+```math
+\mathrm{head}(X) =
+\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
 ```
 
-Takeaway: a linear layer is just a learned projection plus a bias.
-
-### Chunk 6. ReLU
+### Rust
 
 ```rust
-fn relu(x: &Vector) -> Vector {
-    Vector::new(x.data.iter().map(|v| v.max(0.0)).collect())
-}
-```
-
-Takeaway: nonlinearities keep a deep network from collapsing into one big linear map.
-
-### Chunk 7. Tiny neural network
-
-```rust
-fn main() {
-    let layer1 = Linear::new(
-        Matrix::new(
-            2,
-            3,
-            vec![
-                1.0, 0.0, 2.0,
-                0.0, 1.0, 3.0,
-            ],
-        ),
-        Vector::new(vec![0.5, -1.0]),
-    );
-
-    let x = Vector::new(vec![1.0, 2.0, 3.0]);
-
-    let y = layer1.forward(&x);
-    let z = relu(&y);
-
-    println!("y = {:?}", y.data);
-    println!("z = {:?}", z.data);
-}
-```
-
-Takeaway: even a tiny network already has the main pattern of learned transformation plus activation.
-
-### Chunk 8. A Transformer starts with a sequence
-
-```rust
-#[derive(Debug, Clone)]
-struct Sequence {
-    tokens: Vec<Vector>,
-}
-
-impl Sequence {
-    fn new(tokens: Vec<Vector>) -> Self {
-        assert!(!tokens.is_empty());
-
-        let dim = tokens[0].len();
-        for token in &tokens {
-            assert_eq!(token.len(), dim);
-        }
-
-        Self { tokens }
-    }
-
-    fn len(&self) -> usize {
-        self.tokens.len()
-    }
-
-    fn add(&self, other: &Sequence) -> Sequence {
-        assert_eq!(self.len(), other.len());
-
-        Sequence::new(
-            self.tokens
-                .iter()
-                .zip(other.tokens.iter())
-                .map(|(left, right)| Vector::new(
-                    left.data
-                        .iter()
-                        .zip(right.data.iter())
-                        .map(|(a, b)| a + b)
-                        .collect(),
-                ))
-                .collect(),
-        )
-    }
-}
-```
-
-Takeaway: a Transformer does not process one vector. It processes a list of token vectors.
-
-### Chunk 9. Query, key, value projections
-
-```rust
-#[derive(Debug, Clone)]
-struct AttentionProjections {
-    w_q: Linear,
-    w_k: Linear,
-    w_v: Linear,
-}
-
-impl AttentionProjections {
-    fn project(&self, x: &Vector) -> (Vector, Vector, Vector) {
-        let q = self.w_q.forward(x);
-        let k = self.w_k.forward(x);
-        let v = self.w_v.forward(x);
-
-        (q, k, v)
-    }
-}
-```
-
-Takeaway:
-
-- query = what am I looking for?
-- key = what do I contain?
-- value = what information do I contribute?
-
-### Chunk 10. One attention score
-
-```rust
-fn attention_score(q: &Vector, k: &Vector) -> f32 {
-    q.dot(k)
-}
-```
-
-Takeaway: one query-key dot product measures how strongly two token views match.
-
-### Chunk 11. Scale the score
-
-```rust
-fn scaled_attention_score(q: &Vector, k: &Vector) -> f32 {
-    let dk = q.len() as f32;
-    q.dot(k) / dk.sqrt()
-}
-```
-
-Takeaway: scaling keeps large hidden dimensions from blowing up score magnitudes.
-
-### Chunk 12. Softmax turns scores into probabilities
-
-```rust
-fn softmax(xs: &[f32]) -> Vec<f32> {
-    let max = xs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-
-    let exps: Vec<f32> = xs.iter().map(|x| (x - max).exp()).collect();
-    let sum: f32 = exps.iter().sum();
-
-    exps.into_iter().map(|e| e / sum).collect()
-}
-```
-
-Takeaway: softmax turns raw compatibility scores into weights that sum to 1.
-
-### Chunk 13. Weighted sum of values
-
-```rust
-fn weighted_sum(weights: &[f32], values: &[Vector]) -> Vector {
-    assert!(!values.is_empty());
-    assert_eq!(weights.len(), values.len());
-
-    let dim = values[0].len();
-    let mut out = vec![0.0; dim];
-
-    for (weight, value) in weights.iter().zip(values.iter()) {
-        for (slot, component) in out.iter_mut().zip(value.data.iter()) {
-            *slot += weight * component;
-        }
-    }
-
-    Vector::new(out)
-}
-```
-
-Takeaway: one attention output is a mixture of value vectors, not a hard choice of one token.
-
-### Chunk 14. One full attention head
-
-```rust
-#[derive(Debug, Clone)]
-struct AttentionHead {
-    w_q: Linear,
-    w_k: Linear,
-    w_v: Linear,
-}
-
-impl AttentionHead {
-    fn forward(&self, seq: &Sequence) -> Sequence {
-        let queries: Vec<Vector> = seq.tokens.iter().map(|x| self.w_q.forward(x)).collect();
-        let keys: Vec<Vector> = seq.tokens.iter().map(|x| self.w_k.forward(x)).collect();
-        let values: Vec<Vector> = seq.tokens.iter().map(|x| self.w_v.forward(x)).collect();
-
-        let mut outputs = Vec::with_capacity(seq.len());
-
-        for q in &queries {
-            let scores: Vec<f32> = keys
-                .iter()
-                .map(|k| scaled_attention_score(q, k))
-                .collect();
-
-            let weights = softmax(&scores);
-            let out = weighted_sum(&weights, &values);
-
-            outputs.push(out);
-        }
-
-        Sequence::new(outputs)
-    }
-}
-```
-
-Takeaway: this is self-attention. Each token compares against every token, then mixes values.
-
-### Chunk 15. One head is not enough
-
-One head gives one learned way to compare tokens.
-
-Language has many relationships:
-
-- syntax
-- meaning
-- reference
-- agreement
-- position-sensitive behavior
-
-That is why the paper uses multiple heads.
-
-### Chunk 16. Concatenation helper
-
-```rust
-fn concat_vectors(vectors: &[Vector]) -> Vector {
-    let mut out = Vec::new();
-
-    for v in vectors {
-        out.extend_from_slice(&v.data);
-    }
-
-    Vector::new(out)
-}
-```
-
-Takeaway: concatenation just stitches multiple head outputs together end to end.
-
-### Chunk 17. Multi-head attention container
-
-```rust
-#[derive(Debug, Clone)]
-struct MultiHeadAttention {
-    heads: Vec<AttentionHead>,
-    w_o: Linear,
-}
-```
-
-Takeaway: multi-head attention is many attention heads plus one output projection.
-
-### Chunk 18. Multi-head forward pass
-
-```rust
-impl MultiHeadAttention {
-    fn forward(&self, seq: &Sequence) -> Sequence {
-        let head_outputs: Vec<Sequence> =
-            self.heads.iter().map(|head| head.forward(seq)).collect();
-
-        let mut final_tokens = Vec::with_capacity(seq.len());
-
-        for token_index in 0..seq.len() {
-            let token_parts: Vec<Vector> = head_outputs
-                .iter()
-                .map(|head_seq| head_seq.tokens[token_index].clone())
-                .collect();
-
-            let joined = concat_vectors(&token_parts);
-            let projected = self.w_o.forward(&joined);
-
-            final_tokens.push(projected);
-        }
-
-        Sequence::new(final_tokens)
-    }
-}
-```
-
-Takeaway: each head attends differently, then the model recombines those views.
-
-### Chunk 19. Why positional encoding is needed
-
-Attention by itself does not know order. Without positional information, the model is missing the difference between:
-
-- `dog bites man`
-- `man bites dog`
-
-That is why the Transformer adds positional encoding.
-
-### Chunk 20. Positional encoding struct
-
-```rust
-#[derive(Debug, Clone)]
-struct PositionalEncoding {
-    d_model: usize,
-}
-
-impl PositionalEncoding {
-    fn new(d_model: usize) -> Self {
-        Self { d_model }
-    }
-}
-```
-
-### Chunk 21. Sinusoidal encoding for one position
-
-```rust
-impl PositionalEncoding {
-    fn encode_position(&self, pos: usize) -> Vector {
-        let mut values = vec![0.0; self.d_model];
-
-        for (i, slot) in values.iter_mut().enumerate() {
-            let exponent = (2 * (i / 2)) as f32 / self.d_model as f32;
-            let angle = pos as f32 / 10000_f32.powf(exponent);
-
-            *slot = if i % 2 == 0 {
-                angle.sin()
-            } else {
-                angle.cos()
-            };
-        }
-
-        Vector::new(values)
-    }
-}
-```
-
-Takeaway: the original paper uses sine and cosine patterns so nearby positions have related encodings.
-
-### Chunk 22. Add positions to a sequence
-
-```rust
-impl PositionalEncoding {
-    fn add_to(&self, seq: &Sequence) -> Sequence {
-        let mut out = Vec::with_capacity(seq.len());
-
-        for pos in 0..seq.len() {
-            let pe = self.encode_position(pos);
-            let token_with_pos = Vector::new(
-                seq.tokens[pos]
-                    .data
-                    .iter()
-                    .zip(pe.data.iter())
-                    .map(|(a, b)| a + b)
-                    .collect(),
-            );
-            out.push(token_with_pos);
-        }
-
-        Sequence::new(out)
-    }
-}
-```
-
-Takeaway: a token representation is token meaning plus position signal.
-
-### Chunk 23. Residual connection
-
-```rust
-fn residual(x: &Sequence, fx: &Sequence) -> Sequence {
-    x.add(fx)
-}
-```
-
-Takeaway: residual connections let the model preserve the original signal and learn a correction on top.
-
-### Chunk 24. Why normalization exists
-
-Deep networks can become numerically unstable. Layer normalization keeps activations in a more stable range.
-
-### Chunk 25. Layer norm for one vector
-
-```rust
-#[derive(Debug, Clone)]
-struct LayerNorm {
-    eps: f32,
-}
-
-impl LayerNorm {
-    fn new() -> Self {
-        Self { eps: 1e-5 }
-    }
-
-    fn forward(&self, x: &Vector) -> Vector {
-        let mean = x.data.iter().sum::<f32>() / x.len() as f32;
-        let var = x
-            .data
-            .iter()
-            .map(|value| {
-                let delta = value - mean;
-                delta * delta
+use rust_ml_transformer::{
+    AttentionHead, DenseMatrix, DenseVector, KeyLayer, KeyProjection, ModelError,
+    ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
+    ValueProjection,
+};
+
+fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows(
+        (0..dim)
+            .map(|row| {
+                (0..dim)
+                    .map(|col| if row == col { 1.0 } else { 0.0 })
+                    .collect::<Vec<_>>()
             })
-            .sum::<f32>()
-            / x.len() as f32;
-        let denom = (var + self.eps).sqrt();
+            .collect(),
+    )
+}
 
-        Vector::new(x.data.iter().map(|v| (v - mean) / denom).collect())
-    }
+fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+}
+
+fn main() -> Result<(), ModelError> {
+    let head = AttentionHead::new(
+        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
+        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
+        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+    )?;
+
+    let seq = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+    ])?;
+
+    let outputs = head.forward(&seq)?;
+    println!("{:?}", outputs[0].as_slice());
+    Ok(())
 }
 ```
 
-Takeaway: layer norm centers and rescales each token vector independently.
+## Chunk 12: Multi-head attention means several learned views in parallel
 
-### Chunk 26. Apply layer norm to a full sequence
+### English
+
+One head gives one way to compare tokens.
+
+Multiple heads let the model learn multiple views at once.
+
+Then the head outputs are concatenated and projected back.
+
+### Algebra
+
+```math
+\mathrm{MultiHead}(Q, K, V) =
+\mathrm{Concat}(\mathrm{head}_1, \ldots, \mathrm{head}_h)W_O
+```
+
+### Rust
 
 ```rust
-impl LayerNorm {
-    fn forward_sequence(&self, seq: &Sequence) -> Sequence {
-        Sequence::new(seq.tokens.iter().map(|token| self.forward(token)).collect())
-    }
+use rust_ml_transformer::{
+    AttentionHead, DenseMatrix, DenseVector, KeyLayer, KeyProjection, ModelError,
+    MultiHeadAttention, OutputLayer, OutputProjection, ProjectionBias, QueryLayer,
+    QueryProjection, TokenEmbedding, TokenSequence, ValueLayer, ValueProjection,
+};
+
+fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows(
+        (0..dim)
+            .map(|row| {
+                (0..dim)
+                    .map(|col| if row == col { 1.0 } else { 0.0 })
+                    .collect::<Vec<_>>()
+            })
+            .collect(),
+    )
+}
+
+fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+}
+
+fn main() -> Result<(), ModelError> {
+    let head_a = AttentionHead::new(
+        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
+        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
+        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+    )?;
+    let head_b = AttentionHead::new(
+        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
+        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
+        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+    )?;
+    let mha = MultiHeadAttention::new(
+        vec![head_a, head_b],
+        OutputLayer::new(
+            OutputProjection(DenseMatrix::from_rows(vec![
+                vec![1.0, 0.0, 0.0, 0.0],
+                vec![0.0, 1.0, 0.0, 0.0],
+            ])?),
+            bias(2)?,
+        )?,
+    )?;
+
+    let seq = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+    ])?;
+
+    let output = mha.forward(&seq)?;
+    println!("{:?}", output.token(0).as_slice());
+    Ok(())
 }
 ```
 
-### Chunk 27. Feed-forward network intuition
+## Chunk 13: Positional encoding tells the model where a token is
 
-Attention mixes information between tokens.
+### English
 
-Feed-forward layers then transform each token by itself. That division is core to the architecture.
+Attention alone does not know order.
 
-### Chunk 28. Feed-forward struct
+So the paper adds positional information to token embeddings.
+
+### Algebra
+
+```math
+x_{\mathrm{with\ position}} = x_{\mathrm{token}} + x_{\mathrm{position}}
+```
+
+### Rust
 
 ```rust
-#[derive(Debug, Clone)]
-struct FeedForward {
-    linear1: Linear,
-    linear2: Linear,
+use rust_ml_transformer::{
+    DenseVector, ModelError, PositionalEncodingTable, TokenEmbedding, TokenSequence,
+};
+
+fn main() -> Result<(), ModelError> {
+    let seq = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0, 1.0])?),
+    ])?;
+    let positions = PositionalEncodingTable::new(4)?;
+
+    let with_position = positions.add_to_sequence(&seq)?;
+    println!("{:?}", with_position.token(0).as_slice());
+    Ok(())
 }
 ```
 
-### Chunk 29. Feed-forward for one token
+## Chunk 14: Residual connections keep the old signal alive
+
+### English
+
+Instead of replacing `x` with `f(x)`, we add them:
+
+`x + f(x)`
+
+That gives the model an easy path to preserve earlier information.
+
+### Algebra
+
+```math
+\mathrm{residual}(x) = x + f(x)
+```
+
+### Rust
 
 ```rust
-impl FeedForward {
-    fn forward_token(&self, x: &Vector) -> Vector {
-        let hidden = relu(&self.linear1.forward(x));
-        self.linear2.forward(&hidden)
-    }
+use rust_ml_transformer::{
+    add_sequences, DenseVector, ModelError, TokenEmbedding, TokenSequence,
+};
+
+fn main() -> Result<(), ModelError> {
+    let left = TokenSequence::new(vec![TokenEmbedding(DenseVector::new(vec![1.0, 2.0])?)])?;
+    let right = TokenSequence::new(vec![TokenEmbedding(DenseVector::new(vec![0.5, -1.0])?)])?;
+
+    let sum = add_sequences(&left, &right)?;
+    println!("{:?}", sum.token(0).as_slice());
+    Ok(())
 }
 ```
 
-### Chunk 30. Feed-forward for a full sequence
+## Chunk 15: Layer normalization stabilizes each token
+
+### English
+
+After attention or feed-forward, values can get messy.
+
+Layer normalization rescales each token so the model behaves more predictably.
+
+### Algebra
+
+```math
+\mathrm{LayerNorm}(x)_i =
+\gamma_i \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta_i
+```
+
+### Rust
 
 ```rust
-impl FeedForward {
-    fn forward_sequence(&self, seq: &Sequence) -> Sequence {
-        Sequence::new(
-            seq.tokens
-                .iter()
-                .map(|token| self.forward_token(token))
-                .collect(),
-        )
-    }
+use rust_ml_transformer::{DenseVector, LayerNorm, ModelError, TokenEmbedding};
+
+fn main() -> Result<(), ModelError> {
+    let norm = LayerNorm::new(3)?;
+    let token = TokenEmbedding(DenseVector::new(vec![1.0, 2.0, 3.0])?);
+
+    let normalized = norm.forward_token(&token)?;
+    println!("{:?}", normalized.as_slice());
+    Ok(())
 }
 ```
 
-Takeaway: attention is cross-token mixing. Feed-forward is per-token transformation.
+## Chunk 16: Feed-forward transforms each token on its own
 
-### Chunk 31. One encoder block: the heartbeat
+### English
+
+Attention mixes information across tokens.
+
+Feed-forward transforms each token independently.
+
+That division is one of the core architectural ideas.
+
+### Algebra
+
+```math
+\mathrm{FFN}(x) = W_2(\mathrm{ReLU}(W_1x + b_1)) + b_2
+```
+
+### Rust
+
+```rust
+use rust_ml_transformer::{
+    DenseMatrix, DenseVector, FeedForward, FeedForwardLayer1, FeedForwardLayer2,
+    FeedForwardProjection1, FeedForwardProjection2, ModelError, ProjectionBias, TokenEmbedding,
+};
+
+fn main() -> Result<(), ModelError> {
+    let feed_forward = FeedForward::new(
+        FeedForwardLayer1::new(
+            FeedForwardProjection1(DenseMatrix::from_rows(vec![
+                vec![1.0, 0.0],
+                vec![0.0, 1.0],
+                vec![1.0, 1.0],
+            ])?),
+            ProjectionBias(DenseVector::new(vec![0.0, 0.0, 0.0])?),
+        )?,
+        FeedForwardLayer2::new(
+            FeedForwardProjection2(DenseMatrix::from_rows(vec![
+                vec![1.0, 0.0, 0.0],
+                vec![0.0, 1.0, 0.0],
+            ])?),
+            ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
+        )?,
+    )?;
+
+    let token = TokenEmbedding(DenseVector::new(vec![1.0, -2.0])?);
+    let output = feed_forward.forward_token(&token)?;
+    println!("{:?}", output.as_slice());
+    Ok(())
+}
+```
+
+## Chunk 17: One encoder block is the full heartbeat
+
+### English
 
 One encoder block does:
 
 1. multi-head attention
-2. residual
+2. residual add
 3. layer norm
 4. feed-forward
-5. residual
+5. residual add
 6. layer norm
 
-### Chunk 32. Encoder block struct
+That is the heartbeat of the encoder.
+
+### Algebra
+
+```math
+A = \mathrm{LayerNorm}(X + \mathrm{MHA}(X))
+```
+
+```math
+Y = \mathrm{LayerNorm}(A + \mathrm{FFN}(A))
+```
+
+### Rust
 
 ```rust
-#[derive(Debug, Clone)]
-struct TransformerEncoderBlock {
-    attention: MultiHeadAttention,
-    norm1: LayerNorm,
-    feed_forward: FeedForward,
-    norm2: LayerNorm,
+use rust_ml_transformer::{
+    AttentionHead, DenseMatrix, DenseVector, FeedForward, FeedForwardLayer1, FeedForwardLayer2,
+    FeedForwardProjection1, FeedForwardProjection2, KeyLayer, KeyProjection, LayerNorm,
+    ModelError, MultiHeadAttention, OutputLayer, OutputProjection, ProjectionBias, QueryLayer,
+    QueryProjection, TokenEmbedding, TokenSequence, TransformerEncoderBlock, ValueLayer,
+    ValueProjection,
+};
+
+fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows(
+        (0..dim)
+            .map(|row| {
+                (0..dim)
+                    .map(|col| if row == col { 1.0 } else { 0.0 })
+                    .collect::<Vec<_>>()
+            })
+            .collect(),
+    )
+}
+
+fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+}
+
+fn main() -> Result<(), ModelError> {
+    let head = AttentionHead::new(
+        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
+        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
+        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+    )?;
+    let attention = MultiHeadAttention::new(
+        vec![head],
+        OutputLayer::new(OutputProjection(eye(2)?), bias(2)?)?,
+    )?;
+    let feed_forward = FeedForward::new(
+        FeedForwardLayer1::new(
+            FeedForwardProjection1(DenseMatrix::from_rows(vec![
+                vec![1.0, 0.0],
+                vec![0.0, 1.0],
+                vec![1.0, 1.0],
+            ])?),
+            ProjectionBias(DenseVector::new(vec![0.0, 0.0, 0.0])?),
+        )?,
+        FeedForwardLayer2::new(
+            FeedForwardProjection2(DenseMatrix::from_rows(vec![
+                vec![1.0, 0.0, 0.0],
+                vec![0.0, 1.0, 0.0],
+            ])?),
+            ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
+        )?,
+    )?;
+    let block = TransformerEncoderBlock::new(
+        attention,
+        LayerNorm::new(2)?,
+        feed_forward,
+        LayerNorm::new(2)?,
+    )?;
+
+    let seq = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+    ])?;
+
+    let output = block.forward(&seq)?;
+    println!("{:?}", output.token(0).as_slice());
+    Ok(())
 }
 ```
 
-### Chunk 33. Full encoder block forward pass
+## Chunk 18: Linear attention fits in the same slot, not the same paper
+
+### English
+
+Keep this category line clean:
+
+- original paper: scaled dot-product multi-head attention
+- later efficient family: linear attention
+
+Same architecture slot.
+
+Different attention math.
+
+### Algebra
+
+```math
+\mathrm{Transformer\ block}
+\rightarrow
+\mathrm{attention\ module}
+```
+
+Original paper:
+
+```math
+\mathrm{attention\ module} =
+\mathrm{scaled\ dot\ product\ multihead\ attention}
+```
+
+Later variant:
+
+```math
+\mathrm{attention\ module} =
+\mathrm{linear\ attention}
+```
+
+### Rust
 
 ```rust
-impl TransformerEncoderBlock {
-    fn forward(&self, x: &Sequence) -> Sequence {
-        let attention_out = self.attention.forward(x);
-        let after_residual = residual(x, &attention_out);
-        let after_norm = self.norm1.forward_sequence(&after_residual);
+use rust_ml_transformer::{
+    DenseMatrix, DenseVector, KeyLayer, KeyProjection, LinearAttentionHead, ModelError,
+    ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
+    ValueProjection,
+};
 
-        let ff_out = self.feed_forward.forward_sequence(&after_norm);
-        let after_ff_residual = residual(&after_norm, &ff_out);
-        self.norm2.forward_sequence(&after_ff_residual)
-    }
+fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows(
+        (0..dim)
+            .map(|row| {
+                (0..dim)
+                    .map(|col| if row == col { 1.0 } else { 0.0 })
+                    .collect::<Vec<_>>()
+            })
+            .collect(),
+    )
+}
+
+fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+}
+
+fn main() -> Result<(), ModelError> {
+    let head = LinearAttentionHead::new(
+        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
+        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
+        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+    )?;
+
+    let seq = TokenSequence::new(vec![
+        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
+        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+    ])?;
+
+    let outputs = head.forward(&seq)?;
+    println!("{:?}", outputs[0].as_slice());
+    Ok(())
 }
 ```
 
-Takeaway: this is the core encoder pattern from the paper.
+## Final memory card
 
-### Chunk 34. Why stacking blocks matters
+Keep this in your head:
 
-One block gives shallow context. Multiple blocks let the model refine meaning across layers.
-
-### Chunk 35. Stack encoder blocks
-
-```rust
-#[derive(Debug, Clone)]
-struct Encoder {
-    blocks: Vec<TransformerEncoderBlock>,
-}
-
-impl Encoder {
-    fn forward(&self, x: &Sequence) -> Sequence {
-        let mut current = x.clone();
-
-        for block in &self.blocks {
-            current = block.forward(&current);
-        }
-
-        current
-    }
-}
+```text
+TokenEmbedding = what the token is
+Query          = what the token is looking for
+Key            = what the token offers
+Value          = what information the token carries
 ```
 
-Takeaway: the Transformer becomes powerful by repeating the same block many times.
+Then:
 
-### Chunk 36. The decoder exists, but the encoder is the right first stop
-
-The original paper also has a decoder with masked self-attention and encoder-decoder attention.
-
-For first-principles learning, the encoder is the right stopping point because it already contains the main invention.
-
-### Chunk 37. Tiny demo sequence
-
-```rust
-let seq = Sequence::new(vec![
-    Vector::new(vec![1.0, 0.0, 1.0, 0.0]),
-    Vector::new(vec![0.0, 1.0, 0.0, 1.0]),
-    Vector::new(vec![1.0, 1.0, 0.0, 0.0]),
-]);
+```text
+attention = compare query with keys, then mix values
 ```
 
-### Chunk 38. Add positional encoding
+Then:
 
-```rust
-let pe = PositionalEncoding::new(4);
-let seq_with_pos = pe.add_to(&seq);
+```text
+encoder block = attention + residual + norm + feed-forward + residual + norm
 ```
 
-### Chunk 39. Build one tiny attention head
-
-```rust
-let projector = Linear::new(
-    Matrix::new(
-        4,
-        4,
-        vec![
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0,
-        ],
-    ),
-    Vector::new(vec![0.0, 0.0, 0.0, 0.0]),
-);
-
-let head = AttentionHead {
-    w_q: projector.clone(),
-    w_k: projector.clone(),
-    w_v: projector,
-};
-```
-
-### Chunk 40. Build multi-head attention
-
-```rust
-let output_projection = Linear::new(
-    Matrix::new(
-        4,
-        8,
-        vec![
-            1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-        ],
-    ),
-    Vector::new(vec![0.0, 0.0, 0.0, 0.0]),
-);
-
-let mha = MultiHeadAttention {
-    heads: vec![head.clone(), head],
-    w_o: output_projection,
-};
-```
-
-### Chunk 41. Build feed-forward and norms
-
-```rust
-let ff = FeedForward {
-    linear1: Linear::new(
-        Matrix::new(
-            4,
-            4,
-            vec![
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
-            ],
-        ),
-        Vector::new(vec![0.0, 0.0, 0.0, 0.0]),
-    ),
-    linear2: Linear::new(
-        Matrix::new(
-            4,
-            4,
-            vec![
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
-            ],
-        ),
-        Vector::new(vec![0.0, 0.0, 0.0, 0.0]),
-    ),
-};
-
-let norm1 = LayerNorm::new();
-let norm2 = LayerNorm::new();
-```
-
-### Chunk 42. Build one encoder block
-
-```rust
-let block = TransformerEncoderBlock {
-    attention: mha,
-    norm1,
-    feed_forward: ff,
-    norm2,
-};
-```
-
-### Chunk 43. Run the block
-
-```rust
-let output = block.forward(&seq_with_pos);
-println!("{}", output.len());
-```
-
-Takeaway: that one line represents attention, residual structure, normalization, and feed-forward refinement.
-
-### Chunk 44. Where linear attention fits
-
-The original paper uses scaled dot-product attention.
-
-Linear attention is a later efficient-attention family. The block shape stays similar, but the attention module is replaced with a different computation strategy.
-
-### Chunk 45. What Liger is not
-
-Keep the categories clean:
-
-- `Attention Is All You Need` = the original Transformer architecture paper
-- linear attention = later efficient attention methods
-- Liger Kernel = runtime and training optimization tooling
-
-These are different layers of the stack.
-
-### Chunk 46. What this lesson does not build
-
-This lesson does not build:
-
-- training
-- backpropagation
-- optimizers
-- masking
-- decoder cross-attention
-- batching
-- dropout
-- GPU kernels
-
-That is intentional. Architecture comes first.
-
-## Why This Matters
-
-This chunked path gives you a reliable mental model:
-
-- `Vector`, `Matrix`, and `Linear` explain the arithmetic substrate
-- `AttentionHead` explains how token-to-token interaction works
-- `MultiHeadAttention` explains why the model can look through multiple learned lenses at once
-- `PositionalEncoding` explains how order enters the system
-- `TransformerEncoderBlock` explains the exact structural loop that later models repeat many times
-
-Once this becomes familiar, later topics stop looking like symbol soup. They become variations on a known scaffold.
-
-## Short Practice
-
-Use the smallest possible learning loop:
-
-1. Read only the `Vector` and `Matrix` chunks.
-2. Compile a tiny `Linear` example.
-3. Print one query, one key, and one attention score.
-4. Print softmax weights for a three-token example.
-5. Run one attention head on a fake sequence.
-6. Run one encoder block and print the output length.
-7. Compare this lesson with Lesson 18 and explain where linear attention swaps into the block.
-
-Best next milestone:
-
-- implement `Vector`
-- implement `Matrix`
-- implement `Linear`
-- implement one `AttentionHead`
-- print queries, keys, scores, weights, and outputs
-
-That is the point where the Transformer stops feeling mystical and starts feeling architectural.
+That is the spine of the whole paper.

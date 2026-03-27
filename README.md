@@ -40,8 +40,8 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 
 ### Transformer track now included
 
-- [Lesson 17: A Tiny Transformer (From First Principles)](lessons/07-transformer/01-tiny-transformer-from-first-principles.md)
-- [Lesson 18: Typed Rust Transformer with Linear Attention](lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md)
+- [Lesson 17: What Problem the Transformer Solves](lessons/07-transformer/01-tiny-transformer-from-first-principles.md)
+- [Lesson 18: Typed Rust Transformer with Expressive Errors](lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md)
 - [Lesson 19: Transformer Encoder in Small Chunks](lessons/07-transformer/03-transformer-encoder-in-small-chunks.md)
 - [Transformer exercises](lessons/07-transformer/exercises.md)
 - [Transformer solutions](lessons/07-transformer/solutions.md)
@@ -79,23 +79,16 @@ rust-ml/
 
 ## Learning Strategy
 
-Each authored lesson follows the same pattern:
+The course keeps the same translation goal everywhere:
 
-1. Overview
-2. Learning goals
-3. Plain-English explanation
-4. Algebra form
-5. Rust form
-6. Why this matters
-7. Short practice
+`plain English <-> algebra <-> Rust`
+
+Module 07 now applies that rule in two complementary ways:
+
+- narrative lessons that explain the architecture and the implementation choices
+- a chunked encoder lesson where every concept is written as `English -> Algebra -> Rust`
 
 That repetition is intentional. Repetition is how the translation dictionary becomes automatic.
-
-The Transformer module also includes:
-
-- a typed Rust lesson that bridges architecture and implementation
-- a chunked encoder lesson for lower-cognitive-load study
-- a small companion crate that turns the lesson concepts into runnable Rust
 
 ## Suggested Study Flow
 
@@ -115,14 +108,12 @@ cargo test --manifest-path code/transformer/Cargo.toml
 
 That crate covers:
 
-- vectors and matrices
-- newtype-based scalars and structural dimensions
-- linear layers
-- sequences
-- standard self-attention
-- simplified linear attention
-- feed-forward layers
-- a minimal Transformer block
+- dense vectors and matrices
+- semantic model newtypes such as `TokenEmbedding`, `Query`, `Key`, and `Value`
+- expressive `thiserror` diagnostics for shape mistakes
+- standard self-attention and multi-head attention
+- a simplified linear-attention comparison point
+- positional encodings, layer norm, feed-forward layers, and an encoder block
 
 ## Quality Automation
 

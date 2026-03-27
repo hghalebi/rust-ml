@@ -97,8 +97,18 @@ def check_lesson_sections() -> list[str]:
     for module_dir in AUTHORED_MODULES:
         for lesson_file in sorted(module_dir.glob("[0-9][0-9]-*.md")):
             text = lesson_file.read_text(encoding="utf-8")
-            for heading in REQUIRED_LESSON_HEADINGS:
-                marker = f"## {heading}"
+            if module_dir.name == "07-transformer":
+                required_markers = (
+                    "## Overview",
+                    "## Learning Goals",
+                    "### English",
+                    "### Algebra",
+                    "### Rust",
+                )
+            else:
+                required_markers = tuple(f"## {heading}" for heading in REQUIRED_LESSON_HEADINGS)
+
+            for marker in required_markers:
                 if marker not in text:
                     errors.append(f"{relative(lesson_file)} is missing section: {marker}")
 
