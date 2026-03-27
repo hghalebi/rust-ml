@@ -8,7 +8,8 @@ This lesson gives you just enough Rust to read the neuron code as a real system 
 
 - explain why `f64`, functions, structs, and loops are enough for a first neuron
 - use the newtype pattern to distinguish inputs from weights and targets
-- read `.0`, `mut`, `&`, `*`, `Vec`, and `impl` without stopping the lesson flow
+- explain when to overload operators instead of peeling values out with `.0`
+- read `mut`, `&`, `*`, `Vec`, and `impl` without stopping the lesson flow
 - know where to go in the official Rust documentation when you want more depth
 
 ## Plain-English Explanation
@@ -32,6 +33,24 @@ The neuron uses small tuple structs such as `Input(f64)` and `Weight(f64)`.
 That is the newtype pattern.
 
 It matters because a prediction and a target may both be floating-point numbers, but they do not mean the same thing. Rust lets us preserve that meaning in the type system instead of hoping we stay disciplined forever.
+
+### Better than `value.0` everywhere
+
+You can always reach the inner number with `.0`, but that gets noisy fast.
+
+For this kind of teaching code, the better move is usually:
+
+- keep the newtypes
+- do not implement `Deref<Target = f64>`
+- implement only the math operators that make semantic sense
+
+That lets the code read like:
+
+- `x1 * w1`
+- `prediction - target`
+- `self.w1 = self.w1 - lr * gradient`
+
+without erasing the meaning of the types.
 
 ### The small Rust moves that matter here
 
@@ -85,6 +104,8 @@ That is the real translation exercise.
 ## Rust Form
 
 ```rust
+use std::ops::{Add, Mul};
+
 #[derive(Debug, Clone, Copy)]
 struct Input(f64);
 
@@ -101,8 +122,24 @@ struct Neuron {
     b: Bias,
 }
 
+impl Mul<Weight> for Input {
+    type Output = f64;
+
+    fn mul(self, rhs: Weight) -> Self::Output {
+        self.0 * rhs.0
+    }
+}
+
+impl Add<Bias> for f64 {
+    type Output = f64;
+
+    fn add(self, rhs: Bias) -> Self::Output {
+        self + rhs.0
+    }
+}
+
 fn pre_activation(x1: Input, x2: Input, w1: Weight, w2: Weight, b: Bias) -> f64 {
-    w1.0 * x1.0 + w2.0 * x2.0 + b.0
+    x1 * w1 + x2 * w2 + b
 }
 
 impl Neuron {
@@ -136,7 +173,9 @@ fn main() {
     ];
 
     for (x1, x2, target) in &dataset {
-        println!("x1={:.1}, x2={:.1}, target={:.1}", x1.0, x2.0, *target);
+        let Input(left) = *x1;
+        let Input(right) = *x2;
+        println!("x1={left:.1}, x2={right:.1}, target={target:.1}");
     }
 }
 ```
@@ -155,5 +194,6 @@ This is the same architectural instinct you use in larger systems:
 ## Short Practice
 
 1. In one sentence, what does the newtype pattern buy us in this module?
-2. Why is `mut` required for parameter updates but not for a plain forward pass?
-3. When you see `for (x1, x2, target) in &dataset`, what do `&` and `*target` mean?
+2. Why is operator overloading a better fit here than implementing `Deref<Target = f64>` for every numeric role?
+3. Why is `mut` required for parameter updates but not for a plain forward pass?
+4. When you see `for (x1, x2, target) in &dataset`, what do `&` and `*x1` mean?
