@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AUTHORED_MODULES = (
     ROOT / "lessons" / "01-foundations",
     ROOT / "lessons" / "02-vectors",
+    ROOT / "lessons" / "03-neuron",
     ROOT / "lessons" / "07-transformer",
 )
 REQUIRED_LESSON_HEADINGS = (

@@ -20,7 +20,8 @@ The goal is not to memorize symbols. The goal is to learn how to read formulas a
 
 1. Read [01 Foundations](lessons/01-foundations/README.md).
 2. Continue with [02 Vectors](lessons/02-vectors/README.md).
-3. Use [Lessons index](lessons/README.md) to see the full course map.
+3. Continue with [03 Neuron](lessons/03-neuron/README.md).
+4. Use [Lessons index](lessons/README.md) to see the full course map.
 
 If you specifically want the current Transformer material after the fundamentals, jump to [07 Transformer](lessons/07-transformer/README.md).
 
@@ -36,7 +37,15 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - [Lessons index](lessons/README.md)
 - [01 Foundations](lessons/01-foundations/README.md)
 - [02 Vectors](lessons/02-vectors/README.md)
+- [03 Neuron](lessons/03-neuron/README.md)
 - [07 Transformer](lessons/07-transformer/README.md)
+
+### Neuron track now included
+
+- [Lesson 4: Rust Essentials for a Tiny Neuron](lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md)
+- [Lesson 5: A Neuron as a Chain of Functions](lessons/03-neuron/02-neuron-as-a-chain-of-functions.md)
+- [Neuron exercises](lessons/03-neuron/exercises.md)
+- [Neuron solutions](lessons/03-neuron/solutions.md)
 
 ### Transformer track now included
 
@@ -54,7 +63,6 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 ### Source material and roadmap
 
 - [Reference material](references/README.md)
-- [03 Neuron](lessons/03-neuron/README.md)
 - [04 Learning](lessons/04-learning/README.md)
 - [05 MLP](lessons/05-mlp/README.md)
 - [06 Attention](lessons/06-attention/README.md)

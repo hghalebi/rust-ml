@@ -878,6 +878,14 @@ def wrap_known_block(path: str, idx: int, block: str) -> str:
             + textwrap.indent(block, "    ")
             + "\n    let _ = dot(&[1.0, 2.0], &[3.0, 4.0]);\n}\n"
         )
+    if key == "lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md:1":
+        return block + "\n"
+    if key == "lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md:2":
+        return block + "\n"
+    if key == "lessons/03-neuron/02-neuron-as-a-chain-of-functions.md:1":
+        return block + "\n"
+    if key == "lessons/03-neuron/02-neuron-as-a-chain-of-functions.md:2":
+        return block + "\n"
     if key == "lessons/07-transformer/01-tiny-transformer-from-first-principles.md:1":
         return common_f64() + (
             'fn main() { let queries = vec![vec![1.0, 2.0], vec![3.0, 4.0]]; let keys = vec![vec![5.0, 6.0], vec![7.0, 8.0]]; let mut scores = vec![0.0; 2]; let i = 0usize; let j = 1usize; let scale = 2.0_f64; '
@@ -934,8 +942,12 @@ def compile_general_snippets(temp_dir: Path) -> int:
         Path("lessons/02-vectors/01-scalars-vectors-matrices.md"),
         Path("lessons/02-vectors/02-sum-dot-product-and-mat-vec.md"),
         Path("lessons/02-vectors/03-sigmoid-loss-and-gradient-descent.md"),
+        Path("lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md"),
+        Path("lessons/03-neuron/02-neuron-as-a-chain-of-functions.md"),
         Path("lessons/02-vectors/exercises.md"),
         Path("lessons/02-vectors/solutions.md"),
+        Path("lessons/03-neuron/exercises.md"),
+        Path("lessons/03-neuron/solutions.md"),
     ]
 
     failures: list[str] = []
@@ -962,7 +974,9 @@ def compile_general_snippets(temp_dir: Path) -> int:
         print("\n".join(failures))
         return 1
 
-    print(f"Compiled {count} Rust snippets from the authored foundations and vectors lessons.")
+    print(
+        f"Compiled {count} Rust snippets from the authored foundations, vectors, and neuron lessons."
+    )
     return 0
 
 
