@@ -1,4 +1,4 @@
-# Lesson 19: Transformer Encoder in Small Chunks
+# Transformer Encoder in Small Chunks
 
 ## Overview
 

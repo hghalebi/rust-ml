@@ -2,6 +2,8 @@
 
 Status: active.
 
+This folder maps to course Module 6.
+
 This module now teaches the Transformer encoder path in three complementary modes:
 
 1. a narrative lesson about the problem, the paper, and the full encoder rhythm
@@ -11,6 +13,10 @@ This module now teaches the Transformer encoder path in three complementary mode
 ## Goal
 
 Understand what the Transformer is solving, how the encoder math works, and how to model that architecture cleanly in Rust.
+
+## Role In The Course
+
+This module is the current advanced preview. It is fully authored even though the bridge modules between the neuron and the Transformer are still planned.
 
 ## Outcomes
 
@@ -38,11 +44,15 @@ After this module, you should be able to:
 
 - Complete [06 Attention](../06-attention/README.md)
 
+## Current Working Prerequisite
+
+- Until [06 Attention](../06-attention/README.md) is authored, complete [02 Vectors](../02-vectors/README.md) and [03 Neuron](../03-neuron/README.md), then treat this module as an advanced preview.
+
 ## Lessons
 
-1. [Lesson 17: What Problem the Transformer Solves](01-tiny-transformer-from-first-principles.md)
-2. [Lesson 18: Typed Rust Transformer with Expressive Errors](02-typed-rust-transformer-with-linear-attention.md)
-3. [Lesson 19: Transformer Encoder in Small Chunks](03-transformer-encoder-in-small-chunks.md)
+1. [What Problem the Transformer Solves](01-tiny-transformer-from-first-principles.md)
+2. [Typed Rust Transformer with Expressive Errors](02-typed-rust-transformer-with-linear-attention.md)
+3. [Transformer Encoder in Small Chunks](03-transformer-encoder-in-small-chunks.md)
 
 ## Practice
 
@@ -58,3 +68,12 @@ The current authored material covers:
 - a semantic-newtype Rust crate with expressive shape errors
 - a runnable encoder demo
 - a chunked study path for low-cognitive-load review
+
+## Before You Move On
+
+You are ready to leave this preview module when you can:
+
+- explain the encoder block as `attention -> residual -> norm -> feed-forward -> residual -> norm`
+- describe the roles of query, key, and value without collapsing them into one generic vector
+- read the scaled dot-product attention equation and point to the matching Rust code shape
+- explain why positional encodings are required once recurrence is removed

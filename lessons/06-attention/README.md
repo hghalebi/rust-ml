@@ -2,13 +2,27 @@
 
 Status: planned.
 
-This folder will map to course Module 5.
+This folder maps to course Module 5.
+
+This module will build the conceptual bridge from vector-space models to token-to-token interaction.
 
 ## Goal
 
 Introduce token representations, projections, and attention scores.
 
-## Planned Code Artifact
+## Planned Lesson Ladder
+
+1. tokens as vectors in a sequence
+2. query, key, and value projections
+3. attention scores, weights, and weighted sums
+
+## Planned Practice
+
+- compute one attention score by hand
+- explain softmax as normalized focus
+- trace how one token mixes information from other tokens
+
+## Code Artifact
 
 - Future crate: [`code/attention`](../../code/attention/README.md)
 

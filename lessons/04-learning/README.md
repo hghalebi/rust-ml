@@ -2,7 +2,9 @@
 
 Status: planned.
 
-This folder will map to course Module 3.
+This folder maps to course Module 3.
+
+This module will take the neuron from "one step makes sense" to "a full training loop makes sense."
 
 ## Goal
 
@@ -13,7 +15,19 @@ Turn a forward pass into a learning loop:
 - update parameters
 - repeat across data
 
-## Planned Code Artifact
+## Planned Lesson Ladder
+
+1. one training step, end to end
+2. chain rule by hand for the neuron parameters
+3. dataset loops, epochs, and reading loss over time
+
+## Planned Practice
+
+- derive one update by hand
+- run a tiny dataset loop
+- explain what it means for loss to go down or fail to go down
+
+## Code Artifact
 
 - Future crate: [`code/neuron`](../../code/neuron/README.md)
 

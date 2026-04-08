@@ -2,6 +2,8 @@
 
 This directory stores source material that supports the course but is not itself part of the authored lesson flow.
 
+It exists to preserve provenance and to keep raw source material separate from the learner-facing course structure defined in [`lessons/`](../lessons/README.md) and [`lessons/COURSE-STRUCTURE.md`](../lessons/COURSE-STRUCTURE.md).
+
 ## Transcripts
 
 - [Attention is all you need (Transformer) - Model explanation (including math), Inference and Training](transcripts/attention-is-all-you-need-transformer-model-explanation-inference-training.md)
@@ -22,3 +24,4 @@ This directory stores source material that supports the course but is not itself
 - Keep the lessons in `lessons/` concise and learner-focused.
 - Keep raw or lightly edited source material here so the repo preserves provenance.
 - Use external repositories as inspiration for sequencing, pedagogy, and architecture comparisons rather than as direct code templates.
+- Do not treat this directory as part of the beginner learning path. It is a support layer, not the course surface.

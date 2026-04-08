@@ -1,4 +1,4 @@
-# Lesson 2: Reading Algebra Like a Programmer
+# Reading Algebra Like a Programmer
 
 ## Overview
 

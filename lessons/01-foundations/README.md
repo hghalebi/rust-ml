@@ -1,8 +1,14 @@
 # 01 Foundations
 
+Status: active.
+
 This folder maps to course Module 0.
 
 The job of this module is narrow and important: teach the smallest set of notation and Rust syntax needed to read beginner machine-learning material without panic.
+
+## Role In The Course
+
+This module is the orientation layer. It teaches the notation and Rust surface area that all later modules reuse.
 
 ## Outcomes
 
@@ -23,6 +29,14 @@ After this module, you should be able to:
 
 - [Exercises](exercises.md)
 - [Solutions](solutions.md)
+
+## Code Artifact
+
+- No dedicated crate yet. This module is intentionally lightweight and prepares the learner for the executable code that starts later in the course.
+
+## Prerequisite
+
+- None. This is the course entry point.
 
 ## Before You Move On
 

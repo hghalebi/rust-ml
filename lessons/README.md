@@ -4,6 +4,8 @@ This directory is the canonical course surface for the repo.
 
 The folder numbers are sequential for the repository, while the course numbering starts at Module 0.
 
+For the canonical structure rules, see [Course Structure](COURSE-STRUCTURE.md).
+
 ## Course Map
 
 | Repo folder | Course module | Status | Outcome |
@@ -14,8 +16,25 @@ The folder numbers are sequential for the repository, while the course numbering
 | [04-learning](04-learning/README.md) | Module 3 | Planned | Connect loss, gradients, and parameter updates into one training loop. |
 | [05-mlp](05-mlp/README.md) | Module 4 | Planned | Extend one neuron into a small multi-layer network. |
 | [06-attention](06-attention/README.md) | Module 5 | Planned | Represent tokens as vectors and learn how attention scores are formed. |
-| [07-transformer](07-transformer/README.md) | Module 6 | Planned | Understand the compact attention formulation as a batched version of explicit dot-product loops. |
-| [07-transformer](07-transformer/README.md) | Module 7 | Authored | Learn the encoder path through semantic Rust types, expressive errors, and an English/Algebra/Rust chunk ladder. |
+| [07-transformer](07-transformer/README.md) | Module 6 | Authored preview | Learn the encoder path through semantic Rust types, expressive errors, and an English/Algebra/Rust chunk ladder. |
+
+## Current Recommended Paths
+
+### Core path now
+
+Start here if you want the current coherent beginner sequence:
+
+1. [01 Foundations](01-foundations/README.md)
+2. [02 Scalars, Vectors, and Dot Products](02-vectors/README.md)
+3. [03 Neuron](03-neuron/README.md)
+
+### Advanced preview now
+
+If you want the most complete advanced material already in the repo, continue with:
+
+4. [07 Transformer](07-transformer/README.md)
+
+Treat it as an advanced preview for now. Modules 3, 4, and 5 remain planned and will eventually close the conceptual gap between the neuron lessons and the Transformer module.
 
 ## How To Use These Lessons
 
@@ -23,6 +42,7 @@ The folder numbers are sequential for the repository, while the course numbering
 - Treat the placeholder modules as the roadmap, not as finished material.
 - Read formulas as compressed code.
 - Read Rust loops as expanded algebra.
+- Use the core path first unless you intentionally want to jump ahead to the Transformer preview.
 
 ## Content Contract
 

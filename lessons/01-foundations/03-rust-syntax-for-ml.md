@@ -1,4 +1,4 @@
-# Lesson 3: Rust Syntax for ML
+# Rust Syntax for ML
 
 ## Overview
 
