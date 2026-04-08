@@ -1,8 +1,14 @@
 # 02 Scalars, Vectors, and Dot Products
 
+Status: active.
+
 This folder maps to course Module 1.
 
 This module turns single numbers into structure. It is where ML starts to feel like linear algebra instead of isolated arithmetic.
+
+## Role In The Course
+
+This module builds the arithmetic and shape vocabulary that the neuron, MLP, attention, and Transformer modules depend on.
 
 ## Outcomes
 
@@ -23,6 +29,14 @@ After this module, you should be able to:
 
 - [Exercises](exercises.md)
 - [Solutions](solutions.md)
+
+## Code Artifact
+
+- No dedicated crate yet. The code snippets in this module are intentionally small and compile-checked through the lesson harness.
+
+## Prerequisite
+
+- Complete [01 Foundations](../01-foundations/README.md)
 
 ## Before You Move On
 

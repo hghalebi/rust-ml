@@ -1,4 +1,4 @@
-# Lesson 1: The Single Most Important Idea
+# The Single Most Important Idea
 
 ## Overview
 

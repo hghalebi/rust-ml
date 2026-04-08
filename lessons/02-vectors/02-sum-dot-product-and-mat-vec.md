@@ -1,4 +1,4 @@
-# Lesson 2: Sum, Dot Product, and Matrix-Vector Multiplication
+# Sum, Dot Product, and Matrix-Vector Multiplication
 
 ## Overview
 

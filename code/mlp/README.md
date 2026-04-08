@@ -8,6 +8,11 @@ This directory will become the runnable crate for a tiny multi-layer perceptron.
 
 - lesson module: [05 MLP](../../lessons/05-mlp/README.md)
 
+## Current State
+
+- Lesson module is still planned
+- No executable crate yet
+
 ## Future Purpose
 
 - connect multiple neurons into layers

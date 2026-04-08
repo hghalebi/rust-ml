@@ -14,6 +14,11 @@ AUTHORED_MODULES = (
     ROOT / "lessons" / "03-neuron",
     ROOT / "lessons" / "07-transformer",
 )
+PLANNED_MODULES = (
+    ROOT / "lessons" / "04-learning",
+    ROOT / "lessons" / "05-mlp",
+    ROOT / "lessons" / "06-attention",
+)
 REQUIRED_LESSON_HEADINGS = (
     "Overview",
     "Learning Goals",
@@ -92,6 +97,51 @@ def check_authored_module_contract() -> list[str]:
     return errors
 
 
+def expected_course_module(module_dir: Path) -> int:
+    return int(module_dir.name.split("-", 1)[0]) - 1
+
+
+def check_module_readmes() -> list[str]:
+    errors: list[str] = []
+
+    authored_markers = (
+        "Status: active.",
+        "## Outcomes",
+        "## Lessons",
+        "## Practice",
+        "## Code Artifact",
+        "## Prerequisite",
+        "## Before You Move On",
+    )
+    planned_markers = (
+        "Status: planned.",
+        "## Goal",
+        "## Planned Lesson Ladder",
+        "## Planned Practice",
+        "## Code Artifact",
+        "## Prerequisite",
+        "## Planned Outcome",
+    )
+
+    for module_dir in AUTHORED_MODULES + PLANNED_MODULES:
+        readme = module_dir / "README.md"
+        if not readme.exists():
+            errors.append(f"{relative(readme)} is required")
+            continue
+
+        text = readme.read_text(encoding="utf-8")
+        expected_mapping = f"This folder maps to course Module {expected_course_module(module_dir)}."
+        if expected_mapping not in text:
+            errors.append(f"{relative(readme)} should contain mapping line: {expected_mapping}")
+
+        markers = authored_markers if module_dir in AUTHORED_MODULES else planned_markers
+        for marker in markers:
+            if marker not in text:
+                errors.append(f"{relative(readme)} is missing section: {marker}")
+
+    return errors
+
+
 def check_lesson_sections() -> list[str]:
     errors: list[str] = []
 
@@ -119,6 +169,54 @@ def check_lesson_sections() -> list[str]:
             if "TODO" in text:
                 errors.append(f"{relative(lesson_file)} contains TODO and should be finished")
 
+            if text.startswith("# Lesson "):
+                errors.append(
+                    f"{relative(lesson_file)} should use a concept-first title, not a global lesson number"
+                )
+
+    return errors
+
+
+def check_structure_guide() -> list[str]:
+    guide = ROOT / "lessons" / "COURSE-STRUCTURE.md"
+    if not guide.exists():
+        return [f"{relative(guide)} is required"]
+
+    text = guide.read_text(encoding="utf-8")
+    required_phrases = (
+        "# Course Structure",
+        "## Translation Contract",
+        "## Current Learning Paths",
+        "## Naming Rules",
+        "## Module Contract",
+        "## Lesson Contract",
+        "## Review Checklist",
+    )
+    return [
+        f"{relative(guide)} is missing section marker: {phrase}"
+        for phrase in required_phrases
+        if phrase not in text
+    ]
+
+
+def check_lessons_index_contract() -> list[str]:
+    errors: list[str] = []
+    readme = ROOT / "lessons" / "README.md"
+    text = readme.read_text(encoding="utf-8")
+
+    required_phrases = (
+        "# Lessons",
+        "## Course Map",
+        "## Current Recommended Paths",
+        "Module 6 | Authored preview",
+    )
+    for phrase in required_phrases:
+        if phrase not in text:
+            errors.append(f"lessons/README.md is missing section marker: {phrase}")
+
+    if "Module 7" in text:
+        errors.append("lessons/README.md should not reference a duplicate Module 7 entry")
+
     return errors
 
 
@@ -133,6 +231,7 @@ def check_root_readme_contract() -> list[str]:
         "## What Exists Now",
         "## Repo Map",
         "## Running The Code",
+        "lessons/COURSE-STRUCTURE.md",
     )
     for phrase in required_phrases:
         if phrase not in text:
@@ -145,7 +244,10 @@ def main() -> int:
     checks = (
         check_markdown_links,
         check_authored_module_contract,
+        check_module_readmes,
         check_lesson_sections,
+        check_structure_guide,
+        check_lessons_index_contract,
         check_root_readme_contract,
     )
 
