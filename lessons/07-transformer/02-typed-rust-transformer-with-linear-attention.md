@@ -1,4 +1,4 @@
-# Lesson 18: Typed Rust Transformer with Expressive Errors
+# Typed Rust Transformer with Expressive Errors
 
 ## Overview
 

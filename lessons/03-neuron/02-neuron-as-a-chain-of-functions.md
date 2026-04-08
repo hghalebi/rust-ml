@@ -1,4 +1,4 @@
-# Lesson 5: A Neuron as a Chain of Functions
+# A Neuron as a Chain of Functions
 
 ## Overview
 
@@ -86,6 +86,26 @@ That is why the gradient factors multiply:
 - how much prediction changes with pre-activation
 - how much pre-activation changes with the parameter
 
+### Cleaner Rust with operator traits
+
+The noisy version of this lesson uses `.0` constantly because every newtype wraps an `f64`.
+
+For the teaching code, a better compromise is:
+
+- keep the semantic wrappers
+- overload the specific operators that are mathematically valid
+- avoid `Deref<Target = f64>`, because it makes every type feel raw again
+
+That gives us readable lines such as:
+
+```text
+x1 * w1 + x2 * w2 + b
+prediction - target
+self.w1 = self.w1 - lr * d_loss_d_w1
+```
+
+The wrappers still mean something. The code just stops shouting about their storage layout.
+
 ### Why `dz/dw1 = x1`
 
 Start from:
@@ -157,6 +177,8 @@ w := w - \eta \frac{dL}{dw}
 ## Rust Form
 
 ```rust
+use std::ops::{Add, Mul, Sub};
+
 #[derive(Debug, Clone, Copy)]
 struct Input(f64);
 
@@ -172,8 +194,38 @@ struct Prediction(f64);
 #[derive(Debug, Clone, Copy)]
 struct Target(f64);
 
+impl Mul<Weight> for Input {
+    type Output = f64;
+
+    fn mul(self, rhs: Weight) -> Self::Output {
+        self.0 * rhs.0
+    }
+}
+
+impl Add<Bias> for f64 {
+    type Output = f64;
+
+    fn add(self, rhs: Bias) -> Self::Output {
+        self + rhs.0
+    }
+}
+
+impl Sub<Target> for Prediction {
+    type Output = f64;
+
+    fn sub(self, rhs: Target) -> Self::Output {
+        self.0 - rhs.0
+    }
+}
+
+impl From<Prediction> for f64 {
+    fn from(value: Prediction) -> Self {
+        value.0
+    }
+}
+
 fn pre_activation(x1: Input, x2: Input, w1: Weight, w2: Weight, b: Bias) -> f64 {
-    w1.0 * x1.0 + w2.0 * x2.0 + b.0
+    x1 * w1 + x2 * w2 + b
 }
 
 fn activation(z: f64) -> Prediction {
@@ -181,7 +233,7 @@ fn activation(z: f64) -> Prediction {
 }
 
 fn loss(prediction: Prediction, target: Target) -> f64 {
-    (prediction.0 - target.0).powi(2)
+    (prediction - target).powi(2)
 }
 
 fn main() {
@@ -190,11 +242,18 @@ fn main() {
     let y_hat = activation(z);
     let loss_value = loss(y_hat, target);
 
-    println!("z = {:.4}, y_hat = {:.4}, loss = {:.4}", z, y_hat.0, loss_value);
+    println!(
+        "z = {:.4}, y_hat = {:.4}, loss = {:.4}",
+        z,
+        f64::from(y_hat),
+        loss_value
+    );
 }
 ```
 
 ```rust
+use std::ops::{Add, Mul, Sub};
+
 #[derive(Debug, Clone, Copy)]
 struct Input(f64);
 
@@ -214,14 +273,80 @@ struct Target(f64);
 struct LearningRate(f64);
 
 #[derive(Debug, Clone, Copy)]
+struct Gradient(f64);
+
+#[derive(Debug, Clone, Copy)]
+struct Adjustment(f64);
+
+#[derive(Debug, Clone, Copy)]
 struct Neuron {
     w1: Weight,
     w2: Weight,
     b: Bias,
 }
 
+impl Mul<Weight> for Input {
+    type Output = f64;
+
+    fn mul(self, rhs: Weight) -> Self::Output {
+        self.0 * rhs.0
+    }
+}
+
+impl Add<Bias> for f64 {
+    type Output = f64;
+
+    fn add(self, rhs: Bias) -> Self::Output {
+        self + rhs.0
+    }
+}
+
+impl Sub<Target> for Prediction {
+    type Output = f64;
+
+    fn sub(self, rhs: Target) -> Self::Output {
+        self.0 - rhs.0
+    }
+}
+
+impl From<Input> for f64 {
+    fn from(value: Input) -> Self {
+        value.0
+    }
+}
+
+impl From<Prediction> for f64 {
+    fn from(value: Prediction) -> Self {
+        value.0
+    }
+}
+
+impl Mul<Gradient> for LearningRate {
+    type Output = Adjustment;
+
+    fn mul(self, rhs: Gradient) -> Self::Output {
+        Adjustment(self.0 * rhs.0)
+    }
+}
+
+impl Sub<Adjustment> for Weight {
+    type Output = Weight;
+
+    fn sub(self, rhs: Adjustment) -> Self::Output {
+        Weight(self.0 - rhs.0)
+    }
+}
+
+impl Sub<Adjustment> for Bias {
+    type Output = Bias;
+
+    fn sub(self, rhs: Adjustment) -> Self::Output {
+        Bias(self.0 - rhs.0)
+    }
+}
+
 fn pre_activation(x1: Input, x2: Input, w1: Weight, w2: Weight, b: Bias) -> f64 {
-    w1.0 * x1.0 + w2.0 * x2.0 + b.0
+    x1 * w1 + x2 * w2 + b
 }
 
 fn activation(z: f64) -> Prediction {
@@ -233,7 +358,7 @@ fn sigmoid_derivative_from_output(output: f64) -> f64 {
 }
 
 fn loss(prediction: Prediction, target: Target) -> f64 {
-    (prediction.0 - target.0).powi(2)
+    (prediction - target).powi(2)
 }
 
 impl Neuron {
@@ -253,32 +378,35 @@ impl Neuron {
         let prediction = activation(z);
         let current_loss = loss(prediction, target);
 
-        let d_loss_d_prediction = 2.0 * (prediction.0 - target.0);
+        let d_loss_d_prediction = 2.0 * (prediction - target);
         let d_prediction_d_pre_activation =
-            sigmoid_derivative_from_output(prediction.0);
+            sigmoid_derivative_from_output(f64::from(prediction));
 
-        let d_pre_activation_d_w1 = x1.0;
-        let d_pre_activation_d_w2 = x2.0;
+        let d_pre_activation_d_w1 = f64::from(x1);
+        let d_pre_activation_d_w2 = f64::from(x2);
         let d_pre_activation_d_b = 1.0;
 
-        let d_loss_d_w1 =
+        let d_loss_d_w1 = Gradient(
             d_loss_d_prediction
             * d_prediction_d_pre_activation
-            * d_pre_activation_d_w1;
+            * d_pre_activation_d_w1,
+        );
 
-        let d_loss_d_w2 =
+        let d_loss_d_w2 = Gradient(
             d_loss_d_prediction
             * d_prediction_d_pre_activation
-            * d_pre_activation_d_w2;
+            * d_pre_activation_d_w2,
+        );
 
-        let d_loss_d_b =
+        let d_loss_d_b = Gradient(
             d_loss_d_prediction
             * d_prediction_d_pre_activation
-            * d_pre_activation_d_b;
+            * d_pre_activation_d_b,
+        );
 
-        self.w1.0 -= lr.0 * d_loss_d_w1;
-        self.w2.0 -= lr.0 * d_loss_d_w2;
-        self.b.0 -= lr.0 * d_loss_d_b;
+        self.w1 = self.w1 - lr * d_loss_d_w1;
+        self.w2 = self.w2 - lr * d_loss_d_w2;
+        self.b = self.b - lr * d_loss_d_b;
 
         current_loss
     }
@@ -302,7 +430,9 @@ fn main() {
 
     println!(
         "before={:.4}, loss={:.4}, after={:.4}",
-        before.0, loss_before, after.0
+        f64::from(before),
+        loss_before,
+        f64::from(after)
     );
 }
 ```
@@ -331,4 +461,4 @@ That is the right mental model before you move to larger networks.
 
 1. Write the dependency path from `w2` to the final loss in words.
 2. If `x1 = 0`, what happens to `dz/dw1`, and what does that imply for the update?
-3. Read this line aloud in ordinary English: `self.w1.0 -= lr.0 * d_loss_d_w1;`
+3. Read this line aloud in ordinary English: `self.w1 = self.w1 - lr * d_loss_d_w1;`

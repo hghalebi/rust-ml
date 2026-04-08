@@ -1,4 +1,4 @@
-# Lesson 1: Scalars, Vectors, and Matrices
+# Scalars, Vectors, and Matrices
 
 ## Overview
 

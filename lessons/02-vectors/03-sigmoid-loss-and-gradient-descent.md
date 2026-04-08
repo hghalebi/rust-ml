@@ -1,4 +1,4 @@
-# Lesson 3: Sigmoid, Loss, and Gradient Descent
+# Sigmoid, Loss, and Gradient Descent
 
 ## Overview
 

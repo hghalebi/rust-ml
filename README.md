@@ -10,6 +10,8 @@ A beginner course for learning machine learning as a translation problem:
 
 The goal is not to memorize symbols. The goal is to learn how to read formulas as programs, and how to read Rust code as precise mathematical structure.
 
+For the canonical curriculum layout, see [lessons/Course Structure](lessons/COURSE-STRUCTURE.md).
+
 ## Who This Is For
 
 - Beginners with little or no machine learning background
@@ -21,37 +23,42 @@ The goal is not to memorize symbols. The goal is to learn how to read formulas a
 1. Read [01 Foundations](lessons/01-foundations/README.md).
 2. Continue with [02 Vectors](lessons/02-vectors/README.md).
 3. Continue with [03 Neuron](lessons/03-neuron/README.md).
-4. Use [Lessons index](lessons/README.md) to see the full course map.
+4. Use [Lessons index](lessons/README.md) to see the full course map and the roadmap modules.
 
-If you specifically want the current Transformer material after the fundamentals, jump to [07 Transformer](lessons/07-transformer/README.md).
+If you specifically want the current advanced preview after the core path, jump to [07 Transformer](lessons/07-transformer/README.md).
 
 The repo uses sequential folder numbers even though the curriculum starts at Module 0:
 
 - Course Module 0 -> Repo folder `lessons/01-foundations`
 - Course Module 1 -> Repo folder `lessons/02-vectors`
+- Course Module 2 -> Repo folder `lessons/03-neuron`
+- Course Module 3 -> Repo folder `lessons/04-learning`
+- Course Module 4 -> Repo folder `lessons/05-mlp`
+- Course Module 5 -> Repo folder `lessons/06-attention`
+- Course Module 6 -> Repo folder `lessons/07-transformer`
 
 ## What Exists Now
 
-### Authored lessons
+### Current coherent path
 
 - [Lessons index](lessons/README.md)
 - [01 Foundations](lessons/01-foundations/README.md)
 - [02 Vectors](lessons/02-vectors/README.md)
 - [03 Neuron](lessons/03-neuron/README.md)
-- [07 Transformer](lessons/07-transformer/README.md)
 
 ### Neuron track now included
 
-- [Lesson 4: Rust Essentials for a Tiny Neuron](lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md)
-- [Lesson 5: A Neuron as a Chain of Functions](lessons/03-neuron/02-neuron-as-a-chain-of-functions.md)
+- [Rust Essentials for a Tiny Neuron](lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md)
+- [A Neuron as a Chain of Functions](lessons/03-neuron/02-neuron-as-a-chain-of-functions.md)
 - [Neuron exercises](lessons/03-neuron/exercises.md)
 - [Neuron solutions](lessons/03-neuron/solutions.md)
 
-### Transformer track now included
+### Advanced authored preview
 
-- [Lesson 17: What Problem the Transformer Solves](lessons/07-transformer/01-tiny-transformer-from-first-principles.md)
-- [Lesson 18: Typed Rust Transformer with Expressive Errors](lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md)
-- [Lesson 19: Transformer Encoder in Small Chunks](lessons/07-transformer/03-transformer-encoder-in-small-chunks.md)
+- [07 Transformer](lessons/07-transformer/README.md)
+- [What Problem the Transformer Solves](lessons/07-transformer/01-tiny-transformer-from-first-principles.md)
+- [Typed Rust Transformer with Expressive Errors](lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md)
+- [Transformer Encoder in Small Chunks](lessons/07-transformer/03-transformer-encoder-in-small-chunks.md)
 - [Transformer exercises](lessons/07-transformer/exercises.md)
 - [Transformer solutions](lessons/07-transformer/solutions.md)
 
@@ -84,6 +91,7 @@ rust-ml/
 - `lessons/` is the source of truth for written teaching content.
 - `code/` follows the lesson progression and now includes a real tested `transformer` crate.
 - `book/` is intentionally thin in this pass so the course content does not drift into two competing copies.
+- `lessons/COURSE-STRUCTURE.md` is the canonical structure guide for module and lesson contracts.
 
 ## Learning Strategy
 
@@ -91,7 +99,12 @@ The course keeps the same translation goal everywhere:
 
 `plain English <-> algebra <-> Rust`
 
-Module 07 now applies that rule in two complementary ways:
+The current repo intentionally has two different learning depths:
+
+- a coherent beginner path through Modules 0, 1, and 2
+- an advanced Transformer preview in Module 6
+
+Module 6 applies the translation rule in two complementary ways:
 
 - narrative lessons that explain the architecture and the implementation choices
 - a chunked encoder lesson where every concept is written as `English -> Algebra -> Rust`
@@ -105,6 +118,13 @@ That repetition is intentional. Repetition is how the translation dictionary bec
 3. Do the module exercises without copying from the solutions first.
 4. Use the solution files to check reasoning, naming, and Rust syntax.
 5. Move to the next module only after you can explain each formula out loud in English.
+
+Current recommended sequence:
+
+1. [01 Foundations](lessons/01-foundations/README.md)
+2. [02 Vectors](lessons/02-vectors/README.md)
+3. [03 Neuron](lessons/03-neuron/README.md)
+4. [07 Transformer](lessons/07-transformer/README.md) only if you want the advanced preview before the missing bridge modules are authored
 
 ## Running The Code
 

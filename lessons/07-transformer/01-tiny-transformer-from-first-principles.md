@@ -1,4 +1,4 @@
-# Lesson 17: What Problem the Transformer Solves
+# What Problem the Transformer Solves
 
 ## Overview
 

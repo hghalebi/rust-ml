@@ -6,6 +6,10 @@ This folder maps to course Module 2.
 
 This module turns the vector and loss intuition from Module 1 into the smallest trainable model: one typed neuron with a forward pass, a loss, and a backward-pass story that does not hide behind variable soup.
 
+## Role In The Course
+
+This module is the bridge between algebraic ingredients and the first complete model. It is where the course stops talking only about parts and starts talking about a learnable system.
+
 ## Outcomes
 
 After this module, you should be able to:
