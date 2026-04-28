@@ -68,6 +68,23 @@ The current authored material covers:
 - a semantic-newtype Rust crate with expressive shape errors
 - a runnable encoder demo
 - a chunked study path for low-cognitive-load review
+- a forward-only architecture view, while full end-to-end training remains a later step
+
+## Training Preview
+
+The next major educational jump after this preview is not a new attention
+equation. It is a training-system jump.
+
+In a fully trainable Transformer, gradients must flow through:
+
+- token embeddings
+- position embeddings
+- query, key, and value projections
+- feed-forward layers
+- the final language-model head
+
+That is the point where autograd becomes more attractive than hand-derived
+parameter-by-parameter update code.
 
 ## Before You Move On
 
@@ -77,3 +94,4 @@ You are ready to leave this preview module when you can:
 - describe the roles of query, key, and value without collapsing them into one generic vector
 - read the scaled dot-product attention equation and point to the matching Rust code shape
 - explain why positional encodings are required once recurrence is removed
+- explain why full Transformer training is a stronger fit for autograd than for hand-written local update rules

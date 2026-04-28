@@ -22,6 +22,7 @@ After this module, you should be able to:
 - explain what an optimizer does and why a learning rate matters
 - read a dataset loop and an epoch counter in plain English
 - explain why token targets make language-model training a different-sized problem
+- explain the smallest next-token bridge as `token -> embedding -> lm_head -> logits -> cross-entropy`
 
 ## Lessons
 
@@ -58,4 +59,4 @@ The authored material in this module is intentionally narrow:
 - a single neuron with manual gradients
 - SGD as the first optimizer
 - tiny boolean datasets as the first training data
-- a sequence-model bridge that introduces token targets without pretending the full Transformer training story is already covered
+- a tiny next-token bridge that introduces embeddings and token targets without pretending the full Transformer training story is already covered

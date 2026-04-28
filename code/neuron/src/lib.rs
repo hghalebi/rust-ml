@@ -7,11 +7,13 @@
 //! - token-target helpers provide the first bridge from scalar labels to
 //!   next-token losses
 
+pub mod bigram;
 pub mod dataset;
 pub mod neuron;
 pub mod optimizer;
 pub mod token_targets;
 
+pub use bigram::{BigramDataset, BigramEpochMetrics, BigramError, BigramExample, TinyBigramModel};
 pub use dataset::{Dataset, DatasetError, TrainingExample};
 pub use neuron::{
     Bias, Gradient, Input, Loss, Neuron, NeuronGradients, Prediction, Target, TrainingStep, Weight,

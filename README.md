@@ -24,7 +24,7 @@ For the canonical curriculum layout, see [lessons/Course Structure](lessons/COUR
 2. Continue with [02 Vectors](lessons/02-vectors/README.md).
 3. Continue with [03 Neuron](lessons/03-neuron/README.md).
 4. Continue with [04 Learning](lessons/04-learning/README.md).
-4. Use [Lessons index](lessons/README.md) to see the full course map and the roadmap modules.
+5. Use [Lessons index](lessons/README.md) to see the full course map and the roadmap modules.
 
 If you specifically want the current advanced preview after the core path, jump to [07 Transformer](lessons/07-transformer/README.md).
 
@@ -157,6 +157,7 @@ The neuron crate covers:
 - SGD parameter updates
 - tiny boolean datasets and epoch loops
 - token-target utilities and cross-entropy bridge code
+- a tiny bigram next-token model that turns `token -> embedding -> lm_head` into a real training loop
 
 The Transformer crate covers:
 

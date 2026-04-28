@@ -12,17 +12,20 @@ It models the first honest training system in the course with:
 - SGD updates and epoch-level dataset training helpers
 - tiny boolean datasets such as OR and AND
 - token-target utilities that bridge scalar supervision to next-token loss
+- a tiny bigram next-token model using `token -> embedding -> lm_head -> logits`
 
 ## Layout
 
 ```text
 src/
+  bigram.rs
   dataset.rs
   neuron.rs
   optimizer.rs
   token_targets.rs
   lib.rs
 examples/
+  train_bigram_cycle.rs
   train_or_gate.rs
   token_targets.rs
 ```
@@ -35,6 +38,10 @@ cargo test --manifest-path code/neuron/Cargo.toml
 
 ```bash
 cargo run --example train_or_gate --manifest-path code/neuron/Cargo.toml
+```
+
+```bash
+cargo run --example train_bigram_cycle --manifest-path code/neuron/Cargo.toml
 ```
 
 ```bash

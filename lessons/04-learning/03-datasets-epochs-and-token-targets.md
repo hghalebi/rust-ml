@@ -48,6 +48,23 @@ In language modeling, the target is often "which token should come next?"
 That means the model output is no longer one number. It becomes a whole score
 vector over the vocabulary, and the target selects one index inside that vector.
 
+### The first next-token model can still be tiny
+
+You do not need full self-attention to introduce token-target training.
+
+A clean bridge is:
+
+```text
+token id -> embedding vector -> linear lm_head -> logits -> softmax loss
+```
+
+That model is still small enough to train with an explicit SGD loop, but it
+already teaches the real sequence-learning shift:
+
+- the input is discrete token identity
+- the model must produce one score per vocabulary token
+- the target picks the correct next token, not one scalar regression value
+
 ### Why this feels like a different animal
 
 The local learning rule is still gradients plus updates.
@@ -58,6 +75,11 @@ What changes is the scale:
 - larger datasets
 - more parameters
 - more structure in the target
+
+Once token embeddings, position embeddings, attention projections,
+feed-forward layers, and the language-model head all become trainable together,
+manual gradient bookkeeping stops being a pleasant teaching tool and starts
+becoming a strong argument for autograd.
 
 The training principle is continuous. The workload is not.
 
@@ -149,8 +171,8 @@ This lesson is the conceptual bridge between "a neuron learns from one labeled
 example" and "a sequence model learns to predict the next token from a whole
 distribution."
 
-The mechanism is still learning by gradients. The target structure is what gets
-much larger.
+The mechanism is still learning by gradients. The first size jump is a tiny
+embedding-plus-head model. The next jump is a full trainable Transformer.
 
 ## Short Practice
 
