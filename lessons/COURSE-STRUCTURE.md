@@ -28,6 +28,15 @@ The order matters. Beginners should not have to decode symbolic syntax before th
 
 The repo currently supports two realistic paths:
 
+## Course Phases
+
+| Phase | Course modules | Repo folders | Status |
+| --- | --- | --- | --- |
+| Orientation | Modules 0-1 | `01-foundations`, `02-vectors` | Active |
+| First trainable system | Modules 2-3 | `03-neuron`, `04-learning` | Active |
+| Bridge to architecture | Modules 4-5 | `05-mlp`, `06-attention` | Planned |
+| Architecture preview | Module 6 | `07-transformer` | Active preview |
+
 ### Core Path
 
 This is the recommended order for most learners right now:
@@ -39,7 +48,7 @@ This is the recommended order for most learners right now:
 
 ### Advanced Preview Path
 
-The Transformer module is already authored even though the middle modules are still planned.
+The Transformer module is already authored even though the MLP and Attention bridge modules are still planned.
 
 Use it as an advanced preview after the core path:
 

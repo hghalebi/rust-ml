@@ -21,4 +21,4 @@ This directory will become the runnable crate for beginner-friendly attention ex
 
 ## Packaging Note
 
-This will become a Cargo workspace crate when the attention lesson moves from concept to execution.
+This will become a Cargo crate when the attention lesson moves from concept to execution.

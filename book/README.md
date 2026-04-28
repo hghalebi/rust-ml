@@ -1,6 +1,6 @@
-# Book
+# Book Wrapper
 
-This directory is intentionally thin in the bootstrap pass.
+This directory is intentionally thin.
 
 It is reserved for a future presentation layer such as mdBook once the authored lesson structure in [`lessons/`](../lessons/README.md) is stable enough to mirror safely.
 

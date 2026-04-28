@@ -20,6 +20,15 @@ For the canonical structure rules, see [Course Structure](COURSE-STRUCTURE.md).
 
 ## Current Recommended Paths
 
+## Course Phases
+
+| Phase | Repo folders | Status | Checkpoint |
+| --- | --- | --- | --- |
+| Orientation | [01-foundations](01-foundations/README.md), [02-vectors](02-vectors/README.md) | Authored | Read notation, vectors, dot products, sigmoid, loss, and update rules. |
+| First trainable system | [03-neuron](03-neuron/README.md), [04-learning](04-learning/README.md) | Authored | Trace a neuron, compute gradients, train across a dataset, and explain token targets. |
+| Bridge to architecture | [05-mlp](05-mlp/README.md), [06-attention](06-attention/README.md) | Planned | Move from one neuron to layers, then from token vectors to attention scores. |
+| Architecture preview | [07-transformer](07-transformer/README.md) | Authored preview | Read the Transformer encoder path before the middle bridge is complete. |
+
 ### Core path now
 
 Start here if you want the current coherent beginner sequence:
@@ -35,12 +44,12 @@ If you want the most complete advanced material already in the repo, continue wi
 
 5. [07 Transformer](07-transformer/README.md)
 
-Treat it as an advanced preview for now. Modules 4 and 5 remain planned and will eventually close the remaining conceptual gap between the training lessons and the Transformer module.
+Treat it as an advanced preview for now. Course Modules 4 and 5 remain planned and will eventually close the remaining conceptual gap between the training lessons and the Transformer module.
 
 ## How To Use These Lessons
 
 - Start with the authored modules in order.
-- Treat Modules 4 and 5 as the current roadmap, not as finished material.
+- Treat Course Modules 4 and 5 as the current roadmap, not as finished material.
 - Read formulas as compressed code.
 - Read Rust loops as expanded algebra.
 - Use the core path first unless you intentionally want to jump ahead to the Transformer preview.

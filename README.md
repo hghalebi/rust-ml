@@ -84,7 +84,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - [Reference material](references/README.md)
 - [05 MLP](lessons/05-mlp/README.md)
 - [06 Attention](lessons/06-attention/README.md)
-- [Book placeholder](book/README.md)
+- [Book wrapper placeholder](book/README.md)
 
 ## Repo Map
 
@@ -100,7 +100,7 @@ rust-ml/
 ## Working Rules For This Repo
 
 - `lessons/` is the source of truth for written teaching content.
-- `code/` follows the lesson progression and now includes a real tested `transformer` crate.
+- `code/` follows the lesson progression and now includes tested `neuron` and `transformer` crates.
 - `book/` is intentionally thin in this pass so the course content does not drift into two competing copies.
 - `lessons/COURSE-STRUCTURE.md` is the canonical structure guide for module and lesson contracts.
 
@@ -114,6 +114,15 @@ The current repo intentionally has two different learning depths:
 
 - a coherent beginner path through Modules 0, 1, 2, and 3
 - an advanced Transformer preview in Module 6
+
+## Course Phases
+
+| Phase | Modules | Status | Learner checkpoint |
+| --- | --- | --- | --- |
+| Orientation | 0 Foundations, 1 Vectors | Active | Read ML notation and vector code without losing the plain-English meaning. |
+| First trainable system | 2 Neuron, 3 Learning | Active | Explain one model, one backward pass, one optimizer step, and one token-target bridge. |
+| Bridge to architecture | 4 MLP, 5 Attention | Planned | Connect training to layers, hidden activations, token interactions, and attention scores. |
+| Architecture preview | 6 Transformer | Active preview | Read the encoder path and understand why full Transformer training needs more machinery. |
 
 Module 6 applies the translation rule in two complementary ways:
 
@@ -136,7 +145,7 @@ Current recommended sequence:
 2. [02 Vectors](lessons/02-vectors/README.md)
 3. [03 Neuron](lessons/03-neuron/README.md)
 4. [04 Learning](lessons/04-learning/README.md)
-5. [07 Transformer](lessons/07-transformer/README.md) only if you want the advanced preview before the remaining bridge modules are authored
+5. [07 Transformer](lessons/07-transformer/README.md) only if you want the advanced preview before the MLP and Attention bridge modules are authored
 
 ## Running The Code
 
