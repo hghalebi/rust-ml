@@ -35,6 +35,7 @@ This is the recommended order for most learners right now:
 1. `01-foundations` -> course Module 0
 2. `02-vectors` -> course Module 1
 3. `03-neuron` -> course Module 2
+4. `04-learning` -> course Module 3
 
 ### Advanced Preview Path
 
@@ -42,9 +43,9 @@ The Transformer module is already authored even though the middle modules are st
 
 Use it as an advanced preview after the core path:
 
-4. `07-transformer` -> course Module 6 preview
+5. `07-transformer` -> course Module 6 preview
 
-Modules `04-learning`, `05-mlp`, and `06-attention` remain the planned bridge that will eventually make the path fully continuous.
+Modules `05-mlp` and `06-attention` remain the planned bridge that will eventually make the path fully continuous.
 
 ## Naming Rules
 

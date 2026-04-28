@@ -1,4 +1,4 @@
-# Lesson 5: A Neuron as a Chain of Functions
+# A Neuron as a Chain of Functions
 
 ## Overview
 

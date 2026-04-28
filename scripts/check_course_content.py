@@ -12,10 +12,10 @@ AUTHORED_MODULES = (
     ROOT / "lessons" / "01-foundations",
     ROOT / "lessons" / "02-vectors",
     ROOT / "lessons" / "03-neuron",
+    ROOT / "lessons" / "04-learning",
     ROOT / "lessons" / "07-transformer",
 )
 PLANNED_MODULES = (
-    ROOT / "lessons" / "04-learning",
     ROOT / "lessons" / "05-mlp",
     ROOT / "lessons" / "06-attention",
 )

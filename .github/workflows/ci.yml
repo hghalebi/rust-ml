@@ -72,3 +72,25 @@ jobs:
 
       - name: cargo test
         run: cargo test --manifest-path code/transformer/Cargo.toml
+
+  neuron-crate:
+    name: Neuron Crate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: cargo fmt --check
+        run: cargo fmt --manifest-path code/neuron/Cargo.toml --check
+
+      - name: cargo clippy
+        run: cargo clippy --manifest-path code/neuron/Cargo.toml --all-targets --all-features
+
+      - name: cargo test
+        run: cargo test --manifest-path code/neuron/Cargo.toml
