@@ -32,7 +32,7 @@ After this module, you should be able to:
 
 ## Code Artifact
 
-- Companion crate still planned: [`code/neuron`](../../code/neuron/README.md)
+- Runnable companion crate shared with Module 3: [`code/neuron`](../../code/neuron/README.md)
 
 ## Prerequisite
 

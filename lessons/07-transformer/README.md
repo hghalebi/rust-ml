@@ -8,7 +8,7 @@ This module now teaches the Transformer encoder path in three complementary mode
 
 1. a narrative lesson about the problem, the paper, and the full encoder rhythm
 2. a typed Rust lesson about semantic newtypes, `thiserror`, and architecture visibility
-3. an ADHD-friendly chunk ladder using `English -> Algebra -> Rust`
+3. a low-cognitive-load chunk ladder using `English -> Algebra -> Rust`
 
 ## Goal
 
@@ -16,7 +16,7 @@ Understand what the Transformer is solving, how the encoder math works, and how 
 
 ## Role In The Course
 
-This module is the current advanced preview. It is fully authored even though the bridge modules between the neuron and the Transformer are still planned.
+This module is the current advanced preview. It is fully authored even though the MLP and Attention bridge modules are still planned.
 
 ## Outcomes
 
