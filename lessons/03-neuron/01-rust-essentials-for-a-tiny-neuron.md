@@ -1,4 +1,4 @@
-# Lesson 4: Rust Essentials for a Tiny Neuron
+# Rust Essentials for a Tiny Neuron
 
 ## Overview
 

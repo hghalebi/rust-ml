@@ -46,7 +46,7 @@ After this module, you should be able to:
 
 ## Current Working Prerequisite
 
-- Until [06 Attention](../06-attention/README.md) is authored, complete [02 Vectors](../02-vectors/README.md) and [03 Neuron](../03-neuron/README.md), then treat this module as an advanced preview.
+- Until [05 MLP](../05-mlp/README.md) and [06 Attention](../06-attention/README.md) are authored, complete [02 Vectors](../02-vectors/README.md), [03 Neuron](../03-neuron/README.md), and [04 Learning](../04-learning/README.md), then treat this module as an advanced preview.
 
 ## Lessons
 

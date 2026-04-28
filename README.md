@@ -23,6 +23,7 @@ For the canonical curriculum layout, see [lessons/Course Structure](lessons/COUR
 1. Read [01 Foundations](lessons/01-foundations/README.md).
 2. Continue with [02 Vectors](lessons/02-vectors/README.md).
 3. Continue with [03 Neuron](lessons/03-neuron/README.md).
+4. Continue with [04 Learning](lessons/04-learning/README.md).
 4. Use [Lessons index](lessons/README.md) to see the full course map and the roadmap modules.
 
 If you specifically want the current advanced preview after the core path, jump to [07 Transformer](lessons/07-transformer/README.md).
@@ -45,6 +46,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - [01 Foundations](lessons/01-foundations/README.md)
 - [02 Vectors](lessons/02-vectors/README.md)
 - [03 Neuron](lessons/03-neuron/README.md)
+- [04 Learning](lessons/04-learning/README.md)
 
 ### Neuron track now included
 
@@ -52,6 +54,15 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - [A Neuron as a Chain of Functions](lessons/03-neuron/02-neuron-as-a-chain-of-functions.md)
 - [Neuron exercises](lessons/03-neuron/exercises.md)
 - [Neuron solutions](lessons/03-neuron/solutions.md)
+
+### Training bridge now included
+
+- [04 Learning](lessons/04-learning/README.md)
+- [One training step, end to end](lessons/04-learning/01-one-training-step-end-to-end.md)
+- [Backpropagation as local gradient bookkeeping](lessons/04-learning/02-backpropagation-as-local-gradient-bookkeeping.md)
+- [Datasets, epochs, and token targets](lessons/04-learning/03-datasets-epochs-and-token-targets.md)
+- [Learning exercises](lessons/04-learning/exercises.md)
+- [Learning solutions](lessons/04-learning/solutions.md)
 
 ### Advanced authored preview
 
@@ -65,12 +76,12 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 ### Executable companion code
 
 - [Code index](code/README.md)
+- [neuron crate](code/neuron/README.md)
 - [transformer crate](code/transformer/README.md)
 
 ### Source material and roadmap
 
 - [Reference material](references/README.md)
-- [04 Learning](lessons/04-learning/README.md)
 - [05 MLP](lessons/05-mlp/README.md)
 - [06 Attention](lessons/06-attention/README.md)
 - [Book placeholder](book/README.md)
@@ -101,7 +112,7 @@ The course keeps the same translation goal everywhere:
 
 The current repo intentionally has two different learning depths:
 
-- a coherent beginner path through Modules 0, 1, and 2
+- a coherent beginner path through Modules 0, 1, 2, and 3
 - an advanced Transformer preview in Module 6
 
 Module 6 applies the translation rule in two complementary ways:
@@ -124,17 +135,30 @@ Current recommended sequence:
 1. [01 Foundations](lessons/01-foundations/README.md)
 2. [02 Vectors](lessons/02-vectors/README.md)
 3. [03 Neuron](lessons/03-neuron/README.md)
-4. [07 Transformer](lessons/07-transformer/README.md) only if you want the advanced preview before the missing bridge modules are authored
+4. [04 Learning](lessons/04-learning/README.md)
+5. [07 Transformer](lessons/07-transformer/README.md) only if you want the advanced preview before the remaining bridge modules are authored
 
 ## Running The Code
 
-The current runnable code artifact is the Transformer teaching crate:
+The current runnable code artifacts are the neuron and Transformer teaching crates:
+
+```bash
+cargo test --manifest-path code/neuron/Cargo.toml
+```
 
 ```bash
 cargo test --manifest-path code/transformer/Cargo.toml
 ```
 
-That crate covers:
+The neuron crate covers:
+
+- a single typed neuron
+- squared-error loss and manual gradients
+- SGD parameter updates
+- tiny boolean datasets and epoch loops
+- token-target utilities and cross-entropy bridge code
+
+The Transformer crate covers:
 
 - dense vectors and matrices
 - semantic model newtypes such as `TokenEmbedding`, `Query`, `Key`, and `Value`
@@ -148,7 +172,7 @@ That crate covers:
 The repo now includes two GitHub Actions workflows for quality control:
 
 - `CI` runs deterministic checks for lesson structure, local Markdown links, and authored-section contracts.
-- `CI` also compile-checks Rust snippets embedded in lessons and runs `cargo fmt`, `cargo clippy`, and `cargo test` for the Transformer teaching crate.
+- `CI` also compile-checks Rust snippets embedded in lessons and runs `cargo fmt`, `cargo clippy`, and `cargo test` for both the neuron and Transformer teaching crates.
 - `Gemini Writing Review` reviews Markdown content on pull requests for English clarity, technical-teaching quality, structural discipline, and beginner friendliness.
 
 The Gemini review is advisory, not a replacement for human judgment. It is designed to catch weak phrasing, excess cognitive load, mismatches between English and code, and places where the teaching flow violates common technical-writing or technical-instruction best practices.
