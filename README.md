@@ -84,7 +84,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - [Reference material](references/README.md)
 - [05 MLP](lessons/05-mlp/README.md)
 - [06 Attention](lessons/06-attention/README.md)
-- [Book wrapper placeholder](book/README.md)
+- [Book wrapper and cover](book/README.md)
 
 ## Repo Map
 
@@ -93,7 +93,7 @@ rust-ml/
 ├── lessons/    # canonical course content
 ├── references/ # transcripts and papers used as source material
 ├── code/       # runnable companion crates
-├── book/       # future mdBook/site wrapper
+├── book/       # cover/front matter and future mdBook/site wrapper
 └── README.md
 ```
 
@@ -101,7 +101,7 @@ rust-ml/
 
 - `lessons/` is the source of truth for written teaching content.
 - `code/` follows the lesson progression and now includes tested `neuron` and `transformer` crates.
-- `book/` is intentionally thin in this pass so the course content does not drift into two competing copies.
+- `book/` holds front matter and future presentation files; lesson content remains canonical in `lessons/`.
 - `lessons/COURSE-STRUCTURE.md` is the canonical structure guide for module and lesson contracts.
 
 ## Learning Strategy
