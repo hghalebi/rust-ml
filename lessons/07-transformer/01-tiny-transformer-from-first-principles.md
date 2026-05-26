@@ -208,7 +208,7 @@ fn main() -> Result<(), ModelError> {
 The companion crate includes a runnable encoder demo:
 
 ```bash
-cargo run --example encoder_demo --manifest-path code/transformer/Cargo.toml
+cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encoder_demo
 ```
 
 That example builds:

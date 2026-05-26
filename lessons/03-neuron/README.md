@@ -32,7 +32,14 @@ After this module, you should be able to:
 
 ## Code Artifact
 
-- Companion crate still planned: [`code/neuron`](../../code/neuron/README.md)
+- Active companion crate: [`code/neuron`](../../code/neuron/README.md)
+- Run the examples in order after the two lessons:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighted_sum
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
+```
 
 ## Prerequisite
 

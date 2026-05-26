@@ -51,8 +51,8 @@ jobs:
       - name: Compile-check Rust snippets embedded in lessons
         run: python3 scripts/check_lesson_rust_snippets.py
 
-  transformer-crate:
-    name: Transformer Crate
+  teaching-crates:
+    name: Teaching Crates
     runs-on: ubuntu-latest
 
     steps:
@@ -65,10 +65,10 @@ jobs:
           components: rustfmt, clippy
 
       - name: cargo fmt --check
-        run: cargo fmt --manifest-path code/transformer/Cargo.toml --check
+        run: cargo fmt --manifest-path code/Cargo.toml --all --check
 
       - name: cargo clippy
-        run: cargo clippy --manifest-path code/transformer/Cargo.toml --all-targets --all-features
+        run: cargo clippy --manifest-path code/Cargo.toml --workspace --all-targets --all-features
 
       - name: cargo test
-        run: cargo test --manifest-path code/transformer/Cargo.toml
+        run: cargo test --manifest-path code/Cargo.toml --workspace --all-targets

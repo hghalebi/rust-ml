@@ -65,6 +65,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 ### Executable companion code
 
 - [Code index](code/README.md)
+- [neuron crate](code/neuron/README.md)
 - [transformer crate](code/transformer/README.md)
 
 ### Source material and roadmap
@@ -128,13 +129,36 @@ Current recommended sequence:
 
 ## Running The Code
 
-The current runnable code artifact is the Transformer teaching crate:
+Run every active teaching crate:
 
 ```bash
-cargo test --manifest-path code/transformer/Cargo.toml
+cargo test --manifest-path code/Cargo.toml --workspace --all-targets
 ```
 
-That crate covers:
+Run the beginner neuron ladder:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighted_sum
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
+```
+
+The neuron crate covers:
+
+- semantic scalar types such as `InputValue`, `Weight`, `Bias`, `Target`, and `LearningRate`
+- feature and weight vectors with shape checks
+- one forward pass from weighted sum to sigmoid prediction
+- one training step with visible gradients and loss before/after
+- a tiny AND-gate training loop for intuition
+
+Run the advanced Transformer encoder demo:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encoder_demo
+```
+
+The Transformer crate covers:
 
 - dense vectors and matrices
 - semantic model newtypes such as `TokenEmbedding`, `Query`, `Key`, and `Value`

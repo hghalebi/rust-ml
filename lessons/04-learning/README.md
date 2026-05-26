@@ -29,7 +29,12 @@ Turn a forward pass into a learning loop:
 
 ## Code Artifact
 
-- Future crate: [`code/neuron`](../../code/neuron/README.md)
+- Current bridge crate: [`code/neuron`](../../code/neuron/README.md)
+- The `04_and_gate_epoch` example already shows the first full dataset loop:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
+```
 
 ## Prerequisite
 

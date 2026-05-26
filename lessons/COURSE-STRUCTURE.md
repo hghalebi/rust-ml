@@ -138,6 +138,8 @@ The solution file should:
 
 - Placeholder topic directories may exist before a real crate is ready
 - Once a topic earns executable material, it should become a real Cargo crate
+- Active topic crates should be members of `code/Cargo.toml`
+- Runnable examples should map to lesson concepts in increasing difficulty
 - The code README should state whether the topic is active or still planned
 - `lessons/` stays the canonical teaching surface even when a companion crate exists
 

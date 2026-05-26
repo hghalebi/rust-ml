@@ -59,3 +59,15 @@ Without looking back, write the two three-word summaries for:
 
 1. forward pass
 2. backward pass
+
+## Exercise 7: Run the executable ladder
+
+Run these examples in order:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighted_sum
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
+```
+
+For each example, write one sentence that connects the printed numbers to the lesson vocabulary.
