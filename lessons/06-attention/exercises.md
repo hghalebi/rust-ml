@@ -67,12 +67,33 @@ Write down:
 
 Then answer: which token did query token `0` focus on most?
 
+## Exercise 6: Review a trace for public release
+
+Run:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 05_public_trace
+```
+
+Write down:
+
+1. the public query token
+2. the public attention weights
+3. the public output vector
+
+Then answer:
+
+1. Why is `AttentionTrace` not enough to prove that a trace belongs in public course material?
+2. Which constructor rejects the non-public trace?
+3. Why is this boundary separate from the attention math?
+
 ## Failure Signals
 
 - You confuse sequence length with token width.
 - You compute attention scores but cannot say which query/key pair produced each score.
 - You treat softmax as choosing one token instead of assigning a distribution of weights.
 - You mix values before normalizing scores into weights.
+- You treat a valid computation trace as automatically publishable evidence.
 
 ## Debugging Hints
 
@@ -80,3 +101,4 @@ Then answer: which token did query token `0` focus on most?
 - Compute one score by hand before reading a full trace.
 - Check that attention weights add up to one before mixing values.
 - When reading an output vector, decompose it into weighted value-vector contributions.
+- When reading a public trace, ask two separate questions: did the attention math compose, and is this evidence allowed in public learner material?

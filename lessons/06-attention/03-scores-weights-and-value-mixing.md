@@ -122,13 +122,95 @@ The model is not simply choosing one token. It is building a weighted mixture of
 
 That is why attention can preserve multiple pieces of context at once, and why its shape and numerical checks matter.
 
+## Worked Example: Public Attention Traces
+
+The attention trace proves what happened during computation. A public attention
+trace proves something different: the trace was reviewed and is allowed to become
+learner-facing evidence.
+
+### English
+
+`AttentionTrace` answers a mathematical question:
+
+```text
+Which scores, weights, and output did this query produce?
+```
+
+`PublicAttentionTrace` answers a publication question:
+
+```text
+May this trace be shown in the public course material?
+```
+
+These questions should not share one raw flag. They are different meanings, so
+the crate gives them different types.
+
+### Algebra
+
+The computation map is:
+
+```text
+Query * Keys -> AttentionScores
+AttentionScores -> AttentionWeights
+AttentionWeights * Values -> AttentionOutput
+```
+
+The public-release map is:
+
+```text
+AttentionTrace + public review -> PublicAttentionTrace
+```
+
+The first map checks attention mechanics. The second map checks whether the
+evidence belongs in the public learning path.
+
+### Rust
+
+Run the reviewed trace example:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 05_public_trace
+```
+
+It prints the public query token, its normalized weights, and its mixed output:
+
+```text
+public query token = 0
+public weights     = [0.4011, 0.1978, 0.4011]
+public output      = [0.8022, 0.5989]
+```
+
+Then it tries to publish a non-public trace and receives a typed error:
+
+```text
+blocked from public attention trace: invalid public trace in PublicAttentionTrace::from_reviewed_trace: public attention traces cannot include restricted or private sequence evidence
+```
+
+The important lesson is not only that one branch failed. The important lesson is
+where it failed: at `PublicAttentionTrace::from_reviewed_trace`, the boundary
+that owns the publication invariant.
+
+### Category-Theory Lens
+
+Read each arrow as a meaning-preserving map between typed objects. Attention
+math maps typed vectors into a typed output. Public review maps reviewed evidence
+into publishable evidence. The second map is not a numerical layer; it is a
+boundary in the learning system.
+
+### Checkpoint
+
+If someone says "the trace is valid, so it can be public", what type do they
+forget? They forget `PublicAttentionTrace`. A valid computation is not the same
+object as reviewed public evidence.
+
 ## Concept Trace
 
-- **Object/newtype:** `AttentionScore`, `AttentionWeight`, `Value`, and `AttentionOutput`.
-- **Invariant:** scores become normalized weights before values are mixed.
-- **Map:** query-key score -> softmax weight -> weighted value mixture.
-- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 03_weighted_sum`.
+- **Object/newtype:** `AttentionScore`, `AttentionWeight`, `Value`, `AttentionOutput`, and `PublicAttentionTrace`.
+- **Invariant:** scores become normalized weights before values are mixed; a trace becomes public only after review.
+- **Map:** query-key score -> softmax weight -> weighted value mixture -> reviewed public evidence.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 03_weighted_sum` and `cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 05_public_trace`.
 - **Failure signal:** you mix values before checking that weights form a distribution.
+- **Public-content failure signal:** you treat a valid `AttentionTrace` as automatically publishable.
 
 ## Short Practice
 
@@ -136,3 +218,12 @@ That is why attention can preserve multiple pieces of context at once, and why i
 2. Why should attention weights sum to one?
 3. If there are three values, how many weights are required?
 4. Which map creates the final `AttentionOutput`?
+5. Which type proves that an attention trace has crossed the public-content boundary?
+
+## Retrieval Practice
+
+Close the lesson and answer from memory:
+
+1. Recall: what are the three mechanical attention steps?
+2. Explain: why is softmax needed before value mixing?
+3. Apply: where should the crate reject a trace that is computationally valid but not publishable?

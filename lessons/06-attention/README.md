@@ -15,6 +15,7 @@ After this module, you should be able to:
 - compute one scaled dot-product score by hand
 - explain softmax as normalized focus
 - trace `scores -> weights -> weighted value mixture`
+- explain why a valid `AttentionTrace` still needs review before it becomes a `PublicAttentionTrace`
 - explain why raw numbers enter through `TryFrom` adapters before becoming attention roles
 - read the crate's `std::ops` arithmetic as typed composition between newtypes
 - run the companion attention examples and predict their outputs
@@ -41,6 +42,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 01_scor
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 02_softmax_focus
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 03_weighted_sum
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 04_attention_trace
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 05_public_trace
 ```
 
 While reading the examples, keep the same mental translation in view:
@@ -53,6 +55,15 @@ For example, `QueryComponent * KeyComponent` creates a score contribution, and
 `AttentionWeight * ValueComponent` creates one weighted value contribution. The
 names are part of the lesson: they prevent attention from looking like untyped
 array arithmetic.
+
+The public teaching trace adds one more typed boundary:
+
+```text
+AttentionTrace -> ReviewedAttentionTrace -> PublicAttentionTrace
+```
+
+That boundary separates "the computation is valid" from "this evidence is safe
+to publish in learner-facing material".
 
 ## Reference Material
 
@@ -73,4 +84,9 @@ You are ready for the Transformer module when you can explain this chain without
 ```text
 Query * Keys -> AttentionScores -> AttentionWeights
 AttentionWeights * Values -> AttentionOutput
+AttentionTrace -> ReviewedAttentionTrace -> PublicAttentionTrace
 ```
+
+You should also be able to say why the last line is not attention math. It is a
+public-content boundary: the trace may be mathematically correct while still not
+belonging in public teaching material.
