@@ -39,7 +39,18 @@ This says the same thing in compressed mathematical form.
 ## Rust Form
 
 ```rust
-let z = w1 * x1 + w2 * x2 + b;
+use rust_ml_neuron::{Bias, FeatureVector, InputValue, Weight, WeightVector};
+
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let inputs = FeatureVector::two(InputValue::try_from(2.0)?, InputValue::try_from(4.0)?);
+    let weights = WeightVector::two(Weight::try_from(1.0)?, Weight::try_from(3.0)?);
+    let bias = Bias::try_from(5.0)?;
+
+    let z = ((&inputs * &weights)? + bias)?;
+
+    println!("score = {z}");
+    Ok(())
+}
 ```
 
 This says the same thing in executable form.
@@ -56,9 +67,17 @@ The rest of the course is mostly this one skill repeated:
 
 If you can do that, ML stops looking magical.
 
+## Concept Trace
+
+- **Object/newtype:** later code names the roles as `InputValue`, `Weight`, `Bias`, and `PreActivation`.
+- **Invariant:** input values, parameters, and score roles should not be mentally interchangeable.
+- **Map:** `inputs + parameters -> score`.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighted_sum`.
+- **Failure signal:** you can write `w1 * x1 + w2 * x2 + b` but cannot say which values are data and which values are learned.
+
 ## Short Practice
 
-Translate this sentence into algebra and then Rust:
+Translate this sentence into algebra and then typed Rust:
 
 > Take two inputs, weight them, add a bias, and compute a score.
 
@@ -68,6 +87,6 @@ Expected target shape:
 z = \dots
 ```
 
-```rust
-let z = /* your expression here */ 0.0;
+```text
+let z = ((&inputs * &weights)? + bias)?;
 ```

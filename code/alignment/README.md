@@ -1,0 +1,87 @@
+# alignment
+
+Status: active.
+
+This crate is the first executable companion for [R5 Alignment](../../assignments/cs336-rust/05-alignment.md) in the CS336 Rust equivalent track.
+
+It teaches post-training as typed, auditable signal flow:
+
+```text
+PromptedResponse -> PreferenceSignal -> UpdateSignal -> AuditRecord
+```
+
+## Owns
+
+- assignment: [R5 Alignment](../../assignments/cs336-rust/05-alignment.md)
+- track: [CS336 Rust Equivalent](../../CS336-RUST-EQUIVALENT.md)
+
+## Current State
+
+- active teaching crate
+- typed instructions, responses, chosen responses, rejected responses, reward scores, reward margins, verifier results, run IDs, signal sources, and audit notes
+- supervised instruction-response examples
+- preference pairs that reject identical chosen and rejected responses
+- reward bundles that preserve chosen/rejected roles before producing a signal
+- reward margins with checked finite score arithmetic
+- verifier feedback that keeps failures visible
+- update signals and audit records that preserve source and meaning
+
+## Layout
+
+```text
+src/
+  error.rs
+  lib.rs
+examples/
+  01_instruction_example.rs
+  02_preference_signal.rs
+  03_verifier_feedback.rs
+  04_audit_record.rs
+```
+
+## Learning Ladder
+
+1. `01_instruction_example` records a supervised instruction-response example.
+2. `02_preference_signal` compares chosen and rejected responses with reward scores.
+3. `03_verifier_feedback` keeps a failed reasoning verifier result visible.
+4. `04_audit_record` wraps a post-training signal in an auditable record.
+
+## Category Lens
+
+Read the crate as maps between post-training signal objects:
+
+```text
+Instruction + Response -> PromptedResponse
+ChosenResponse + RejectedResponse -> PreferencePair
+PreferencePair + PreferenceRewards -> PreferenceSignal
+PreferenceSignal | VerifierFeedback -> UpdateSignal -> AuditRecord
+```
+
+The composition rule is provenance. A learning signal is not complete until it
+keeps its source, role, and audit note attached.
+
+Reward arithmetic is intentionally written as typed operations:
+
+```rust
+RewardScore - RewardScore -> Result<RewardMargin, AlignmentError>
+PreferencePair + PreferenceRewards -> Result<PreferenceSignal, AlignmentError>
+```
+
+## Run
+
+```bash
+cargo test --manifest-path code/Cargo.toml -p rust_ml_alignment --all-targets
+```
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 01_instruction_example
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 02_preference_signal
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 03_verifier_feedback
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 04_audit_record
+```
+
+## Scope
+
+This crate is not a production alignment system.
+
+The goal is to make signal provenance visible: every instruction, preference, reward, verifier result, and update signal keeps its role and source.

@@ -1,11 +1,12 @@
 //! Attention-specific building blocks.
 
 use crate::error::ModelError;
-use crate::math::{DenseMatrix, DenseVector};
+use crate::math::{DenseMatrix, DenseVector, VectorLength};
 use crate::types::{
-    AttentionOutput, AttentionScores, AttentionWeights, ConcatenatedHeadOutput, Key, KeyProjection,
-    OutputProjection, ProjectionBias, Query, QueryProjection, TokenEmbedding, TokenSequence, Value,
-    ValueProjection,
+    AttentionOutput, AttentionOutputSequence, AttentionScore, AttentionScores, AttentionWeights,
+    ConcatenatedHeadOutput, Key, KeyProjection, OutputProjection, ProjectionBias, Query,
+    QueryProjection, TokenEmbedding, TokenIndex, TokenSequence, Value, ValueProjection,
+    ValueSequence,
 };
 
 fn validate_projection(
@@ -14,10 +15,10 @@ fn validate_projection(
     bias: &ProjectionBias,
 ) -> Result<(), ModelError> {
     if weight.rows() != bias.len() {
-        return Err(ModelError::InvalidProjection {
+        return Err(ModelError::invalid_projection(
             operation,
-            details: "weight output dimension must match bias length",
-        });
+            "weight output dimension must match bias length",
+        ));
     }
 
     Ok(())
@@ -33,25 +34,24 @@ pub struct QueryLayer {
 impl QueryLayer {
     /// Creates a query projection layer.
     pub fn new(weight: QueryProjection, bias: ProjectionBias) -> Result<Self, ModelError> {
-        validate_projection("QueryLayer::new", &weight.0, &bias)?;
+        validate_projection("QueryLayer::new", weight.matrix(), &bias)?;
         Ok(Self { weight, bias })
     }
 
     /// Returns the expected input width.
-    pub fn input_dim(&self) -> usize {
-        self.weight.0.cols()
+    pub fn input_dim(&self) -> VectorLength {
+        self.weight.input_dim()
     }
 
     /// Returns the produced query width.
-    pub fn output_dim(&self) -> usize {
-        self.weight.0.rows()
+    pub fn output_dim(&self) -> VectorLength {
+        self.weight.output_dim()
     }
 
     /// Projects one token embedding into query space.
     pub fn forward(&self, x: &TokenEmbedding) -> Result<Query, ModelError> {
-        let wx = self.weight.0.mul_vec(&x.0)?;
-        let y = wx.add(&self.bias.0)?;
-        Ok(Query(y))
+        let projected = (&self.weight * x)?;
+        &projected + &self.bias
     }
 }
 
@@ -65,25 +65,24 @@ pub struct KeyLayer {
 impl KeyLayer {
     /// Creates a key projection layer.
     pub fn new(weight: KeyProjection, bias: ProjectionBias) -> Result<Self, ModelError> {
-        validate_projection("KeyLayer::new", &weight.0, &bias)?;
+        validate_projection("KeyLayer::new", weight.matrix(), &bias)?;
         Ok(Self { weight, bias })
     }
 
     /// Returns the expected input width.
-    pub fn input_dim(&self) -> usize {
-        self.weight.0.cols()
+    pub fn input_dim(&self) -> VectorLength {
+        self.weight.input_dim()
     }
 
     /// Returns the produced key width.
-    pub fn output_dim(&self) -> usize {
-        self.weight.0.rows()
+    pub fn output_dim(&self) -> VectorLength {
+        self.weight.output_dim()
     }
 
     /// Projects one token embedding into key space.
     pub fn forward(&self, x: &TokenEmbedding) -> Result<Key, ModelError> {
-        let wx = self.weight.0.mul_vec(&x.0)?;
-        let y = wx.add(&self.bias.0)?;
-        Ok(Key(y))
+        let projected = (&self.weight * x)?;
+        &projected + &self.bias
     }
 }
 
@@ -97,25 +96,24 @@ pub struct ValueLayer {
 impl ValueLayer {
     /// Creates a value projection layer.
     pub fn new(weight: ValueProjection, bias: ProjectionBias) -> Result<Self, ModelError> {
-        validate_projection("ValueLayer::new", &weight.0, &bias)?;
+        validate_projection("ValueLayer::new", weight.matrix(), &bias)?;
         Ok(Self { weight, bias })
     }
 
     /// Returns the expected input width.
-    pub fn input_dim(&self) -> usize {
-        self.weight.0.cols()
+    pub fn input_dim(&self) -> VectorLength {
+        self.weight.input_dim()
     }
 
     /// Returns the produced value width.
-    pub fn output_dim(&self) -> usize {
-        self.weight.0.rows()
+    pub fn output_dim(&self) -> VectorLength {
+        self.weight.output_dim()
     }
 
     /// Projects one token embedding into value space.
     pub fn forward(&self, x: &TokenEmbedding) -> Result<Value, ModelError> {
-        let wx = self.weight.0.mul_vec(&x.0)?;
-        let y = wx.add(&self.bias.0)?;
-        Ok(Value(y))
+        let projected = (&self.weight * x)?;
+        &projected + &self.bias
     }
 }
 
@@ -129,136 +127,87 @@ pub struct OutputLayer {
 impl OutputLayer {
     /// Creates an output projection layer.
     pub fn new(weight: OutputProjection, bias: ProjectionBias) -> Result<Self, ModelError> {
-        validate_projection("OutputLayer::new", &weight.0, &bias)?;
+        validate_projection("OutputLayer::new", weight.matrix(), &bias)?;
         Ok(Self { weight, bias })
     }
 
     /// Returns the expected concatenated head width.
-    pub fn input_dim(&self) -> usize {
-        self.weight.0.cols()
+    pub fn input_dim(&self) -> VectorLength {
+        self.weight.input_dim()
     }
 
     /// Returns the projected model width.
-    pub fn output_dim(&self) -> usize {
-        self.weight.0.rows()
+    pub fn output_dim(&self) -> VectorLength {
+        self.weight.output_dim()
     }
 
     /// Projects concatenated head output back into model space.
     pub fn forward(&self, x: &ConcatenatedHeadOutput) -> Result<TokenEmbedding, ModelError> {
-        let wx = self.weight.0.mul_vec(&x.0)?;
-        let y = wx.add(&self.bias.0)?;
-        Ok(TokenEmbedding(y))
+        let projected = (&self.weight * x)?;
+        &projected + &self.bias
     }
 }
 
 /// Computes the scaled attention score for one query-key pair.
-pub fn scaled_attention_score(query: &Query, key: &Key) -> Result<f32, ModelError> {
-    if query.len() != key.len() {
-        return Err(ModelError::DimensionMismatch {
-            operation: "scaled_attention_score",
-            left_label: "query",
-            left_shape: vec![query.len()],
-            right_label: "key",
-            right_shape: vec![key.len()],
-            hint: "query and key must have the same dimension",
-        });
-    }
-
-    let dot = query.0.dot(&key.0)?;
-    Ok(dot / (query.len() as f32).sqrt())
+pub fn scaled_attention_score(query: &Query, key: &Key) -> Result<AttentionScore, ModelError> {
+    query * key
 }
 
 /// Normalizes attention scores into attention weights.
 pub fn softmax(scores: &AttentionScores) -> Result<AttentionWeights, ModelError> {
-    if scores.0.is_empty() {
-        return Err(ModelError::EmptyInput {
-            operation: "softmax",
-            details: "scores cannot be empty",
-        });
-    }
-
-    let max = scores.0.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let exp_values: Vec<f32> = scores.0.iter().map(|value| (value - max).exp()).collect();
+    let max = scores
+        .values()
+        .map(|score| score.as_f32())
+        .fold(f32::NEG_INFINITY, f32::max);
+    let exp_values: Vec<f32> = scores
+        .values()
+        .map(|score| (score.as_f32() - max).exp())
+        .collect();
     let sum: f32 = exp_values.iter().sum();
 
     if !sum.is_finite() || sum == 0.0 {
-        return Err(ModelError::NumericalIssue {
-            operation: "softmax",
-            details: "softmax normalization sum was zero or non-finite",
-        });
+        return Err(ModelError::numerical_issue(
+            "softmax",
+            "softmax normalization sum was zero or non-finite",
+        ));
     }
 
-    Ok(AttentionWeights(
-        exp_values.into_iter().map(|value| value / sum).collect(),
-    ))
+    AttentionWeights::from_weights(
+        exp_values
+            .into_iter()
+            .map(|value| crate::types::AttentionWeight::try_from(value / sum))
+            .collect::<Result<Vec<_>, _>>()?,
+    )
 }
 
 /// Applies attention weights to value vectors.
 pub fn weighted_sum(
     weights: &AttentionWeights,
-    values: &[Value],
+    values: &ValueSequence,
 ) -> Result<AttentionOutput, ModelError> {
-    if values.is_empty() {
-        return Err(ModelError::EmptyInput {
-            operation: "weighted_sum",
-            details: "values cannot be empty",
-        });
-    }
-
-    if weights.0.len() != values.len() {
-        return Err(ModelError::DimensionMismatch {
-            operation: "weighted_sum",
-            left_label: "attention weights",
-            left_shape: vec![weights.0.len()],
-            right_label: "values",
-            right_shape: vec![values.len()],
-            hint: "the number of weights must equal the number of values",
-        });
-    }
-
-    let value_dim = values[0].len();
-
-    for value in values {
-        if value.len() != value_dim {
-            return Err(ModelError::DimensionMismatch {
-                operation: "weighted_sum",
-                left_label: "first value",
-                left_shape: vec![value_dim],
-                right_label: "next value",
-                right_shape: vec![value.len()],
-                hint: "all value vectors must have the same dimension",
-            });
-        }
-    }
-
-    let mut out = vec![0.0; value_dim];
-
-    for (weight, value) in weights.0.iter().zip(values.iter()) {
-        for (slot, component) in out.iter_mut().zip(value.0.as_slice().iter()) {
-            *slot += weight * component;
-        }
-    }
-
-    Ok(AttentionOutput(DenseVector::new(out)?))
+    weights * values
 }
 
 /// Concatenates several head outputs into one larger vector.
 pub fn concat_attention_outputs(
-    outputs: &[AttentionOutput],
+    outputs: impl IntoIterator<Item = AttentionOutput>,
 ) -> Result<ConcatenatedHeadOutput, ModelError> {
+    let outputs = outputs.into_iter().collect::<Vec<_>>();
     if outputs.is_empty() {
-        return Err(ModelError::EmptyInput {
-            operation: "concat_attention_outputs",
-            details: "there must be at least one head output",
-        });
+        return Err(ModelError::empty_input(
+            "concat_attention_outputs",
+            "there must be at least one head output",
+        ));
     }
 
     let mut data = Vec::new();
-    for output in outputs {
-        data.extend_from_slice(output.as_slice());
+    for output in &outputs {
+        data.extend_from_slice(output.vector().as_raw_slice());
     }
 
-    Ok(ConcatenatedHeadOutput(DenseVector::new(data)?))
+    Ok(ConcatenatedHeadOutput::from_vector(
+        DenseVector::from_raw_values("concat_attention_outputs", data)?,
+    ))
 }
 
 /// One scaled dot-product attention head.
@@ -279,17 +228,17 @@ impl AttentionHead {
         if query_layer.input_dim() != key_layer.input_dim()
             || query_layer.input_dim() != value_layer.input_dim()
         {
-            return Err(ModelError::InvalidHeadConfiguration {
-                operation: "AttentionHead::new",
-                details: "query, key, and value layers must accept the same token width",
-            });
+            return Err(ModelError::invalid_head_configuration(
+                "AttentionHead::new",
+                "query, key, and value layers must accept the same token width",
+            ));
         }
 
         if query_layer.output_dim() != key_layer.output_dim() {
-            return Err(ModelError::InvalidHeadConfiguration {
-                operation: "AttentionHead::new",
-                details: "query and key layers must produce the same head dimension",
-            });
+            return Err(ModelError::invalid_head_configuration(
+                "AttentionHead::new",
+                "query and key layers must produce the same head dimension",
+            ));
         }
 
         Ok(Self {
@@ -300,55 +249,53 @@ impl AttentionHead {
     }
 
     /// Returns the expected token width.
-    pub fn input_dim(&self) -> usize {
+    pub fn input_dim(&self) -> VectorLength {
         self.query_layer.input_dim()
     }
 
     /// Returns the query/key head dimension.
-    pub fn score_dim(&self) -> usize {
+    pub fn score_dim(&self) -> VectorLength {
         self.query_layer.output_dim()
     }
 
     /// Returns the output width contributed by this head.
-    pub fn value_dim(&self) -> usize {
+    pub fn value_dim(&self) -> VectorLength {
         self.value_layer.output_dim()
     }
 
     /// Runs scaled dot-product attention across the whole sequence.
-    pub fn forward(&self, seq: &TokenSequence) -> Result<Vec<AttentionOutput>, ModelError> {
+    pub fn forward(&self, seq: &TokenSequence) -> Result<AttentionOutputSequence, ModelError> {
         let queries: Vec<Query> = seq
             .tokens()
-            .iter()
             .map(|token| self.query_layer.forward(token))
             .collect::<Result<_, _>>()?;
 
         let keys: Vec<Key> = seq
             .tokens()
-            .iter()
             .map(|token| self.key_layer.forward(token))
             .collect::<Result<_, _>>()?;
 
         let values: Vec<Value> = seq
             .tokens()
-            .iter()
             .map(|token| self.value_layer.forward(token))
             .collect::<Result<_, _>>()?;
+        let values = ValueSequence::from_values(values)?;
 
-        let mut outputs = Vec::with_capacity(seq.len());
+        let mut outputs = Vec::with_capacity(seq.len_usize());
 
         for query in &queries {
-            let scores = AttentionScores(
+            let scores = AttentionScores::from_scores(
                 keys.iter()
-                    .map(|key| scaled_attention_score(query, key))
+                    .map(|key| query * key)
                     .collect::<Result<Vec<_>, _>>()?,
-            );
+            )?;
 
             let weights = softmax(&scores)?;
-            let output = weighted_sum(&weights, &values)?;
+            let output = (&weights * &values)?;
             outputs.push(output);
         }
 
-        Ok(outputs)
+        AttentionOutputSequence::from_outputs(outputs)
     }
 }
 
@@ -376,55 +323,53 @@ impl LinearAttentionHead {
     }
 
     fn phi(vector: &DenseVector) -> DenseVector {
-        vector.map(|value| value.max(0.0) + 1e-6)
+        vector.map_raw(|value| value.max(0.0) + 1e-6)
     }
 
     /// Runs the simplified linear-attention forward pass across the whole sequence.
-    pub fn forward(&self, seq: &TokenSequence) -> Result<Vec<AttentionOutput>, ModelError> {
+    pub fn forward(&self, seq: &TokenSequence) -> Result<AttentionOutputSequence, ModelError> {
         let queries: Vec<Query> = seq
             .tokens()
-            .iter()
             .map(|token| {
                 self.query_layer
                     .forward(token)
-                    .map(|query| Query(Self::phi(&query.0)))
+                    .map(|query| Query::from_vector(Self::phi(query.vector())))
             })
             .collect::<Result<_, _>>()?;
 
         let keys: Vec<Key> = seq
             .tokens()
-            .iter()
             .map(|token| {
                 self.key_layer
                     .forward(token)
-                    .map(|key| Key(Self::phi(&key.0)))
+                    .map(|key| Key::from_vector(Self::phi(key.vector())))
             })
             .collect::<Result<_, _>>()?;
 
         let values: Vec<Value> = seq
             .tokens()
-            .iter()
             .map(|token| self.value_layer.forward(token))
             .collect::<Result<_, _>>()?;
 
-        let key_dim = keys[0].len();
-        let value_dim = values[0].len();
+        let key_dim = keys[0].len().as_usize();
+        let value_dim = values[0].len().as_usize();
 
-        let mut summary = DenseMatrix::zeros(key_dim, value_dim)?;
-        let mut normalizer = DenseVector::zeros(key_dim)?;
+        let mut summary = DenseMatrix::zeros_raw(key_dim, value_dim)?;
+        let mut normalizer = DenseVector::zeros_raw(key_dim)?;
 
         for (key, value) in keys.iter().zip(values.iter()) {
             for row in 0..key_dim {
-                normalizer.set(row, normalizer.get(row) + key.0.get(row));
+                normalizer.set_raw(row, normalizer.raw_at(row) + key.vector().raw_at(row))?;
 
                 for col in 0..value_dim {
-                    let updated = summary.get(row, col) + key.0.get(row) * value.0.get(col);
-                    summary.set(row, col, updated);
+                    let updated = summary.raw_at(row, col)
+                        + key.vector().raw_at(row) * value.vector().raw_at(col);
+                    summary.set_raw(row, col, updated)?;
                 }
             }
         }
 
-        let mut outputs = Vec::with_capacity(seq.len());
+        let mut outputs = Vec::with_capacity(seq.len_usize());
 
         for query in &queries {
             let mut numerator = vec![0.0; value_dim];
@@ -432,17 +377,18 @@ impl LinearAttentionHead {
             for (col, slot) in numerator.iter_mut().enumerate() {
                 let mut sum = 0.0;
                 for row in 0..key_dim {
-                    sum += query.0.get(row) * summary.get(row, col);
+                    sum += query.vector().raw_at(row) * summary.raw_at(row, col);
                 }
                 *slot = sum;
             }
 
-            let denominator = query.0.dot(&normalizer)?.max(1e-6);
-            let output = DenseVector::new(numerator)?.scale(1.0 / denominator);
-            outputs.push(AttentionOutput(output));
+            let denominator = query.vector().dot_raw(&normalizer)?.max(1e-6);
+            let output = DenseVector::from_raw_values("LinearAttentionHead::forward", numerator)?
+                .scale_raw(1.0 / denominator);
+            outputs.push(AttentionOutput::from_vector(output));
         }
 
-        Ok(outputs)
+        AttentionOutputSequence::from_outputs(outputs)
     }
 }
 
@@ -455,28 +401,32 @@ pub struct MultiHeadAttention {
 
 impl MultiHeadAttention {
     /// Creates a multi-head attention module with a valid output projection.
-    pub fn new(heads: Vec<AttentionHead>, output_layer: OutputLayer) -> Result<Self, ModelError> {
+    pub fn new(
+        heads: impl IntoIterator<Item = AttentionHead>,
+        output_layer: OutputLayer,
+    ) -> Result<Self, ModelError> {
+        let heads = heads.into_iter().collect::<Vec<_>>();
         if heads.is_empty() {
-            return Err(ModelError::InvalidHeadConfiguration {
-                operation: "MultiHeadAttention::new",
-                details: "multi-head attention needs at least one head",
-            });
+            return Err(ModelError::invalid_head_configuration(
+                "MultiHeadAttention::new",
+                "multi-head attention needs at least one head",
+            ));
         }
 
         let input_dim = heads[0].input_dim();
         if heads.iter().any(|head| head.input_dim() != input_dim) {
-            return Err(ModelError::InvalidHeadConfiguration {
-                operation: "MultiHeadAttention::new",
-                details: "all heads must accept the same token width",
-            });
+            return Err(ModelError::invalid_head_configuration(
+                "MultiHeadAttention::new",
+                "all heads must accept the same token width",
+            ));
         }
 
-        let concatenated_dim: usize = heads.iter().map(AttentionHead::value_dim).sum();
-        if output_layer.input_dim() != concatenated_dim {
-            return Err(ModelError::InvalidHeadConfiguration {
-                operation: "MultiHeadAttention::new",
-                details: "output layer input dimension must match concatenated head width",
-            });
+        let concatenated_dim: usize = heads.iter().map(|head| head.value_dim().as_usize()).sum();
+        if output_layer.input_dim().as_usize() != concatenated_dim {
+            return Err(ModelError::invalid_head_configuration(
+                "MultiHeadAttention::new",
+                "output layer input dimension must match concatenated head width",
+            ));
         }
 
         Ok(Self {
@@ -486,37 +436,38 @@ impl MultiHeadAttention {
     }
 
     /// Returns the model width expected by each head.
-    pub fn input_dim(&self) -> usize {
+    pub fn input_dim(&self) -> VectorLength {
         self.heads[0].input_dim()
     }
 
     /// Returns the projected model width.
-    pub fn output_dim(&self) -> usize {
+    pub fn output_dim(&self) -> VectorLength {
         self.output_layer.output_dim()
     }
 
     /// Runs multi-head attention over a token sequence.
     pub fn forward(&self, seq: &TokenSequence) -> Result<TokenSequence, ModelError> {
-        let per_head_outputs: Vec<Vec<AttentionOutput>> = self
+        let per_head_outputs: Vec<AttentionOutputSequence> = self
             .heads
             .iter()
             .map(|head| head.forward(seq))
             .collect::<Result<_, _>>()?;
 
-        let mut tokens = Vec::with_capacity(seq.len());
+        let mut tokens = Vec::with_capacity(seq.len_usize());
 
-        for token_index in 0..seq.len() {
+        for token_index in 0..seq.len_usize() {
+            let token_index = TokenIndex::try_from(token_index)?;
             let outputs_for_token: Vec<AttentionOutput> = per_head_outputs
                 .iter()
-                .map(|head_outputs| head_outputs[token_index].clone())
-                .collect();
+                .map(|head_outputs| head_outputs.output(token_index).cloned())
+                .collect::<Result<_, _>>()?;
 
-            let concatenated = concat_attention_outputs(&outputs_for_token)?;
+            let concatenated = concat_attention_outputs(outputs_for_token)?;
             let projected = self.output_layer.forward(&concatenated)?;
             tokens.push(projected);
         }
 
-        TokenSequence::new(tokens)
+        TokenSequence::from_tokens(tokens)
     }
 }
 
@@ -525,253 +476,418 @@ mod tests {
     use super::{
         AttentionHead, KeyLayer, LinearAttentionHead, MultiHeadAttention, OutputLayer,
         ProjectionBias, QueryLayer, ValueLayer, concat_attention_outputs, scaled_attention_score,
-        softmax, weighted_sum,
+        softmax,
     };
     use crate::error::ModelError;
-    use crate::math::{DenseMatrix, DenseVector};
+    use crate::math::{DenseMatrix, DenseVector, ModelScalar, VectorLength};
     use crate::types::{
-        AttentionOutput, AttentionScores, KeyProjection, OutputProjection, QueryProjection,
-        TokenEmbedding, TokenSequence, Value, ValueProjection,
+        AttentionOutput, AttentionScore, AttentionScores, AttentionWeight, AttentionWeights, Key,
+        KeyProjection, OutputProjection, Query, QueryProjection, TokenCount, TokenEmbedding,
+        TokenIndex, TokenSequence, Value, ValueProjection, ValueSequence,
     };
 
-    fn bias(values: &[f32]) -> Result<ProjectionBias, ModelError> {
-        Ok(ProjectionBias(DenseVector::new(values.to_vec())?))
+    fn vector(values: impl IntoIterator<Item = ModelScalar>) -> Result<DenseVector, ModelError> {
+        DenseVector::new(values)
     }
 
-    fn identity_query_layer(dim: usize) -> Result<QueryLayer, ModelError> {
-        let rows = (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+    fn bias(values: impl IntoIterator<Item = ModelScalar>) -> Result<ProjectionBias, ModelError> {
+        Ok(ProjectionBias::from_vector(vector(values)?))
+    }
+
+    fn matrix<R, C>(rows: R) -> Result<DenseMatrix, ModelError>
+    where
+        R: IntoIterator<Item = C>,
+        C: IntoIterator<Item = ModelScalar>,
+    {
+        DenseMatrix::from_rows(rows)
+    }
+
+    fn query_projection<R, C>(rows: R) -> Result<QueryProjection, ModelError>
+    where
+        R: IntoIterator<Item = C>,
+        C: IntoIterator<Item = ModelScalar>,
+    {
+        Ok(QueryProjection::from_matrix(matrix(rows)?))
+    }
+
+    fn output_projection<R, C>(rows: R) -> Result<OutputProjection, ModelError>
+    where
+        R: IntoIterator<Item = C>,
+        C: IntoIterator<Item = ModelScalar>,
+    {
+        Ok(OutputProjection::from_matrix(matrix(rows)?))
+    }
+
+    fn token(values: impl IntoIterator<Item = ModelScalar>) -> Result<TokenEmbedding, ModelError> {
+        Ok(TokenEmbedding::from_vector(vector(values)?))
+    }
+
+    fn query(values: impl IntoIterator<Item = ModelScalar>) -> Result<Query, ModelError> {
+        Ok(Query::from_vector(vector(values)?))
+    }
+
+    fn key(values: impl IntoIterator<Item = ModelScalar>) -> Result<Key, ModelError> {
+        Ok(Key::from_vector(vector(values)?))
+    }
+
+    fn value(values: impl IntoIterator<Item = ModelScalar>) -> Result<Value, ModelError> {
+        Ok(Value::from_vector(vector(values)?))
+    }
+
+    fn attention_output(
+        values: impl IntoIterator<Item = ModelScalar>,
+    ) -> Result<AttentionOutput, ModelError> {
+        Ok(AttentionOutput::from_vector(vector(values)?))
+    }
+
+    fn identity_matrix(dim: VectorLength) -> Result<DenseMatrix, ModelError> {
+        DenseMatrix::identity(dim)
+    }
+
+    fn zero_bias(dim: VectorLength) -> Result<ProjectionBias, ModelError> {
+        Ok(ProjectionBias::from_vector(DenseVector::zeros(dim)?))
+    }
+
+    fn identity_query_layer(dim: VectorLength) -> Result<QueryLayer, ModelError> {
         QueryLayer::new(
-            QueryProjection(DenseMatrix::from_rows(rows)?),
-            bias(&vec![0.0; dim])?,
+            QueryProjection::from_matrix(identity_matrix(dim)?),
+            zero_bias(dim)?,
         )
     }
 
-    fn identity_key_layer(dim: usize) -> Result<KeyLayer, ModelError> {
-        let rows = (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+    fn identity_key_layer(dim: VectorLength) -> Result<KeyLayer, ModelError> {
         KeyLayer::new(
-            KeyProjection(DenseMatrix::from_rows(rows)?),
-            bias(&vec![0.0; dim])?,
+            KeyProjection::from_matrix(identity_matrix(dim)?),
+            zero_bias(dim)?,
         )
     }
 
-    fn identity_value_layer(dim: usize) -> Result<ValueLayer, ModelError> {
-        let rows = (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+    fn identity_value_layer(dim: VectorLength) -> Result<ValueLayer, ModelError> {
         ValueLayer::new(
-            ValueProjection(DenseMatrix::from_rows(rows)?),
-            bias(&vec![0.0; dim])?,
+            ValueProjection::from_matrix(identity_matrix(dim)?),
+            zero_bias(dim)?,
         )
+    }
+
+    fn assert_vector_values(vector: &DenseVector, expected: impl IntoIterator<Item = ModelScalar>) {
+        let actual = vector
+            .values()
+            .map(|value| value.to_string())
+            .collect::<Vec<_>>();
+        let expected = expected
+            .into_iter()
+            .map(|value| value.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(actual, expected);
+    }
+
+    fn assert_vector_values_equal(left: &DenseVector, right: &DenseVector) {
+        let left = left
+            .values()
+            .map(|value| value.to_string())
+            .collect::<Vec<_>>();
+        let right = right
+            .values()
+            .map(|value| value.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(left, right);
+    }
+
+    fn ensure_vector_values_close(
+        vector: &DenseVector,
+        expected: impl IntoIterator<Item = ModelScalar>,
+        tolerance: ModelScalar,
+    ) -> Result<(), ModelError> {
+        let expected = expected.into_iter().collect::<Vec<_>>();
+        if vector.values().len() != expected.len() {
+            return Err(ModelError::dimension_mismatch(
+                "ensure_vector_values_close",
+                "actual vector",
+                vec![vector.len_usize()],
+                "expected vector",
+                vec![expected.len()],
+                "close vector comparison requires equal lengths",
+            ));
+        }
+
+        for (actual, expected) in vector.values().zip(expected) {
+            actual.ensure_close_to(expected, tolerance)?;
+        }
+
+        Ok(())
+    }
+
+    fn assert_attention_weights(
+        weights: &AttentionWeights,
+        expected: impl IntoIterator<Item = AttentionWeight>,
+    ) {
+        let actual = weights
+            .values()
+            .map(|weight| weight.to_string())
+            .collect::<Vec<_>>();
+        let expected = expected
+            .into_iter()
+            .map(|weight| weight.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(actual, expected);
     }
 
     #[test]
     fn query_layer_projects_tokens() -> Result<(), ModelError> {
         let layer = QueryLayer::new(
-            QueryProjection(DenseMatrix::from_rows(vec![
-                vec![2.0, 0.0],
-                vec![0.0, 3.0],
-            ])?),
-            bias(&[0.5, -1.0])?,
+            query_projection([
+                [ModelScalar::try_from(2.0)?, ModelScalar::try_from(0.0)?],
+                [ModelScalar::try_from(0.0)?, ModelScalar::try_from(3.0)?],
+            ])?,
+            bias([ModelScalar::try_from(0.5)?, ModelScalar::try_from(-1.0)?])?,
         )?;
-        let token = TokenEmbedding(DenseVector::new(vec![1.0, 2.0])?);
+        let token = token([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?])?;
 
         let query = layer.forward(&token)?;
-        assert_eq!(query.as_slice(), &[2.5, 5.0]);
+        assert_vector_values(
+            query.vector(),
+            [ModelScalar::try_from(2.5)?, ModelScalar::try_from(5.0)?],
+        );
         Ok(())
     }
 
     #[test]
     fn scaled_attention_score_reports_mismatch() -> Result<(), ModelError> {
-        let query = crate::types::Query(DenseVector::new(vec![1.0, 2.0])?);
-        let key = crate::types::Key(DenseVector::new(vec![1.0, 2.0, 3.0])?);
+        let query = query([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?])?;
+        let key = key([
+            ModelScalar::try_from(1.0)?,
+            ModelScalar::try_from(2.0)?,
+            ModelScalar::try_from(3.0)?,
+        ])?;
 
-        let error = scaled_attention_score(&query, &key).expect_err("mismatched score should fail");
-        assert!(matches!(error, ModelError::DimensionMismatch { .. }));
+        assert!(matches!(
+            scaled_attention_score(&query, &key),
+            Err(ModelError::DimensionMismatch { .. })
+        ));
         Ok(())
     }
 
     #[test]
     fn softmax_is_stable_for_large_values() -> Result<(), ModelError> {
-        let weights = softmax(&AttentionScores(vec![1000.0, 1000.0]))?;
-        let sum: f32 = weights.0.iter().sum();
-
-        assert!((sum - 1.0).abs() < 1e-6);
-        assert!(weights.0.iter().all(|weight| weight.is_finite()));
+        let weights = softmax(&AttentionScores::from_scores([
+            AttentionScore::try_from(1000.0)?,
+            AttentionScore::try_from(1000.0)?,
+        ])?)?;
+        assert_attention_weights(
+            &weights,
+            [
+                AttentionWeight::try_from(0.5)?,
+                AttentionWeight::try_from(0.5)?,
+            ],
+        );
         Ok(())
     }
 
     #[test]
     fn weighted_sum_matches_manual_computation() -> Result<(), ModelError> {
-        let weights = crate::types::AttentionWeights(vec![0.25, 0.75]);
-        let values = vec![
-            Value(DenseVector::new(vec![1.0, 0.0])?),
-            Value(DenseVector::new(vec![0.0, 2.0])?),
-        ];
+        let weights = AttentionWeights::from_weights([
+            AttentionWeight::try_from(0.25)?,
+            AttentionWeight::try_from(0.75)?,
+        ])?;
+        let values = ValueSequence::from_values([
+            value([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?,
+            value([ModelScalar::try_from(0.0)?, ModelScalar::try_from(2.0)?])?,
+        ])?;
 
-        let output = weighted_sum(&weights, &values)?;
-        assert_eq!(output.as_slice(), &[0.25, 1.5]);
+        let output = (&weights * &values)?;
+        assert_vector_values(
+            output.vector(),
+            [ModelScalar::try_from(0.25)?, ModelScalar::try_from(1.5)?],
+        );
         Ok(())
     }
 
     #[test]
     fn weighted_sum_reports_mismatch() -> Result<(), ModelError> {
-        let weights = crate::types::AttentionWeights(vec![1.0]);
-        let values = vec![
-            Value(DenseVector::new(vec![1.0, 0.0])?),
-            Value(DenseVector::new(vec![0.0, 2.0])?),
-        ];
+        let weights = AttentionWeights::from_weights([AttentionWeight::try_from(1.0)?])?;
+        let values = ValueSequence::from_values([
+            value([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?,
+            value([ModelScalar::try_from(0.0)?, ModelScalar::try_from(2.0)?])?,
+        ])?;
 
-        let error =
-            weighted_sum(&weights, &values).expect_err("mismatched weighted sum should fail");
-        assert!(matches!(error, ModelError::DimensionMismatch { .. }));
+        assert!(matches!(
+            &weights * &values,
+            Err(ModelError::DimensionMismatch { .. })
+        ));
         Ok(())
     }
 
     #[test]
     fn attention_head_single_token_reduces_to_value_projection() -> Result<(), ModelError> {
+        let dim = VectorLength::try_from(2)?;
         let head = AttentionHead::new(
-            identity_query_layer(2)?,
-            identity_key_layer(2)?,
-            identity_value_layer(2)?,
+            identity_query_layer(dim)?,
+            identity_key_layer(dim)?,
+            identity_value_layer(dim)?,
         )?;
-        let sequence = TokenSequence::new(vec![TokenEmbedding(DenseVector::new(vec![1.0, 2.0])?)])?;
+        let sequence = TokenSequence::new([token([
+            ModelScalar::try_from(1.0)?,
+            ModelScalar::try_from(2.0)?,
+        ])?])?;
 
         let outputs = head.forward(&sequence)?;
-        assert_eq!(outputs[0].as_slice(), &[1.0, 2.0]);
+        assert_vector_values(
+            outputs.output(TokenIndex::try_from(0)?)?.vector(),
+            [ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?],
+        );
         Ok(())
     }
 
     #[test]
     fn concat_attention_outputs_joins_vectors_in_order() -> Result<(), ModelError> {
-        let outputs = vec![
-            AttentionOutput(DenseVector::new(vec![1.0, 2.0])?),
-            AttentionOutput(DenseVector::new(vec![3.0, 4.0])?),
+        let outputs = [
+            attention_output([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?])?,
+            attention_output([ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?])?,
         ];
 
-        let concatenated = concat_attention_outputs(&outputs)?;
-        assert_eq!(concatenated.as_slice(), &[1.0, 2.0, 3.0, 4.0]);
+        let concatenated = concat_attention_outputs(outputs)?;
+        assert_vector_values(
+            concatenated.vector(),
+            [
+                ModelScalar::try_from(1.0)?,
+                ModelScalar::try_from(2.0)?,
+                ModelScalar::try_from(3.0)?,
+                ModelScalar::try_from(4.0)?,
+            ],
+        );
         Ok(())
     }
 
     #[test]
     fn multi_head_attention_rejects_empty_heads() -> Result<(), ModelError> {
         let output_layer = OutputLayer::new(
-            OutputProjection(DenseMatrix::from_rows(vec![vec![1.0]])?),
-            bias(&[0.0])?,
+            output_projection([[ModelScalar::try_from(1.0)?]])?,
+            bias([ModelScalar::try_from(0.0)?])?,
         )?;
 
-        let error =
-            MultiHeadAttention::new(vec![], output_layer).expect_err("empty head list should fail");
-        assert!(matches!(error, ModelError::InvalidHeadConfiguration { .. }));
+        assert!(matches!(
+            MultiHeadAttention::new(vec![], output_layer),
+            Err(ModelError::InvalidHeadConfiguration { .. })
+        ));
         Ok(())
     }
 
     #[test]
     fn multi_head_attention_validates_output_projection_width() -> Result<(), ModelError> {
+        let dim = VectorLength::try_from(2)?;
         let head = AttentionHead::new(
-            identity_query_layer(2)?,
-            identity_key_layer(2)?,
-            identity_value_layer(2)?,
+            identity_query_layer(dim)?,
+            identity_key_layer(dim)?,
+            identity_value_layer(dim)?,
         )?;
         let output_layer = OutputLayer::new(
-            OutputProjection(DenseMatrix::from_rows(vec![vec![1.0, 0.0, 0.0]])?),
-            bias(&[0.0])?,
+            output_projection([[
+                ModelScalar::try_from(1.0)?,
+                ModelScalar::try_from(0.0)?,
+                ModelScalar::try_from(0.0)?,
+            ]])?,
+            bias([ModelScalar::try_from(0.0)?])?,
         )?;
 
-        let error = MultiHeadAttention::new(vec![head], output_layer)
-            .expect_err("bad output width should fail");
-        assert!(matches!(error, ModelError::InvalidHeadConfiguration { .. }));
+        assert!(matches!(
+            MultiHeadAttention::new(vec![head], output_layer),
+            Err(ModelError::InvalidHeadConfiguration { .. })
+        ));
         Ok(())
     }
 
     #[test]
     fn multi_head_attention_preserves_sequence_length() -> Result<(), ModelError> {
+        let dim = VectorLength::try_from(2)?;
         let head_a = AttentionHead::new(
-            identity_query_layer(2)?,
-            identity_key_layer(2)?,
-            identity_value_layer(2)?,
+            identity_query_layer(dim)?,
+            identity_key_layer(dim)?,
+            identity_value_layer(dim)?,
         )?;
         let head_b = AttentionHead::new(
-            identity_query_layer(2)?,
-            identity_key_layer(2)?,
-            identity_value_layer(2)?,
+            identity_query_layer(dim)?,
+            identity_key_layer(dim)?,
+            identity_value_layer(dim)?,
         )?;
         let output_layer = OutputLayer::new(
-            OutputProjection(DenseMatrix::from_rows(vec![
-                vec![1.0, 0.0, 0.0, 0.0],
-                vec![0.0, 1.0, 0.0, 0.0],
-            ])?),
-            bias(&[0.0, 0.0])?,
+            output_projection([
+                [
+                    ModelScalar::try_from(1.0)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.0)?,
+                ],
+                [
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(1.0)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.0)?,
+                ],
+            ])?,
+            bias([ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?,
         )?;
         let mha = MultiHeadAttention::new(vec![head_a, head_b], output_layer)?;
-        let sequence = TokenSequence::new(vec![
-            TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-            TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        let sequence = TokenSequence::new([
+            token([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?,
+            token([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?,
         ])?;
 
         let output = mha.forward(&sequence)?;
-        assert_eq!(output.len(), 2);
-        assert_eq!(output.d_model(), 2);
+        assert_eq!(output.len(), TokenCount::try_from(2)?);
+        assert_eq!(output.d_model(), VectorLength::try_from(2)?);
         Ok(())
     }
 
     #[test]
     fn linear_attention_single_token_reduces_to_value_projection() -> Result<(), ModelError> {
+        let dim = VectorLength::try_from(2)?;
         let head = LinearAttentionHead::new(
-            identity_query_layer(2)?,
-            identity_key_layer(2)?,
-            identity_value_layer(2)?,
+            identity_query_layer(dim)?,
+            identity_key_layer(dim)?,
+            identity_value_layer(dim)?,
         )?;
-        let sequence = TokenSequence::new(vec![TokenEmbedding(DenseVector::new(vec![1.0, 2.0])?)])?;
+        let sequence = TokenSequence::new([token([
+            ModelScalar::try_from(1.0)?,
+            ModelScalar::try_from(2.0)?,
+        ])?])?;
 
         let outputs = head.forward(&sequence)?;
-        assert!((outputs[0].as_slice()[0] - 1.0).abs() < 1e-5);
-        assert!((outputs[0].as_slice()[1] - 2.0).abs() < 1e-5);
+        let output = outputs.output(TokenIndex::try_from(0)?)?.vector();
+        ensure_vector_values_close(
+            output,
+            [ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?],
+            ModelScalar::try_from(0.00001)?,
+        )?;
         Ok(())
     }
 
     #[test]
     fn linear_attention_is_permutation_equivariant_without_positions() -> Result<(), ModelError> {
+        let dim = VectorLength::try_from(2)?;
         let head = LinearAttentionHead::new(
-            identity_query_layer(2)?,
-            identity_key_layer(2)?,
-            identity_value_layer(2)?,
+            identity_query_layer(dim)?,
+            identity_key_layer(dim)?,
+            identity_value_layer(dim)?,
         )?;
-        let original = TokenSequence::new(vec![
-            TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-            TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        let original = TokenSequence::new([
+            token([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?,
+            token([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?,
         ])?;
-        let permuted = TokenSequence::new(vec![
-            TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
-            TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
+        let permuted = TokenSequence::new([
+            token([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?,
+            token([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?,
         ])?;
 
         let original_outputs = head.forward(&original)?;
         let permuted_outputs = head.forward(&permuted)?;
 
-        assert_eq!(
-            original_outputs[0].as_slice(),
-            permuted_outputs[1].as_slice()
+        assert_vector_values_equal(
+            original_outputs.output(TokenIndex::try_from(0)?)?.vector(),
+            permuted_outputs.output(TokenIndex::try_from(1)?)?.vector(),
         );
-        assert_eq!(
-            original_outputs[1].as_slice(),
-            permuted_outputs[0].as_slice()
+        assert_vector_values_equal(
+            original_outputs.output(TokenIndex::try_from(1)?)?.vector(),
+            permuted_outputs.output(TokenIndex::try_from(0)?)?.vector(),
         );
         Ok(())
     }

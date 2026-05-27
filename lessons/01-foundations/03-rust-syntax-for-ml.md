@@ -28,7 +28,7 @@ Functions turn named inputs into outputs.
 ### Arrays and vectors
 
 - arrays have fixed size
-- `Vec<T>` is growable and common in beginner ML code
+- growable vector storage is an implementation detail; in this course, learner-facing ML values are wrapped in semantic types such as `FeatureVector`
 
 ### Structs
 
@@ -58,35 +58,27 @@ z &= w_1 x_1 + w_2 x_2 + b
 ## Rust Form
 
 ```rust
-let x = 3.0;
-let mut y = 5.0;
-y = y + 1.0;
+use rust_ml_neuron::{Bias, FeatureVector, InputValue, TinyNeuron, Weight, WeightVector};
 
-fn add(a: f64, b: f64) -> f64 {
-    a + b
-}
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let features = FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(2.0)?);
+    let weights = WeightVector::two(Weight::try_from(0.8)?, Weight::try_from(-0.4)?);
+    let mut neuron = TinyNeuron::new(weights, Bias::try_from(0.1)?);
 
-let pair: [f64; 2] = [1.0, 2.0];
-let values: Vec<f64> = vec![1.0, 2.0, 3.0];
+    let first_prediction = neuron.predict(&features)?;
 
-struct Neuron {
-    w1: f64,
-    w2: f64,
-    b: f64,
-}
+    neuron = TinyNeuron::new(
+        WeightVector::two(Weight::try_from(0.8)?, Weight::try_from(-0.4)?),
+        Bias::try_from(0.0)?,
+    );
 
-impl Neuron {
-    fn forward(&self, x1: f64, x2: f64) -> f64 {
-        self.w1 * x1 + self.w2 * x2 + self.b
+    for value in features.values() {
+        println!("feature = {value}");
     }
 
-    fn update_bias(&mut self, step: f64) {
-        self.b = self.b - step;
-    }
-}
-
-for i in 0..values.len() {
-    println!("{}", values[i]);
+    println!("before bias update = {first_prediction:.4}");
+    println!("after bias update  = {:.4}", neuron.predict(&features)?);
+    Ok(())
 }
 ```
 
@@ -100,6 +92,14 @@ That strictness is useful for ML because it makes you be explicit about:
 - what can change
 - what only gets read
 - what the repeated computation actually is
+
+## Concept Trace
+
+- **Object/newtype:** raw syntax introduces the storage shape that later becomes semantic types such as `FeatureVector`, `Weight`, and `LearningRate`.
+- **Invariant:** values that can change during training should be separated from values that are only read during prediction.
+- **Map:** struct state + method inputs -> method output.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass`.
+- **Failure signal:** you can write a struct but cannot explain which fields are parameters or why `forward` should not mutate them.
 
 ## Short Practice
 

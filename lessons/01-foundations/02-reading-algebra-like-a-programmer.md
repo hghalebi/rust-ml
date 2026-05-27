@@ -99,49 +99,36 @@ K^T \\
 ## Rust Form
 
 ```rust
-let mut x = 3.0;
-x = 4.0;
-let same = x == 4.0;
+use rust_ml_neuron::{
+    Bias, FeatureVector, InputValue, Target, TinyNeuron, Weight, WeightVector,
+};
 
-let values = vec![10.0, 20.0, 30.0];
-let x1 = values[0];
-let x2 = values[1];
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let features = FeatureVector::from_values([
+        InputValue::try_from(10.0)?,
+        InputValue::try_from(20.0)?,
+        InputValue::try_from(30.0)?,
+    ])?;
+    let weights = WeightVector::from_values([
+        Weight::try_from(0.1)?,
+        Weight::try_from(0.2)?,
+        Weight::try_from(0.3)?,
+    ])?;
 
-let squared = x * x;
+    let weighted_evidence = (&features * &weights)?;
 
-let training_examples = vec![
-    vec![0.0, 0.0],
-    vec![0.0, 1.0],
-    vec![1.0, 0.0],
-];
-let first_example = &training_examples[0];
+    let first_example = FeatureVector::two(InputValue::try_from(0.0)?, InputValue::try_from(1.0)?);
+    let neuron = TinyNeuron::new(
+        WeightVector::two(Weight::try_from(0.8)?, Weight::try_from(-0.4)?),
+        Bias::try_from(0.1)?,
+    );
+    let y = Target::try_from(1.0)?;
+    let y_hat = neuron.predict(&first_example)?;
 
-let mut sum = 0.0;
-for i in 0..values.len() {
-    sum += values[i];
+    println!("weighted evidence = {weighted_evidence}");
+    println!("target = {y}, prediction = {y_hat}");
+    Ok(())
 }
-
-fn model(x: f64, theta: f64) -> f64 {
-    x * theta
-}
-
-let y = 1.0;
-let y_hat = 0.82;
-
-fn dot(a: &[f64], b: &[f64]) -> f64 {
-    let mut sum = 0.0;
-    for i in 0..a.len() {
-        sum += a[i] * b[i];
-    }
-    sum
-}
-
-let matrix = vec![
-    vec![1.0, 2.0],
-    vec![3.0, 4.0],
-];
-
-let d_loss_d_w = 0.123;
 ```
 
 ## Why This Matters
@@ -155,6 +142,14 @@ If you can unpack symbols into:
 - arithmetic
 
 then algebra becomes readable instead of intimidating.
+
+## Concept Trace
+
+- **Object/newtype:** notation later becomes names such as `TokenIndex`, `VectorWidth`, `Prediction`, and `Gradient`.
+- **Invariant:** every symbol should keep its role when translated into Rust.
+- **Map:** compact notation -> explicit names -> checked computation.
+- **Runnable proof:** compile the lesson snippets with `python3 scripts/check_lesson_rust_snippets.py`.
+- **Failure signal:** you can pronounce a formula but cannot identify the data, parameter, output, or feedback role.
 
 ## Short Practice
 

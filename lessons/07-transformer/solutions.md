@@ -100,3 +100,10 @@ Standard attention forms the exact scaled dot-product interaction pattern.
 Linear attention rewrites the computation through feature-map-based summaries.
 
 That is why linear attention is best understood as a later efficient attention family, not as the definition of the original Transformer paper.
+
+## Self-Check
+
+- You can read a shape error as an object/map mismatch.
+- You can build `TokenSequence` only when token widths agree.
+- You can explain why positional encoding and residual addition preserve `d_model`.
+- You can distinguish the original attention definition from efficiency variants.

@@ -63,13 +63,22 @@ w \leftarrow w - \eta \frac{\partial L}{\partial w}
 ## Rust Form
 
 ```rust
-fn sigmoid(x: f64) -> f64 {
-    1.0 / (1.0 + (-x).exp())
+use rust_ml_neuron::{FeatureVector, InputValue, LearningRate, Target, TinyNeuron, TrainingExample};
+
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let mut neuron = TinyNeuron::lesson_seed()?;
+    let example = TrainingExample::new(
+        FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?),
+        Target::try_from(1.0)?,
+    );
+
+    let loss_before = neuron.loss(&example)?;
+    let step = neuron.train_one_step(&example, LearningRate::try_from(0.5)?)?;
+
+    println!("loss before = {loss_before:.4}");
+    println!("loss after  = {:.4}", step.loss_after());
+    Ok(())
 }
-
-let loss = (y_hat - y) * (y_hat - y);
-
-w = w - learning_rate * d_loss_d_w;
 ```
 
 ## Why This Matters
@@ -81,6 +90,14 @@ These three lines are the smallest version of learning:
 - update the parameter so the future output is less wrong
 
 That is the backbone of the neuron module that comes next.
+
+## Concept Trace
+
+- **Object/newtype:** `PreActivation`, `Prediction`, `Target`, `Loss`, `Gradient`, and `LearningRate`.
+- **Invariant:** predictions stay in a valid range, and learning rates must be positive.
+- **Map:** score -> prediction -> loss -> parameter adjustment.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training`.
+- **Failure signal:** you can compute loss but cannot explain which value tells the parameter how to move.
 
 ## Short Practice
 

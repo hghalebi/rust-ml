@@ -1,38 +1,42 @@
 # 04 Learning
 
-Status: planned.
+Status: active.
 
 This folder maps to course Module 3.
 
-This module will take the neuron from "one step makes sense" to "a full training loop makes sense."
+This module takes the neuron from "one step makes sense" to "a full training loop makes sense."
 
-## Goal
+## Role In The Course
 
-Turn a forward pass into a learning loop:
+The neuron module showed one forward pass and one backward-pass story. This module repeats that story across examples and epochs so learning becomes a process, not a single formula.
 
-- compute loss
-- compute gradients
-- update parameters
-- repeat across data
+## Outcomes
 
-## Planned Lesson Ladder
+After this module, you should be able to:
 
-1. one training step, end to end
-2. chain rule by hand for the neuron parameters
-3. dataset loops, epochs, and reading loss over time
+- explain a training step as `predict -> measure -> adjust`
+- read a gradient update without treating it as magic
+- explain why a dataset loop repeats the same local update across many examples
+- describe an epoch as one pass over the training data
+- interpret a loss trace as feedback about whether learning is moving in a useful direction
 
-## Planned Practice
+## Lessons
 
-- derive one update by hand
-- run a tiny dataset loop
-- explain what it means for loss to go down or fail to go down
+1. [A training step is a feedback story](01-training-step-as-feedback.md)
+2. [Epochs turn one update into a learning process](02-epochs-and-loss-traces.md)
+
+## Practice
+
+- [Exercises](exercises.md)
+- [Solutions](solutions.md)
 
 ## Code Artifact
 
 - Current bridge crate: [`code/neuron`](../../code/neuron/README.md)
-- The `04_and_gate_epoch` example already shows the first full dataset loop:
+- The `03_one_step_training` and `04_and_gate_epoch` examples are the executable anchors:
 
 ```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
 ```
 
@@ -40,6 +44,11 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gat
 
 - Complete [03 Neuron](../03-neuron/README.md)
 
-## Planned Outcome
+## Before You Move On
 
-Be able to derive and explain parameter updates from first principles.
+You are ready for the MLP module if you can:
+
+- explain why the target stays fixed while parameters change
+- say what one epoch means
+- describe why loss can go down unevenly rather than smoothly
+- connect `LearningRate`, `Gradient`, and `Adjustment` to the update rule

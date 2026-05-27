@@ -5,8 +5,17 @@
 //! - [`weighted_sum`] is the algebraic dot product
 //! - [`TinyNeuron::predict`] is `mix -> squash`
 //! - [`TinyNeuron::train_one_step`] is `blame -> trace -> adjust`
+//!
+//! Raw learner literals enter through explicit `TryFrom` adapters. Public
+//! teaching APIs then use semantic values such as [`InputValue`], [`Weight`],
+//! [`Target`], [`LearningRate`], [`FeatureCount`], and [`Loss`].
 
 pub mod error;
+
+use std::{
+    fmt,
+    ops::{Add, Mul, Sub},
+};
 
 use error::NeuronError;
 
@@ -14,7 +23,7 @@ pub use error::NeuronError as Error;
 
 fn finite(role: &'static str, value: f64) -> Result<f64, NeuronError> {
     if !value.is_finite() {
-        return Err(NeuronError::NonFiniteValue { role, value });
+        return Err(NeuronError::non_finite_value(role, value));
     }
 
     Ok(value)
@@ -23,18 +32,30 @@ fn finite(role: &'static str, value: f64) -> Result<f64, NeuronError> {
 macro_rules! finite_scalar {
     ($name:ident, $doc:literal, $role:literal) => {
         #[doc = $doc]
-        #[derive(Debug, Clone, Copy, PartialEq)]
+        #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
         pub struct $name(f64);
 
         impl $name {
-            /// Creates the scalar after checking that it is finite.
-            pub fn new(value: f64) -> Result<Self, NeuronError> {
+            fn from_raw(value: f64) -> Result<Self, NeuronError> {
                 Ok(Self(finite($role, value)?))
             }
 
-            /// Returns the raw scalar value for printing, tests, and hand checks.
-            pub fn value(self) -> f64 {
+            fn as_f64(self) -> f64 {
                 self.0
+            }
+        }
+
+        impl TryFrom<f64> for $name {
+            type Error = NeuronError;
+
+            fn try_from(value: f64) -> Result<Self, Self::Error> {
+                Self::from_raw(value)
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                fmt::Display::fmt(&self.0, formatter)
             }
         }
     };
@@ -61,9 +82,29 @@ finite_scalar!(
     "weighted sum"
 );
 finite_scalar!(
+    WeightedProduct,
+    "One input multiplied by its aligned weight.",
+    "weighted product"
+);
+finite_scalar!(
     PreActivation,
     "The raw score `z` before sigmoid.",
     "pre-activation"
+);
+finite_scalar!(
+    PredictionError,
+    "Prediction minus target for one labeled example.",
+    "prediction error"
+);
+finite_scalar!(
+    SigmoidSlope,
+    "Local slope of the sigmoid at the current prediction.",
+    "sigmoid slope"
+);
+finite_scalar!(
+    ParameterBlame,
+    "Shared blame signal that flows into weight and bias gradients.",
+    "parameter blame"
 );
 finite_scalar!(
     Gradient,
@@ -77,70 +118,247 @@ finite_scalar!(
 );
 finite_scalar!(Loss, "Squared-error loss for one example.", "loss");
 
+impl Add<WeightedProduct> for WeightedSum {
+    type Output = Result<WeightedSum, NeuronError>;
+
+    fn add(self, right: WeightedProduct) -> Self::Output {
+        WeightedSum::from_raw(self.as_f64() + right.as_f64())
+    }
+}
+
+impl Add<Bias> for WeightedSum {
+    type Output = Result<PreActivation, NeuronError>;
+
+    fn add(self, right: Bias) -> Self::Output {
+        PreActivation::from_raw(self.as_f64() + right.as_f64())
+    }
+}
+
+impl Mul<Weight> for InputValue {
+    type Output = Result<WeightedProduct, NeuronError>;
+
+    fn mul(self, right: Weight) -> Self::Output {
+        WeightedProduct::from_raw(self.as_f64() * right.as_f64())
+    }
+}
+
+impl Sub<Target> for Prediction {
+    type Output = Result<PredictionError, NeuronError>;
+
+    fn sub(self, right: Target) -> Self::Output {
+        PredictionError::from_raw(self.as_f64() - right.as_f64())
+    }
+}
+
+impl Mul<SigmoidSlope> for PredictionError {
+    type Output = Result<ParameterBlame, NeuronError>;
+
+    fn mul(self, right: SigmoidSlope) -> Self::Output {
+        ParameterBlame::from_raw(self.as_f64() * right.as_f64())
+    }
+}
+
+impl Mul<InputValue> for ParameterBlame {
+    type Output = Result<Gradient, NeuronError>;
+
+    fn mul(self, right: InputValue) -> Self::Output {
+        Gradient::from_raw(self.as_f64() * right.as_f64())
+    }
+}
+
+impl Mul<Gradient> for LearningRate {
+    type Output = Result<Adjustment, NeuronError>;
+
+    fn mul(self, right: Gradient) -> Self::Output {
+        Adjustment::from_raw(self.as_f64() * right.as_f64())
+    }
+}
+
+impl Sub<Adjustment> for Weight {
+    type Output = Result<Weight, NeuronError>;
+
+    fn sub(self, right: Adjustment) -> Self::Output {
+        Weight::from_raw(self.as_f64() - right.as_f64())
+    }
+}
+
+impl Sub<Adjustment> for Bias {
+    type Output = Result<Bias, NeuronError>;
+
+    fn sub(self, right: Adjustment) -> Self::Output {
+        Bias::from_raw(self.as_f64() - right.as_f64())
+    }
+}
+
+impl Mul<&WeightVector> for &FeatureVector {
+    type Output = Result<WeightedSum, NeuronError>;
+
+    fn mul(self, right: &WeightVector) -> Self::Output {
+        weighted_sum_with_operation("FeatureVector * WeightVector", self, right)
+    }
+}
+
+/// Number of input features or weights in a neuron vector.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FeatureCount(usize);
+
+impl FeatureCount {
+    fn from_raw(value: usize) -> Self {
+        Self(value)
+    }
+
+    fn as_usize(self) -> usize {
+        self.0
+    }
+}
+
+impl fmt::Display for FeatureCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, formatter)
+    }
+}
+
+/// Number of examples in a dataset.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ExampleCount(usize);
+
+impl ExampleCount {
+    fn from_raw(value: usize) -> Self {
+        Self(value)
+    }
+
+    fn as_usize(self) -> usize {
+        self.0
+    }
+}
+
+impl fmt::Display for ExampleCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, formatter)
+    }
+}
+
 /// A probability-like label for the beginner binary examples.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Target(f64);
 
 impl Target {
-    /// Creates a target in the inclusive range `0..=1`.
-    pub fn new(value: f64) -> Result<Self, NeuronError> {
+    fn from_raw(value: f64) -> Result<Self, NeuronError> {
         let value = finite("target", value)?;
 
         if !(0.0..=1.0).contains(&value) {
-            return Err(NeuronError::TargetOutOfRange { value });
+            return Err(NeuronError::target_out_of_range(value));
         }
 
         Ok(Self(value))
     }
 
-    /// Returns the raw target value for printing, tests, and hand checks.
-    pub fn value(self) -> f64 {
+    fn as_f64(self) -> f64 {
         self.0
+    }
+}
+
+impl TryFrom<f64> for Target {
+    type Error = NeuronError;
+
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::from_raw(value)
+    }
+}
+
+impl fmt::Display for Target {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, formatter)
     }
 }
 
 /// A sigmoid output, always in `0..=1`.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Prediction(f64);
 
 impl Prediction {
-    /// Creates a prediction when the caller has already produced a valid score.
-    pub fn new(value: f64) -> Result<Self, NeuronError> {
+    fn from_raw(value: f64) -> Result<Self, NeuronError> {
         let value = finite("prediction", value)?;
 
         if !(0.0..=1.0).contains(&value) {
-            return Err(NeuronError::NumericalIssue {
-                operation: "Prediction::new",
-                details: "prediction must stay between 0 and 1",
-            });
+            return Err(NeuronError::numerical_issue(
+                "Prediction::try_from",
+                "prediction must stay between 0 and 1",
+            ));
         }
 
         Ok(Self(value))
     }
 
-    /// Returns the raw prediction value for printing, tests, and hand checks.
-    pub fn value(self) -> f64 {
+    fn as_f64(self) -> f64 {
         self.0
+    }
+
+    fn sigmoid_slope(self) -> Result<SigmoidSlope, NeuronError> {
+        SigmoidSlope::from_raw(self.as_f64() * (1.0 - self.as_f64()))
+    }
+}
+
+impl TryFrom<f64> for Prediction {
+    type Error = NeuronError;
+
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::from_raw(value)
+    }
+}
+
+impl fmt::Display for Prediction {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, formatter)
     }
 }
 
 /// A positive step size for gradient descent.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct LearningRate(f64);
 
 impl LearningRate {
-    /// Creates a learning rate that can actually move a parameter update.
-    pub fn new(value: f64) -> Result<Self, NeuronError> {
+    fn from_raw(value: f64) -> Result<Self, NeuronError> {
         if !value.is_finite() || value <= 0.0 {
-            return Err(NeuronError::InvalidLearningRate { value });
+            return Err(NeuronError::invalid_learning_rate(value));
         }
 
         Ok(Self(value))
     }
 
-    /// Returns the scalar learning-rate value.
-    pub fn value(self) -> f64 {
+    fn as_f64(self) -> f64 {
         self.0
+    }
+}
+
+impl TryFrom<f64> for LearningRate {
+    type Error = NeuronError;
+
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::from_raw(value)
+    }
+}
+
+impl fmt::Display for LearningRate {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, formatter)
+    }
+}
+
+impl PredictionError {
+    fn squared_loss(self) -> Result<Loss, NeuronError> {
+        Loss::from_raw(self.as_f64().powi(2))
+    }
+
+    fn through_sigmoid(self, prediction: Prediction) -> Result<ParameterBlame, NeuronError> {
+        let local_blame = (self * prediction.sigmoid_slope()?)?;
+        local_blame.double()
+    }
+}
+
+impl ParameterBlame {
+    fn double(self) -> Result<Self, NeuronError> {
+        Self::from_raw(2.0 * self.as_f64())
     }
 }
 
@@ -152,12 +370,13 @@ pub struct FeatureVector {
 
 impl FeatureVector {
     /// Creates a non-empty feature vector.
-    pub fn new(values: Vec<InputValue>) -> Result<Self, NeuronError> {
+    pub fn from_values(values: impl IntoIterator<Item = InputValue>) -> Result<Self, NeuronError> {
+        let values = values.into_iter().collect::<Vec<_>>();
         if values.is_empty() {
-            return Err(NeuronError::EmptyInput {
-                operation: "FeatureVector::new",
-                details: "a neuron needs at least one input feature",
-            });
+            return Err(NeuronError::empty_input(
+                "FeatureVector::from_values",
+                "a neuron needs at least one input feature",
+            ));
         }
 
         Ok(Self { values })
@@ -171,18 +390,17 @@ impl FeatureVector {
     }
 
     /// Returns the number of input features.
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> FeatureCount {
+        FeatureCount::from_raw(self.len_value())
+    }
+
+    /// Iterates over the input values.
+    pub fn values(&self) -> impl ExactSizeIterator<Item = &InputValue> + '_ {
+        self.values.iter()
+    }
+
+    fn len_value(&self) -> usize {
         self.values.len()
-    }
-
-    /// Returns `true` when the vector has no features.
-    pub fn is_empty(&self) -> bool {
-        self.values.is_empty()
-    }
-
-    /// Returns the input values.
-    pub fn values(&self) -> &[InputValue] {
-        &self.values
     }
 }
 
@@ -194,12 +412,13 @@ pub struct WeightVector {
 
 impl WeightVector {
     /// Creates a non-empty weight vector.
-    pub fn new(values: Vec<Weight>) -> Result<Self, NeuronError> {
+    pub fn from_values(values: impl IntoIterator<Item = Weight>) -> Result<Self, NeuronError> {
+        let values = values.into_iter().collect::<Vec<_>>();
         if values.is_empty() {
-            return Err(NeuronError::EmptyInput {
-                operation: "WeightVector::new",
-                details: "a neuron needs at least one weight",
-            });
+            return Err(NeuronError::empty_input(
+                "WeightVector::from_values",
+                "a neuron needs at least one weight",
+            ));
         }
 
         Ok(Self { values })
@@ -213,18 +432,17 @@ impl WeightVector {
     }
 
     /// Returns the number of learned weights.
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> FeatureCount {
+        FeatureCount::from_raw(self.len_value())
+    }
+
+    /// Iterates over the learned weights.
+    pub fn values(&self) -> impl ExactSizeIterator<Item = &Weight> + '_ {
+        self.values.iter()
+    }
+
+    fn len_value(&self) -> usize {
         self.values.len()
-    }
-
-    /// Returns `true` when the vector has no weights.
-    pub fn is_empty(&self) -> bool {
-        self.values.is_empty()
-    }
-
-    /// Returns the learned weights.
-    pub fn values(&self) -> &[Weight] {
-        &self.values
     }
 }
 
@@ -260,12 +478,15 @@ pub struct Dataset {
 
 impl Dataset {
     /// Creates a non-empty dataset.
-    pub fn new(examples: Vec<TrainingExample>) -> Result<Self, NeuronError> {
+    pub fn from_examples(
+        examples: impl IntoIterator<Item = TrainingExample>,
+    ) -> Result<Self, NeuronError> {
+        let examples = examples.into_iter().collect::<Vec<_>>();
         if examples.is_empty() {
-            return Err(NeuronError::EmptyInput {
-                operation: "Dataset::new",
-                details: "training needs at least one example",
-            });
+            return Err(NeuronError::empty_input(
+                "Dataset::from_examples",
+                "training needs at least one example",
+            ));
         }
 
         Ok(Self { examples })
@@ -273,41 +494,38 @@ impl Dataset {
 
     /// Builds the tiny AND dataset used in the neuron lessons.
     pub fn and_gate() -> Result<Self, NeuronError> {
-        Ok(Self {
-            examples: vec![
-                TrainingExample::new(
-                    FeatureVector::two(InputValue::new(0.0)?, InputValue::new(0.0)?),
-                    Target::new(0.0)?,
-                ),
-                TrainingExample::new(
-                    FeatureVector::two(InputValue::new(0.0)?, InputValue::new(1.0)?),
-                    Target::new(0.0)?,
-                ),
-                TrainingExample::new(
-                    FeatureVector::two(InputValue::new(1.0)?, InputValue::new(0.0)?),
-                    Target::new(0.0)?,
-                ),
-                TrainingExample::new(
-                    FeatureVector::two(InputValue::new(1.0)?, InputValue::new(1.0)?),
-                    Target::new(1.0)?,
-                ),
-            ],
-        })
+        Self::from_examples([
+            TrainingExample::new(
+                FeatureVector::two(InputValue::try_from(0.0)?, InputValue::try_from(0.0)?),
+                Target::try_from(0.0)?,
+            ),
+            TrainingExample::new(
+                FeatureVector::two(InputValue::try_from(0.0)?, InputValue::try_from(1.0)?),
+                Target::try_from(0.0)?,
+            ),
+            TrainingExample::new(
+                FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?),
+                Target::try_from(0.0)?,
+            ),
+            TrainingExample::new(
+                FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(1.0)?),
+                Target::try_from(1.0)?,
+            ),
+        ])
     }
 
-    /// Returns all examples.
-    pub fn examples(&self) -> &[TrainingExample] {
-        &self.examples
+    /// Iterates over all examples.
+    pub fn examples(&self) -> impl ExactSizeIterator<Item = &TrainingExample> + '_ {
+        self.examples.iter()
     }
 
     /// Returns the number of examples.
-    pub fn len(&self) -> usize {
-        self.examples.len()
+    pub fn len(&self) -> ExampleCount {
+        ExampleCount::from_raw(self.len_value())
     }
 
-    /// Returns `true` when there are no examples.
-    pub fn is_empty(&self) -> bool {
-        self.examples.is_empty()
+    fn len_value(&self) -> usize {
+        self.examples.len()
     }
 }
 
@@ -319,9 +537,9 @@ pub struct ParameterGradients {
 }
 
 impl ParameterGradients {
-    /// Returns one gradient per weight.
-    pub fn weights(&self) -> &[Gradient] {
-        &self.weights
+    /// Iterates over one gradient per weight.
+    pub fn weights(&self) -> impl ExactSizeIterator<Item = &Gradient> + '_ {
+        self.weights.iter()
     }
 
     /// Returns the bias gradient.
@@ -383,8 +601,8 @@ impl TinyNeuron {
     /// A deterministic starting point used by examples and tests.
     pub fn lesson_seed() -> Result<Self, NeuronError> {
         Ok(Self::new(
-            WeightVector::two(Weight::new(0.5)?, Weight::new(-0.3)?),
-            Bias::new(0.1)?,
+            WeightVector::two(Weight::try_from(0.5)?, Weight::try_from(-0.3)?),
+            Bias::try_from(0.1)?,
         ))
     }
 
@@ -400,8 +618,8 @@ impl TinyNeuron {
 
     /// Computes the raw score `z = w dot x + b`.
     pub fn raw_score(&self, features: &FeatureVector) -> Result<PreActivation, NeuronError> {
-        let sum = weighted_sum(features, &self.weights)?;
-        PreActivation::new(sum.value() + self.bias.value())
+        let sum = (features * &self.weights)?;
+        sum + self.bias
     }
 
     /// Runs the forward pass `mix -> squash`.
@@ -412,6 +630,16 @@ impl TinyNeuron {
     /// Computes squared-error loss for one example.
     pub fn loss(&self, example: &TrainingExample) -> Result<Loss, NeuronError> {
         squared_error(self.predict(example.features())?, example.target())
+    }
+
+    /// Computes average loss without mutating the neuron.
+    pub fn average_loss(&self, dataset: &Dataset) -> Result<Loss, NeuronError> {
+        let total = dataset
+            .examples()
+            .map(|example| self.loss(example).map(Loss::as_f64))
+            .sum::<Result<f64, _>>()?;
+
+        Loss::from_raw(total / dataset.len().as_usize() as f64)
     }
 
     /// Runs one training update and returns the values a learner should inspect.
@@ -426,25 +654,22 @@ impl TinyNeuron {
         let prediction_before = sigmoid(z)?;
         let loss_before = squared_error(prediction_before, example.target())?;
 
-        let d_loss_d_prediction = 2.0 * (prediction_before.value() - example.target().value());
-        let d_prediction_d_pre_activation =
-            prediction_before.value() * (1.0 - prediction_before.value());
-        let shared_blame = d_loss_d_prediction * d_prediction_d_pre_activation;
+        let prediction_error = (prediction_before - example.target())?;
+        let shared_blame = prediction_error.through_sigmoid(prediction_before)?;
 
         let weight_gradients = example
             .features()
             .values()
-            .iter()
-            .map(|feature| Gradient::new(shared_blame * feature.value()))
+            .map(|feature| shared_blame * *feature)
             .collect::<Result<Vec<_>, _>>()?;
-        let bias_gradient = Gradient::new(shared_blame)?;
+        let bias_gradient = Gradient::from_raw(shared_blame.as_f64())?;
 
         for (weight, gradient) in self.weights.values.iter_mut().zip(weight_gradients.iter()) {
-            let adjustment = Adjustment::new(rate.value() * gradient.value())?;
-            *weight = Weight::new(weight.value() - adjustment.value())?;
+            let adjustment = (rate * *gradient)?;
+            *weight = (*weight - adjustment)?;
         }
-        let bias_adjustment = Adjustment::new(rate.value() * bias_gradient.value())?;
-        self.bias = Bias::new(self.bias.value() - bias_adjustment.value())?;
+        let bias_adjustment = (rate * bias_gradient)?;
+        self.bias = (self.bias - bias_adjustment)?;
 
         let prediction_after = self.predict(example.features())?;
         let loss_after = squared_error(prediction_after, example.target())?;
@@ -470,10 +695,10 @@ impl TinyNeuron {
         let mut total = 0.0;
 
         for example in dataset.examples() {
-            total += self.train_one_step(example, rate)?.loss_before().value();
+            total += self.train_one_step(example, rate)?.loss_before().as_f64();
         }
 
-        Loss::new(total / dataset.len() as f64)
+        Loss::from_raw(total / dataset.len().as_usize() as f64)
     }
 
     fn validate_features(
@@ -482,14 +707,14 @@ impl TinyNeuron {
         operation: &'static str,
     ) -> Result<(), NeuronError> {
         if features.len() != self.weights.len() {
-            return Err(NeuronError::DimensionMismatch {
+            return Err(NeuronError::dimension_mismatch(
                 operation,
-                left_label: "features",
-                left_len: features.len(),
-                right_label: "weights",
-                right_len: self.weights.len(),
-                hint: "each input feature must have exactly one learned weight",
-            });
+                "features",
+                features.len().as_usize(),
+                "weights",
+                self.weights.len().as_usize(),
+                "each input feature must have exactly one learned weight",
+            ));
         }
 
         Ok(())
@@ -497,100 +722,144 @@ impl TinyNeuron {
 }
 
 /// Computes the dot product between input features and weights.
+///
+/// This named helper is kept as a learner signpost. The operator form
+/// `&features * &weights` is the same checked typed operation.
 pub fn weighted_sum(
     features: &FeatureVector,
     weights: &WeightVector,
 ) -> Result<WeightedSum, NeuronError> {
+    weighted_sum_with_operation("weighted_sum", features, weights)
+}
+
+fn weighted_sum_with_operation(
+    operation: &'static str,
+    features: &FeatureVector,
+    weights: &WeightVector,
+) -> Result<WeightedSum, NeuronError> {
     if features.len() != weights.len() {
-        return Err(NeuronError::DimensionMismatch {
-            operation: "weighted_sum",
-            left_label: "features",
-            left_len: features.len(),
-            right_label: "weights",
-            right_len: weights.len(),
-            hint: "dot product needs one weight per feature",
-        });
+        return Err(NeuronError::dimension_mismatch(
+            operation,
+            "features",
+            features.len().as_usize(),
+            "weights",
+            weights.len().as_usize(),
+            "dot product needs one weight per feature",
+        ));
     }
 
-    WeightedSum::new(
-        features
-            .values()
-            .iter()
-            .zip(weights.values().iter())
-            .map(|(feature, weight)| feature.value() * weight.value())
-            .sum(),
-    )
+    let mut total = WeightedSum::from_raw(0.0)?;
+
+    for (feature, weight) in features.values().zip(weights.values()) {
+        total = (total + (*feature * *weight)?)?;
+    }
+
+    Ok(total)
 }
 
 /// Applies sigmoid to a raw score.
 pub fn sigmoid(z: PreActivation) -> Result<Prediction, NeuronError> {
-    Prediction::new(1.0 / (1.0 + (-z.value()).exp()))
+    Prediction::from_raw(1.0 / (1.0 + (-z.as_f64()).exp()))
 }
 
 /// Computes squared-error loss.
 pub fn squared_error(prediction: Prediction, target: Target) -> Result<Loss, NeuronError> {
-    Loss::new((prediction.value() - target.value()).powi(2))
+    (prediction - target)?.squared_loss()
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
         Bias, Dataset, FeatureVector, InputValue, LearningRate, NeuronError, Target, TinyNeuron,
-        TrainingExample, Weight, WeightVector, weighted_sum,
+        TrainingExample, Weight, WeightVector, WeightedSum, weighted_sum,
     };
 
-    fn input(value: f64) -> InputValue {
-        InputValue::new(value).expect("test input should be finite")
+    fn features(left: InputValue, right: InputValue) -> FeatureVector {
+        FeatureVector::two(left, right)
     }
 
-    fn weight(value: f64) -> Weight {
-        Weight::new(value).expect("test weight should be finite")
+    fn weights(left: Weight, right: Weight) -> WeightVector {
+        WeightVector::two(left, right)
+    }
+
+    fn assert_weighted_sums_close(left: WeightedSum, right: WeightedSum) {
+        assert!((left.as_f64() - right.as_f64()).abs() < 1e-12);
     }
 
     #[test]
     fn target_rejects_values_outside_probability_range() {
-        let error = Target::new(1.2).expect_err("invalid target should fail");
-        assert_eq!(error, NeuronError::TargetOutOfRange { value: 1.2 });
+        let error = Target::try_from(1.2);
+        assert!(matches!(error, Err(NeuronError::TargetOutOfRange { .. })));
+        assert_eq!(
+            error.err().map(|error| error.to_string()),
+            Some("target must be between 0 and 1 inclusive, got 1.2".to_owned())
+        );
     }
 
     #[test]
     fn learning_rate_rejects_zero() {
-        let error = LearningRate::new(0.0).expect_err("zero learning rate should fail");
-        assert_eq!(error, NeuronError::InvalidLearningRate { value: 0.0 });
+        let error = LearningRate::try_from(0.0);
+        assert!(matches!(
+            error,
+            Err(NeuronError::InvalidLearningRate { .. })
+        ));
+        assert_eq!(
+            error.err().map(|error| error.to_string()),
+            Some("learning rate must be finite and greater than zero, got 0".to_owned())
+        );
     }
 
     #[test]
     fn weighted_sum_matches_the_hand_calculation() -> Result<(), NeuronError> {
-        let features = FeatureVector::two(input(1.0), input(0.5));
-        let weights = WeightVector::two(weight(0.8), weight(-0.4));
+        let features = features(InputValue::try_from(1.0)?, InputValue::try_from(0.5)?);
+        let weights = weights(Weight::try_from(0.8)?, Weight::try_from(-0.4)?);
 
-        assert!((weighted_sum(&features, &weights)?.value() - 0.6).abs() < 1e-12);
+        let expected = WeightedSum::try_from(0.6)?;
+        let actual = weighted_sum(&features, &weights)?;
+
+        assert_weighted_sums_close(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn feature_weight_vectors_multiply_into_a_weighted_sum() -> Result<(), NeuronError> {
+        let features = features(InputValue::try_from(1.0)?, InputValue::try_from(0.5)?);
+        let weights = weights(Weight::try_from(0.8)?, Weight::try_from(-0.4)?);
+
+        let expected = WeightedSum::try_from(0.6)?;
+        let actual = (&features * &weights)?;
+
+        assert_weighted_sums_close(actual, expected);
         Ok(())
     }
 
     #[test]
     fn weighted_sum_reports_shape_mismatch() -> Result<(), NeuronError> {
-        let features = FeatureVector::new(vec![input(1.0), input(2.0), input(3.0)])?;
-        let weights = WeightVector::two(weight(0.1), weight(0.2));
+        let features = FeatureVector::from_values([
+            InputValue::try_from(1.0)?,
+            InputValue::try_from(2.0)?,
+            InputValue::try_from(3.0)?,
+        ])?;
+        let weights = weights(Weight::try_from(0.1)?, Weight::try_from(0.2)?);
 
-        let error = weighted_sum(&features, &weights).expect_err("mismatch should fail");
-        assert!(matches!(error, NeuronError::DimensionMismatch { .. }));
+        let error = weighted_sum(&features, &weights);
+        assert!(matches!(error, Err(NeuronError::DimensionMismatch { .. })));
         Ok(())
     }
 
     #[test]
     fn forward_pass_matches_the_lesson_numbers() -> Result<(), NeuronError> {
         let neuron = TinyNeuron::new(
-            WeightVector::two(weight(0.8), weight(-0.4)),
-            Bias::new(0.1)?,
+            weights(Weight::try_from(0.8)?, Weight::try_from(-0.4)?),
+            Bias::try_from(0.1)?,
         );
-        let features = FeatureVector::two(input(1.0), input(0.0));
+        let features = features(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?);
 
         let raw_score = neuron.raw_score(&features)?;
         let prediction = neuron.predict(&features)?;
 
-        assert!((raw_score.value() - 0.9).abs() < 1e-12);
-        assert!((prediction.value() - 0.710_949_502_625).abs() < 1e-9);
+        assert!((raw_score.as_f64() - 0.9).abs() < 1e-12);
+        assert!((prediction.as_f64() - 0.710_949_502_625).abs() < 1e-9);
         Ok(())
     }
 
@@ -598,12 +867,12 @@ mod tests {
     fn one_step_training_lowers_loss_for_the_same_example() -> Result<(), NeuronError> {
         let mut neuron = TinyNeuron::lesson_seed()?;
         let example = TrainingExample::new(
-            FeatureVector::two(input(1.0), input(0.0)),
-            Target::new(1.0)?,
+            features(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?),
+            Target::try_from(1.0)?,
         );
-        let step = neuron.train_one_step(&example, LearningRate::new(0.5)?)?;
+        let step = neuron.train_one_step(&example, LearningRate::try_from(0.5)?)?;
 
-        assert!(step.loss_after().value() < step.loss_before().value());
+        assert!(step.loss_after() < step.loss_before());
         assert_eq!(step.gradients().weights().len(), 2);
         Ok(())
     }
@@ -611,25 +880,15 @@ mod tests {
     #[test]
     fn epoch_training_reduces_average_loss_on_and_gate() -> Result<(), NeuronError> {
         let dataset = Dataset::and_gate()?;
-        let rate = LearningRate::new(0.8)?;
+        let rate = LearningRate::try_from(0.8)?;
         let mut neuron = TinyNeuron::lesson_seed()?;
-        let initial_loss = dataset
-            .examples()
-            .iter()
-            .map(|example| neuron.loss(example).map(|loss| loss.value()))
-            .sum::<Result<f64, _>>()?
-            / dataset.len() as f64;
+        let initial_loss = neuron.average_loss(&dataset)?;
 
         for _ in 0..200 {
             neuron.train_epoch(&dataset, rate)?;
         }
 
-        let final_loss = dataset
-            .examples()
-            .iter()
-            .map(|example| neuron.loss(example).map(|loss| loss.value()))
-            .sum::<Result<f64, _>>()?
-            / dataset.len() as f64;
+        let final_loss = neuron.average_loss(&dataset)?;
 
         assert!(
             final_loss < initial_loss,

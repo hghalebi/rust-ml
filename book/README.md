@@ -1,21 +1,26 @@
 # Book
 
-This directory is intentionally thin in the bootstrap pass.
+This repository is currently a repo-first learning resource, not a published book.
 
-It is reserved for a future presentation layer such as mdBook once the authored lesson structure in [`lessons/`](../lessons/README.md) is stable enough to mirror safely.
+The public learner-facing material lives in:
+
+- [`README.md`](../README.md)
+- [`lessons/`](../lessons/README.md)
+- [`code/`](../code/README.md)
 
 ## Current Rule
 
-- `lessons/` is the source of truth.
-- `book/` is non-authoritative.
-- [`lessons/COURSE-STRUCTURE.md`](../lessons/COURSE-STRUCTURE.md) defines the canonical curriculum contract.
+- `lessons/` is the source of truth for written teaching content.
+- `code/` is the executable companion layer.
+- `README.md` is the public entry point.
+- `book/` stays non-authoritative unless the project later chooses a book surface.
 
 ## Why
 
-Duplicating the course into both `lessons/` and `book/` this early would create drift.
+Keeping the repository first avoids a second public surface drifting away from the code and lessons.
 
-## Later Use
+## Public Boundary
 
-When the course is stable enough for mdBook or a site wrapper, this directory can host that presentation layer without changing where the content is authored.
+Public learner content must not contain credentials, personal data, private paths, deployment secrets, or maintainer-only project context.
 
-Until then, keeping `book/` intentionally small is a coherence rule, not a missing-feature accident.
+See [`PUBLIC_CONTENT.md`](../PUBLIC_CONTENT.md) for the repo-level boundary.

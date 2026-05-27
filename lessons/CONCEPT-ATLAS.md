@@ -1,0 +1,140 @@
+# Concept Atlas
+
+This atlas shows the same learning path from several angles:
+
+```text
+ML idea -> meaningful Rust type -> checked map -> runnable proof
+```
+
+Use it when you feel that the lessons, code crates, and CS336 Rust assignments
+are separate pieces. They are meant to be one progression.
+
+## How To Read The Atlas
+
+Each row has four learner questions:
+
+- **Object:** what kind of value is this?
+- **Invariant:** what must be true before downstream code may use it?
+- **Map:** what transformation owns the change?
+- **Proof:** which local example or test makes the idea executable?
+
+In the category-theory lens, an object is a meaningful space of values and a
+map is a function between those spaces. The Rust newtype is the learner-visible
+name for the object.
+
+## Core Object Ladder
+
+| Stage | Objects | Invariants | Starts in |
+| --- | --- | --- | --- |
+| Scalar meaning | `InputValue`, `Weight`, `Bias`, `Target` | finite values, probability ranges where needed | [`code/neuron`](../code/neuron/README.md) |
+| Vector meaning | `FeatureVector`, `WeightVector`, `InputVector` | matching widths, non-empty vectors | [`lessons/02-vectors`](02-vectors/README.md) |
+| Prediction path | `WeightedSum`, `PreActivation`, `Prediction`, `Loss` | finite arithmetic, valid prediction range | [`code/neuron`](../code/neuron/README.md) |
+| Learning path | `PredictionError`, `Gradient`, `Adjustment`, `LearningRate` | positive learning rate, checked update arithmetic | [`lessons/04-learning`](04-learning/README.md) |
+| Hidden representation | `HiddenActivation`, `OutputLogit`, `MatrixShape` | layer widths agree before composition | [`code/mlp`](../code/mlp/README.md) |
+| Sequence attention | `TokenEmbedding`, `Query`, `Key`, `Value` | shared model width and role-specific vectors | [`code/attention`](../code/attention/README.md) |
+| Transformer encoder | `PositionEncoding`, `TokenSequence`, `AttentionOutputSequence` | same sequence length and `d_model` for residual maps | [`code/transformer`](../code/transformer/README.md) |
+| Language modeling | `RawText`, `Token`, `TokenId`, `NextTokenBatch` | known vocabulary, aligned input and target lengths | [`code/lm_basics`](../code/lm_basics/README.md) |
+| Systems evidence | `Bytes`, `Flops`, `ElapsedNanos`, `ArithmeticIntensity` | units stay separate during arithmetic | [`code/systems`](../code/systems/README.md) |
+| Kernel tiling | `MatrixShape`, `TileShape`, `TilePlan`, `FlopCount` | tile windows and resource units stay explicit | [`code/kernels`](../code/kernels/README.md) |
+| Scaling evidence | `TrainingRun`, `MetricRecord`, `ComputeBudgetFlops`, `ValidationLoss` | every loss keeps the run that produced it | [`code/scaling`](../code/scaling/README.md) |
+| Data preparation | `RawDocument`, `NormalizedDocument`, `DedupKey`, `CorpusShard` | provenance, filter reasons, and mixture weights stay visible | [`code/data`](../code/data/README.md) |
+| Inference trace | `DecodeRequest`, `SamplingMode`, `KvCacheEntry`, `LatencyBudget` | context, cache, and generated tokens advance together | [`code/inference`](../code/inference/README.md) |
+| Parallel training | `WorldSize`, `RankId`, `RankShard`, `CommunicationBytes` | every shard keeps its rank, origin, and communication units | [`code/parallelism`](../code/parallelism/README.md) |
+| Post-training signals | `PreferencePair`, `RewardScore`, `VerifierFeedback`, `AuditRecord` | signal source and failure meaning are preserved | [`code/alignment`](../code/alignment/README.md) |
+
+## Map Ladder
+
+The course repeatedly asks you to name the map before trusting the code.
+
+| Map | Plain-English reading | Executable anchor |
+| --- | --- | --- |
+| `FeatureVector * WeightVector -> WeightedSum` | mix input evidence with learned importance | `rust_ml_neuron --example 01_weighted_sum` |
+| `WeightedSum + Bias -> PreActivation -> Prediction` | shift the score, then squash it into a prediction | `rust_ml_neuron --example 02_forward_pass` |
+| `Prediction - Target -> PredictionError -> Adjustment` | compare, blame, and update one parameter path | `rust_ml_neuron --example 03_one_step_training` |
+| `InputVector -> HiddenActivation -> Prediction` | build a representation before the final judgment | `rust_ml_mlp --example 03_forward_trace` |
+| `Query * Key -> AttentionScore -> AttentionWeight` | decide which token should influence this token | `rust_ml_attention --example 02_softmax_focus` |
+| `AttentionWeight * Value -> AttentionOutput` | mix value vectors according to the attention distribution | `rust_ml_attention --example 03_weighted_sum` |
+| `TokenEmbedding + PositionEncoding -> TokenEmbedding` | add position without changing token width | `rust_ml_transformer --example encoder_demo` |
+| `RawText -> TokenTextSequence -> TokenIdSequence` | turn text into checked language-model input | `rust_ml_lm_basics --example 01_tokenize_and_encode` |
+| `NextTokenBatch -> Logits -> Loss -> Update` | make the smallest complete language-model training loop | `rust_ml_lm_basics --example 04_training_step` |
+| `ActivationShape -> ElementCount -> Bytes` | convert model shape into memory evidence | `rust_ml_systems --example 01_memory_accounting` |
+| `MatrixRows * MatrixColumns -> ElementCount` | convert shape into compute and memory accounting | `rust_ml_kernels --example 04_kernel_estimate` |
+| `MetricRecord -> ScalingFit -> ForecastLoss` | turn runs into a limited, inspectable scaling claim | `rust_ml_scaling --example 03_forecast_loss` |
+| `RawDocument -> NormalizedDocument -> FilterDecision` | make data quality a typed part of the model path | `rust_ml_data --example 02_filter_and_dedup` |
+| `ContextTokens + TokenId -> ContextTokens` | grow one autoregressive trace without losing the cache boundary | `rust_ml_inference --example 03_kv_cache_trace` |
+| `GlobalBatchSize / WorldSize -> LocalBatchSize` | split a global object into rank-owned local work | `rust_ml_parallelism --example 01_data_parallel_batch` |
+| `PreferenceSignal -> UpdateSignal -> AuditRecord` | keep post-training feedback auditable | `rust_ml_alignment --example 04_audit_record` |
+
+## Runnable Proofs
+
+Every important idea should have a local proof:
+
+- a lesson explanation that names the idea
+- a Rust type that protects the meaning
+- a test that catches the broken case
+- an example that prints or exposes the trace
+
+For example, "a token ID must belong to the vocabulary" is not only prose. It
+is checked by `TokenId`, tested by `code/lm_basics`, and exercised by the R1
+assignment.
+
+Run the full proof set with:
+
+```bash
+python3 scripts/check_course_content.py
+python3 scripts/check_public_content.py
+python3 scripts/check_rust_teaching_contract.py
+python3 scripts/check_teaching_crates.py
+python3 scripts/check_teaching_examples.py
+cargo test --manifest-path code/Cargo.toml --workspace --all-targets
+```
+
+## CS336 Extension
+
+The CS336 Rust equivalent track extends the same atlas into a larger systems
+journey:
+
+```text
+R1 Basics -> R2 Systems -> R3 Scaling -> R4 Data -> R5 Alignment
+```
+
+Each assignment should still answer the same questions:
+
+- What objects are introduced?
+- Which raw literals enter through validation adapters?
+- Which maps compose into the model or system?
+- Which failure signal proves the learner has not hidden the hard part?
+
+That is why the assignments include expected deliverables, required checks,
+assessment rubrics, and failure signals.
+
+## Mastery Trace
+
+A learner is ready to move on when they can trace one value across the course.
+
+Example trace:
+
+```text
+RawText
+  -> TokenTextSequence
+  -> TokenIdSequence
+  -> NextTokenBatch
+  -> Logits
+  -> Loss
+  -> Adjustment
+  -> TilePlan
+  -> MetricRecord
+  -> ScalingFit
+  -> DecodeTrace
+  -> RankShard
+```
+
+The trace is not just a chain of names. At each arrow, the learner should be
+able to say:
+
+- what changed
+- what stayed invariant
+- which type prevents confusion
+- which test would fail if the map were wrong
+
+That is the standard for deep intuition in this repo.

@@ -5,25 +5,24 @@ use rust_ml_neuron::{
 fn main() -> Result<(), rust_ml_neuron::Error> {
     let mut neuron = TinyNeuron::lesson_seed()?;
     let example = TrainingExample::new(
-        FeatureVector::two(InputValue::new(1.0)?, InputValue::new(0.0)?),
-        Target::new(1.0)?,
+        FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?),
+        Target::try_from(1.0)?,
     );
 
-    let step = neuron.train_one_step(&example, LearningRate::new(0.5)?)?;
+    let step = neuron.train_one_step(&example, LearningRate::try_from(0.5)?)?;
+    let weight_gradients = step
+        .gradients()
+        .weights()
+        .map(|gradient| format!("{gradient:.4}"))
+        .collect::<Vec<_>>()
+        .join(", ");
 
-    println!(
-        "prediction before = {:.4}",
-        step.prediction_before().value()
-    );
-    println!("loss before       = {:.4}", step.loss_before().value());
-    println!(
-        "weight gradients  = [{:.4}, {:.4}]",
-        step.gradients().weights()[0].value(),
-        step.gradients().weights()[1].value()
-    );
-    println!("bias gradient     = {:.4}", step.gradients().bias().value());
-    println!("prediction after  = {:.4}", step.prediction_after().value());
-    println!("loss after        = {:.4}", step.loss_after().value());
+    println!("prediction before = {:.4}", step.prediction_before());
+    println!("loss before       = {:.4}", step.loss_before());
+    println!("weight gradients  = [{weight_gradients}]");
+    println!("bias gradient     = {:.4}", step.gradients().bias());
+    println!("prediction after  = {:.4}", step.prediction_after());
+    println!("loss after        = {:.4}", step.loss_after());
 
     Ok(())
 }

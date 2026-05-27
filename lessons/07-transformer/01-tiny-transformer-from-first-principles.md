@@ -7,7 +7,7 @@ This lesson resets the Transformer story from the front door:
 - what problem it solves
 - what the core math is actually doing
 - what we will build in Rust
-- why this course uses semantic types instead of anonymous tensor soup
+- why this course uses semantic types instead of unlabeled tensor plumbing
 
 The goal is not to memorize the paper. The goal is to stop the architecture from looking mystical.
 
@@ -52,13 +52,13 @@ then token `x_i` should be able to use information from every `x_j`, not only fr
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, ModelError, TokenEmbedding, TokenSequence};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError, TokenEmbedding, TokenSequence};
 
 fn main() -> Result<(), ModelError> {
     let sentence = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0, 1.0])?),
-        TokenEmbedding(DenseVector::new(vec![1.0, 1.0, 0.0, 0.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?),
     ])?;
 
     println!("tokens = {}", sentence.len());
@@ -102,22 +102,23 @@ For a whole sequence:
 
 ```rust
 use rust_ml_transformer::{
-    scaled_attention_score, softmax, AttentionScores, DenseVector, Key, ModelError, Query,
+    ModelScalar,
+    softmax, AttentionScore, AttentionScores, DenseVector, Key, ModelError, Query,
 };
 
 fn main() -> Result<(), ModelError> {
-    let query = Query(DenseVector::new(vec![1.0, 2.0])?);
-    let key_a = Key(DenseVector::new(vec![3.0, 4.0])?);
-    let key_b = Key(DenseVector::new(vec![1.0, 0.0])?);
+    let query = Query::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?])?);
+    let key_a = Key::from_vector(DenseVector::new([ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?])?);
+    let key_b = Key::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?);
 
-    let scores = AttentionScores(vec![
-        scaled_attention_score(&query, &key_a)?,
-        scaled_attention_score(&query, &key_b)?,
-    ]);
+    let scores = AttentionScores::from_scores([
+        (&query * &key_a)?,
+        (&query * &key_b)?,
+    ])?;
     let weights = softmax(&scores)?;
 
-    println!("scores = {:?}", scores.0);
-    println!("weights = {:?}", weights.0);
+    println!("scores = {:?}", scores.values().collect::<Vec<AttentionScore>>());
+    println!("weights = {:?}", weights.values().collect::<Vec<_>>());
     Ok(())
 }
 ```
@@ -143,7 +144,7 @@ This is not a training framework.
 
 - no autograd
 - no optimizer
-- no GPU kernel wizardry
+- no GPU kernel engineering
 
 Just the architecture, cleanly.
 
@@ -170,7 +171,8 @@ For a beginner-friendly Transformer, this module starts with option B.
 
 Why?
 
-Because you are learning the model, not auditioning for a role as a hostage negotiator with the compiler.
+Because you are learning the model first, not fighting advanced type machinery
+before the architecture is clear.
 
 ### Algebra
 
@@ -187,13 +189,13 @@ We just check them at runtime while giving the roles explicit names.
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, Key, ModelError, Query, TokenEmbedding, Value};
+use rust_ml_transformer::{ModelScalar, DenseVector, Key, ModelError, Query, TokenEmbedding, Value};
 
 fn main() -> Result<(), ModelError> {
-    let token = TokenEmbedding(DenseVector::new(vec![0.2, 0.7, -0.1, 0.4])?);
-    let query = Query(DenseVector::new(vec![0.3, 0.1])?);
-    let key = Key(DenseVector::new(vec![0.2, 0.5])?);
-    let value = Value(DenseVector::new(vec![1.0, -1.0])?);
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.7)?, ModelScalar::try_from(-0.1)?, ModelScalar::try_from(0.4)?])?);
+    let query = Query::from_vector(DenseVector::new([ModelScalar::try_from(0.3)?, ModelScalar::try_from(0.1)?])?);
+    let key = Key::from_vector(DenseVector::new([ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.5)?])?);
+    let value = Value::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(-1.0)?])?);
 
     println!("token width = {}", token.len());
     println!("query width = {}", query.len());
@@ -255,7 +257,7 @@ This lesson does not build:
 - training
 - backpropagation
 
-Because that would turn a teaching lesson into a hostage situation.
+Because that would turn a focused teaching lesson into a much larger systems project.
 
 ## 8. Where linear attention fits
 
@@ -290,7 +292,7 @@ This module chooses:
 - small methods
 - shape checks close to the bug
 - function signatures that tell the story
-- expressive `thiserror` diagnostics instead of panic soup
+- expressive `thiserror` diagnostics instead of panic-heavy shortcuts
 
 It avoids:
 
@@ -316,6 +318,14 @@ Study the encoder path in this order:
 10. `TransformerEncoderBlock`
 
 Once you can explain each of those out loud, the Transformer stops looking magical and starts looking like disciplined engineering.
+
+## Concept Trace
+
+- **Object/newtype:** `TokenEmbedding`, `PositionEncoding`, `TokenSequence`, and `TransformerEncoderBlock`.
+- **Invariant:** sequence length and `d_model` must stay compatible across attention, residual, normalization, and feed-forward maps.
+- **Map:** token sequence -> positioned sequence -> attention -> feed-forward -> encoded sequence.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encoder_demo`.
+- **Failure signal:** you can describe the Transformer as a stack but cannot say which maps preserve shape and why residual addition requires that.
 
 ## 11. One-sentence summary
 

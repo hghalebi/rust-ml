@@ -81,3 +81,10 @@ A strong self-check answer should connect each program to the model chain:
 3. `03_one_step_training` prints loss before and after the update, so it shows `blame -> trace -> adjust`.
 
 The exact gradient values matter less than the direction: for the positive example, the loss after the update should be lower than the loss before the update.
+
+## Self-Check
+
+- You can trace `FeatureVector -> WeightedSum -> Prediction -> Loss` without skipping a role.
+- You can explain which parameter each local derivative belongs to.
+- You can describe the update as blame, trace, adjust.
+- You can connect every printed example value to a Rust newtype in `code/neuron`.

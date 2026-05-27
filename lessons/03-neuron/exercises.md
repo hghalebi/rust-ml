@@ -71,3 +71,17 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_ste
 ```
 
 For each example, write one sentence that connects the printed numbers to the lesson vocabulary.
+
+## Failure Signals
+
+- You can compute `z` but cannot explain why the sigmoid map comes next.
+- You describe the backward pass as "magic correction" instead of tracing loss back to each parameter.
+- You mix up `Prediction`, `Target`, `Loss`, `Gradient`, and `Adjustment` as if they were the same kind of number.
+- You run the examples but cannot connect the printed values to the type names in `code/neuron`.
+
+## Debugging Hints
+
+- Draw the forward path first: `FeatureVector -> WeightedSum -> Prediction -> Loss`.
+- For each parameter, ask which intermediate value it directly changes.
+- Keep the three-word hooks nearby: forward is mix, squash, judge; backward is blame, trace, adjust.
+- When an example prints a value, write the Rust newtype name beside the printed number.

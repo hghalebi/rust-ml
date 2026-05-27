@@ -10,17 +10,25 @@ z = w_1 x_1 + w_2 x_2 + b
 
 Rust:
 
-```rust
-let z = w1 * x1 + w2 * x2 + b;
+```text
+let z = ((&inputs * &weights)? + bias)?;
 ```
 
 ## Solution 2: Fix the indexing mismatch
 
 ```rust
-let x = vec![10.0, 20.0, 30.0];
+use rust_ml_neuron::{FeatureVector, InputValue};
 
-let x1 = x[0];
-let x3 = x[2];
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let x = FeatureVector::from_values([
+        InputValue::try_from(10.0)?,
+        InputValue::try_from(20.0)?,
+        InputValue::try_from(30.0)?,
+    ])?;
+
+    println!("feature count = {}", x.len());
+    Ok(())
+}
 ```
 
 Math starts at 1. Rust starts at 0.
@@ -35,31 +43,45 @@ Math starts at 1. Rust starts at 0.
 ## Solution 4: Write a dot product
 
 ```rust
-fn dot(a: &[f64], b: &[f64]) -> f64 {
-    let mut sum = 0.0;
+use rust_ml_neuron::{FeatureVector, InputValue, Weight, WeightVector};
 
-    for i in 0..a.len() {
-        sum += a[i] * b[i];
-    }
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let x = FeatureVector::from_values([
+        InputValue::try_from(1.0)?,
+        InputValue::try_from(2.0)?,
+    ])?;
+    let w = WeightVector::from_values([
+        Weight::try_from(3.0)?,
+        Weight::try_from(4.0)?,
+    ])?;
 
-    sum
+    println!("{}", (&x * &w)?);
+    Ok(())
 }
 ```
 
 ## Solution 5: Model as a struct
 
 ```rust
-struct Neuron {
-    w1: f64,
-    w2: f64,
-    b: f64,
-}
+use rust_ml_neuron::{Bias, FeatureVector, InputValue, TinyNeuron, Weight, WeightVector};
 
-impl Neuron {
-    fn forward(&self, x1: f64, x2: f64) -> f64 {
-        self.w1 * x1 + self.w2 * x2 + self.b
-    }
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let neuron = TinyNeuron::new(
+        WeightVector::two(Weight::try_from(1.0)?, Weight::try_from(2.0)?),
+        Bias::try_from(0.5)?,
+    );
+    let input = FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?);
+
+    println!("{}", neuron.raw_score(&input)?);
+    Ok(())
 }
 ```
 
 The important idea is not the syntax alone. The important idea is that the struct holds the parameters, and the method expresses the arithmetic.
+
+## Self-Check
+
+- You can point to the English phrase, algebra symbol, and Rust field for each value.
+- You can explain why algebra position `1` maps to Rust index `0`.
+- Your dot product returns one score, not another vector.
+- Your `forward` method is a map from inputs to score, not only a storage container.

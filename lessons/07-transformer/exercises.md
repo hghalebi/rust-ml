@@ -5,13 +5,13 @@
 Run this and read the error carefully:
 
 ```rust
-use rust_ml_transformer::{DenseMatrix, DenseVector, ModelError};
+use rust_ml_transformer::{ModelScalar, DenseMatrix, DenseVector, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let matrix = DenseMatrix::from_rows(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
-    let vector = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+    let matrix = DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?], [ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?]])?;
+    let vector = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
 
-    let result = matrix.mul_vec(&vector);
+    let result = &matrix * &vector;
     println!("{result:?}");
     Ok(())
 }
@@ -89,3 +89,17 @@ Questions:
 - what architectural slot stayed the same?
 - what math changed?
 - why is that an efficiency discussion rather than a definition of the 2017 paper?
+
+## Failure Signals
+
+- You can build a type but cannot explain the invariant its constructor checks.
+- You ignore shape errors instead of reading the operation, shapes, and hint.
+- You add positional encodings but cannot say which dimensions stay unchanged.
+- You describe linear attention as "the Transformer" instead of a comparison point in the same architectural slot.
+
+## Debugging Hints
+
+- Start every Transformer experiment by naming sequence length and `d_model`.
+- When a constructor fails, read the error as teaching material before changing the code.
+- Use typed addition for residual and positional maps so the code mirrors the algebra.
+- Keep the 2017 architecture separate from later efficiency variants when explaining attention.

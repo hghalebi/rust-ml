@@ -18,6 +18,10 @@ It exists to preserve provenance and to keep raw source material separate from t
 
 - [Sebastian Raschka: LLMs From Scratch](repos/llms-from-scratch.md)
 
+## Course Maps
+
+- [CS336 Language Modeling From Scratch source map](courses/cs336-language-modeling-from-scratch.md)
+
 ## Usage
 
 - Use these files as supporting context when authoring future modules.

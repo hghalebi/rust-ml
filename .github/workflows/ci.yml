@@ -27,10 +27,23 @@ jobs:
           python3 -m py_compile \
             scripts/check_course_content.py \
             scripts/check_lesson_rust_snippets.py \
+            scripts/check_rust_teaching_contract.py \
+            scripts/check_teaching_examples.py \
+            scripts/check_teaching_crates.py \
+            scripts/check_public_content.py \
             scripts/gemini_review_markdown.py
 
       - name: Validate lesson structure and local links
         run: python3 scripts/check_course_content.py
+
+      - name: Validate public learner content boundary
+        run: python3 scripts/check_public_content.py
+
+      - name: Validate Rust teaching contracts
+        run: python3 scripts/check_rust_teaching_contract.py
+
+      - name: Validate active teaching crate structure
+        run: python3 scripts/check_teaching_crates.py
 
   lesson-snippets:
     name: Lesson Rust Snippets
@@ -59,6 +72,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -72,3 +90,6 @@ jobs:
 
       - name: cargo test
         run: cargo test --manifest-path code/Cargo.toml --workspace --all-targets
+
+      - name: Run teaching examples
+        run: python3 scripts/check_teaching_examples.py

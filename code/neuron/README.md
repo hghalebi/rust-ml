@@ -6,7 +6,11 @@ This crate is the executable companion for [03 Neuron](../../lessons/03-neuron/R
 
 It keeps the beginner model explicit:
 
+## Current State
+
 - semantic scalar types: `InputValue`, `Weight`, `Bias`, `Target`, `Prediction`, `LearningRate`
+- explicit `TryFrom` adapters for raw learner literals
+- readable typed arithmetic through `std::ops` traits, such as `&FeatureVector * &WeightVector`, `InputValue * Weight`, `WeightedSum + Bias`, and `Weight - Adjustment`
 - vector wrappers: `FeatureVector`, `WeightVector`
 - typed model: `TinyNeuron`
 - explicit errors through `NeuronError`
@@ -37,6 +41,22 @@ examples/
 3. `03_one_step_training` exposes `blame -> trace -> adjust` for one labeled example.
 4. `04_and_gate_epoch` repeats updates across a tiny AND dataset so learners can watch average loss move.
 
+## Category Lens
+
+Read the neuron as a composition of tiny maps:
+
+```text
+FeatureVector * WeightVector -> WeightedSum
+WeightedSum + Bias -> PreActivation
+PreActivation -> Prediction
+Prediction + Target -> Loss
+Loss -> Gradient -> Adjustment
+```
+
+The composition rule is alignment. Every input feature needs exactly one
+weight, and each update keeps the parameter role separate from the observed
+training example.
+
 ## Run
 
 ```bash
@@ -59,3 +79,5 @@ The goal is one complete mental model:
 ```text
 weighted sum -> sigmoid -> loss -> gradient update
 ```
+
+The public API avoids raw domain primitives: examples parse raw numbers at the edge with `TryFrom`, then the model code moves through semantic newtypes and checked operations.

@@ -58,14 +58,15 @@ even when each one is represented by a vector.
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     DenseVector, Key, ModelError, Query, TokenEmbedding, Value,
 };
 
 fn main() -> Result<(), ModelError> {
-    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
-    let query = Query(DenseVector::new(vec![0.2, 0.5])?);
-    let key = Key(DenseVector::new(vec![0.1, 0.4])?);
-    let value = Value(DenseVector::new(vec![2.0, -1.0])?);
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?);
+    let query = Query::from_vector(DenseVector::new([ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.5)?])?);
+    let key = Key::from_vector(DenseVector::new([ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.4)?])?);
+    let value = Value::from_vector(DenseVector::new([ModelScalar::try_from(2.0)?, ModelScalar::try_from(-1.0)?])?);
 
     println!("{:?}", token.as_slice());
     println!("{:?}", query.as_slice());
@@ -75,7 +76,7 @@ fn main() -> Result<(), ModelError> {
 }
 ```
 
-## 2. Use `thiserror`, not panic soup
+## 2. Use `thiserror`, not panic-heavy shortcuts
 
 ### English
 
@@ -106,13 +107,13 @@ If they do not, the operation is invalid.
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseMatrix, DenseVector, ModelError};
+use rust_ml_transformer::{ModelScalar, DenseMatrix, DenseVector, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let matrix = DenseMatrix::from_rows(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
-    let vector = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+    let matrix = DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?], [ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?]])?;
+    let vector = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
 
-    match matrix.mul_vec(&vector) {
+    match &matrix * &vector {
         Ok(_) => println!("unexpected success"),
         Err(error) => println!("{error}"),
     }
@@ -148,13 +149,13 @@ d_{model}
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, ModelError, TokenEmbedding, TokenSequence};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError, TokenEmbedding, TokenSequence};
 
 fn main() -> Result<(), ModelError> {
     let sequence = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![1.0, 1.0, 0.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
     ])?;
 
     println!("tokens = {}", sequence.len());
@@ -176,6 +177,10 @@ Instead of a single generic `Linear` that can mean anything, the crate uses type
 
 That makes the function signature teach the architecture.
 
+The underlying newtypes also implement Rust operation traits. The expression
+`&projection * &token` is not generic matrix arithmetic: its output type is
+`Query`. Adding a `ProjectionBias` keeps the same semantic role.
+
 ### Algebra
 
 For one token embedding `x`:
@@ -196,21 +201,20 @@ v = W_V x + b_V
 
 ```rust
 use rust_ml_transformer::{
-    DenseMatrix, DenseVector, ModelError, ProjectionBias, QueryLayer, QueryProjection,
-    TokenEmbedding,
+    ModelScalar,
+    DenseMatrix, DenseVector, ModelError, ProjectionBias, QueryProjection, TokenEmbedding,
 };
 
 fn main() -> Result<(), ModelError> {
-    let layer = QueryLayer::new(
-        QueryProjection(DenseMatrix::from_rows(vec![
-            vec![0.2, 0.1, 0.0, 0.3],
-            vec![0.0, 0.4, 0.1, 0.2],
-        ])?),
-        ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
-    )?;
+    let projection = QueryProjection::from_matrix(DenseMatrix::from_rows([
+        [ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.3)?],
+        [ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.4)?, ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.2)?],
+    ])?);
+    let bias = ProjectionBias::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?);
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?);
 
-    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
-    let query = layer.forward(&token)?;
+    let projected = (&projection * &token)?;
+    let query = (&projected + &bias)?;
 
     println!("{:?}", query.as_slice());
     Ok(())
@@ -246,41 +250,35 @@ Q = XW_Q,\quad K = XW_K,\quad V = XW_V
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     AttentionHead, DenseMatrix, DenseVector, KeyLayer, KeyProjection, ModelError,
     ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
-    ValueProjection,
+    ValueProjection, VectorLength,
 };
 
-fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
-    DenseMatrix::from_rows(
-        (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect(),
-    )
+fn identity_projection() -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?], [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?]])
 }
 
-fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn main() -> Result<(), ModelError> {
+    let width = VectorLength::try_from(2)?;
     let head = AttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
 
     let sequence = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
 
     let outputs = head.forward(&sequence)?;
-    println!("{:?}", outputs[0].as_slice());
+    println!("{:?}", outputs.output(rust_ml_transformer::TokenIndex::try_from(0)?)?.as_slice());
     Ok(())
 }
 ```
@@ -318,41 +316,35 @@ with a matching normalizer.
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     DenseMatrix, DenseVector, KeyLayer, KeyProjection, LinearAttentionHead, ModelError,
     ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
-    ValueProjection,
+    ValueProjection, VectorLength,
 };
 
-fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
-    DenseMatrix::from_rows(
-        (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect(),
-    )
+fn identity_projection() -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?], [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?]])
 }
 
-fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn main() -> Result<(), ModelError> {
+    let width = VectorLength::try_from(2)?;
     let head = LinearAttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
 
     let sequence = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
 
     let outputs = head.forward(&sequence)?;
-    println!("{:?}", outputs[0].as_slice());
+    println!("{:?}", outputs.output(rust_ml_transformer::TokenIndex::try_from(0)?)?.as_slice());
     Ok(())
 }
 ```
@@ -414,6 +406,14 @@ That separation is deliberate:
 - `types.rs` owns semantic model roles
 - `attention.rs` owns attention-specific logic
 - `transformer.rs` owns encoder-side assembly
+
+## Concept Trace
+
+- **Object/newtype:** `DenseVector` is the raw math layer, while `Query`, `Key`, `Value`, and `AttentionOutput` are semantic model roles.
+- **Invariant:** shared storage does not imply shared meaning; role wrappers prevent architectural swaps.
+- **Map:** raw checked vector -> semantic projection role -> attention output.
+- **Runnable proof:** `cargo test --manifest-path code/Cargo.toml -p rust_ml_transformer --all-targets`.
+- **Failure signal:** you treat `Query`, `Key`, and `Value` as interchangeable because they all contain vectors.
 
 ## Short Practice
 

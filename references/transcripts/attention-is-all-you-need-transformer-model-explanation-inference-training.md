@@ -1,6 +1,6 @@
 # Attention is all you need (Transformer) - Model explanation (including math), Inference and Training
 
-Type: user-provided transcript  
+Type: user-provided transcript
 Intended modules: [06 Attention](../../lessons/06-attention/README.md), [07 Transformer](../../lessons/07-transformer/README.md)
 
 ## Note

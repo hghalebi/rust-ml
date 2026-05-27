@@ -1,41 +1,77 @@
 use rust_ml_transformer::{
     AttentionHead, DenseMatrix, DenseVector, FeedForward, FeedForwardLayer1, FeedForwardLayer2,
     FeedForwardProjection1, FeedForwardProjection2, KeyLayer, KeyProjection, LayerNorm, ModelError,
-    MultiHeadAttention, OutputLayer, OutputProjection, PositionalEncodingTable, ProjectionBias,
-    QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, TransformerEncoderBlock,
-    ValueLayer, ValueProjection,
+    ModelScalar, MultiHeadAttention, OutputLayer, OutputProjection, PositionalEncodingTable,
+    ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence,
+    TransformerEncoderBlock, ValueLayer, ValueProjection, VectorLength,
 };
 
-fn matrix(rows: Vec<Vec<f32>>) -> Result<DenseMatrix, ModelError> {
+fn vector(values: impl IntoIterator<Item = ModelScalar>) -> Result<DenseVector, ModelError> {
+    DenseVector::new(values)
+}
+
+fn matrix(
+    rows: impl IntoIterator<Item = impl IntoIterator<Item = ModelScalar>>,
+) -> Result<DenseMatrix, ModelError> {
     DenseMatrix::from_rows(rows)
 }
 
-fn bias(values: Vec<f32>) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(values)?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn head_one() -> Result<AttentionHead, ModelError> {
     AttentionHead::new(
         QueryLayer::new(
-            QueryProjection(matrix(vec![
-                vec![0.2, 0.1, 0.0, 0.3],
-                vec![0.0, 0.4, 0.1, 0.2],
+            QueryProjection::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.3)?,
+                ],
+                [
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.4)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                ],
             ])?),
-            bias(vec![0.0, 0.0])?,
+            zero_bias(VectorLength::try_from(2)?)?,
         )?,
         KeyLayer::new(
-            KeyProjection(matrix(vec![
-                vec![0.1, 0.0, 0.3, 0.2],
-                vec![0.2, 0.2, 0.1, 0.0],
+            KeyProjection::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.2)?,
+                ],
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                ],
             ])?),
-            bias(vec![0.0, 0.0])?,
+            zero_bias(VectorLength::try_from(2)?)?,
         )?,
         ValueLayer::new(
-            ValueProjection(matrix(vec![
-                vec![0.3, 0.1, 0.2, 0.0],
-                vec![0.0, 0.2, 0.3, 0.1],
+            ValueProjection::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.0)?,
+                ],
+                [
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.1)?,
+                ],
             ])?),
-            bias(vec![0.0, 0.0])?,
+            zero_bias(VectorLength::try_from(2)?)?,
         )?,
     )
 }
@@ -43,85 +79,208 @@ fn head_one() -> Result<AttentionHead, ModelError> {
 fn head_two() -> Result<AttentionHead, ModelError> {
     AttentionHead::new(
         QueryLayer::new(
-            QueryProjection(matrix(vec![
-                vec![0.1, 0.3, 0.2, 0.0],
-                vec![0.2, 0.1, 0.0, 0.4],
+            QueryProjection::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.0)?,
+                ],
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.4)?,
+                ],
             ])?),
-            bias(vec![0.0, 0.0])?,
+            zero_bias(VectorLength::try_from(2)?)?,
         )?,
         KeyLayer::new(
-            KeyProjection(matrix(vec![
-                vec![0.2, 0.1, 0.1, 0.3],
-                vec![0.1, 0.0, 0.4, 0.2],
+            KeyProjection::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.3)?,
+                ],
+                [
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.4)?,
+                    ModelScalar::try_from(0.2)?,
+                ],
             ])?),
-            bias(vec![0.0, 0.0])?,
+            zero_bias(VectorLength::try_from(2)?)?,
         )?,
         ValueLayer::new(
-            ValueProjection(matrix(vec![
-                vec![0.0, 0.2, 0.1, 0.3],
-                vec![0.3, 0.1, 0.2, 0.0],
+            ValueProjection::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.3)?,
+                ],
+                [
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.0)?,
+                ],
             ])?),
-            bias(vec![0.0, 0.0])?,
+            zero_bias(VectorLength::try_from(2)?)?,
         )?,
     )
 }
 
 fn main() -> Result<(), ModelError> {
     let input = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0, 1.0])?),
-        TokenEmbedding(DenseVector::new(vec![1.0, 1.0, 0.0, 0.0])?),
+        TokenEmbedding::from_vector(vector([
+            ModelScalar::try_from(1.0)?,
+            ModelScalar::try_from(0.0)?,
+            ModelScalar::try_from(1.0)?,
+            ModelScalar::try_from(0.0)?,
+        ])?),
+        TokenEmbedding::from_vector(vector([
+            ModelScalar::try_from(0.0)?,
+            ModelScalar::try_from(1.0)?,
+            ModelScalar::try_from(0.0)?,
+            ModelScalar::try_from(1.0)?,
+        ])?),
+        TokenEmbedding::from_vector(vector([
+            ModelScalar::try_from(1.0)?,
+            ModelScalar::try_from(1.0)?,
+            ModelScalar::try_from(0.0)?,
+            ModelScalar::try_from(0.0)?,
+        ])?),
     ])?;
 
-    let positions = PositionalEncodingTable::new(4)?;
+    let positions = PositionalEncodingTable::new(VectorLength::try_from(4)?);
     let with_position = positions.add_to_sequence(&input)?;
 
     let attention = MultiHeadAttention::new(
         vec![head_one()?, head_two()?],
         OutputLayer::new(
-            OutputProjection(matrix(vec![
-                vec![0.2, 0.1, 0.0, 0.1],
-                vec![0.0, 0.3, 0.2, 0.1],
-                vec![0.1, 0.0, 0.3, 0.2],
-                vec![0.2, 0.1, 0.1, 0.2],
+            OutputProjection::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.1)?,
+                ],
+                [
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                ],
+                [
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.2)?,
+                ],
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                ],
             ])?),
-            bias(vec![0.0, 0.0, 0.0, 0.0])?,
+            zero_bias(VectorLength::try_from(4)?)?,
         )?,
     )?;
 
     let feed_forward = FeedForward::new(
         FeedForwardLayer1::new(
-            FeedForwardProjection1(matrix(vec![
-                vec![0.2, 0.1, 0.0, 0.3],
-                vec![0.1, 0.2, 0.3, 0.0],
-                vec![0.0, 0.3, 0.1, 0.2],
-                vec![0.2, 0.0, 0.2, 0.1],
-                vec![0.1, 0.1, 0.1, 0.1],
-                vec![0.3, 0.2, 0.0, 0.1],
+            FeedForwardProjection1::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.3)?,
+                ],
+                [
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.0)?,
+                ],
+                [
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                ],
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                ],
+                [
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.1)?,
+                ],
+                [
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.1)?,
+                ],
             ])?),
-            bias(vec![0.0; 6])?,
+            zero_bias(VectorLength::try_from(6)?)?,
         )?,
         FeedForwardLayer2::new(
-            FeedForwardProjection2(matrix(vec![
-                vec![0.2, 0.1, 0.0, 0.3, 0.1, 0.2],
-                vec![0.1, 0.2, 0.3, 0.0, 0.1, 0.0],
-                vec![0.0, 0.3, 0.1, 0.2, 0.2, 0.1],
-                vec![0.2, 0.0, 0.2, 0.1, 0.1, 0.3],
+            FeedForwardProjection2::from_matrix(matrix([
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                ],
+                [
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.0)?,
+                ],
+                [
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.3)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                ],
+                [
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.0)?,
+                    ModelScalar::try_from(0.2)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.1)?,
+                    ModelScalar::try_from(0.3)?,
+                ],
             ])?),
-            bias(vec![0.0; 4])?,
+            zero_bias(VectorLength::try_from(4)?)?,
         )?,
     )?;
 
     let block = TransformerEncoderBlock::new(
         attention,
-        LayerNorm::new(4)?,
+        LayerNorm::new(VectorLength::try_from(4)?)?,
         feed_forward,
-        LayerNorm::new(4)?,
+        LayerNorm::new(VectorLength::try_from(4)?)?,
     )?;
 
     let output = block.forward(&with_position)?;
 
-    for (index, token) in output.tokens().iter().enumerate() {
+    for (index, token) in output.tokens().enumerate() {
         println!("token {index}: {:?}", token.as_slice());
     }
 

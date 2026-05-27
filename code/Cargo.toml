@@ -1,6 +1,17 @@
 [workspace]
 resolver = "3"
 members = [
+    "alignment",
+    "attention",
+    "data",
+    "evaluation",
+    "inference",
+    "kernels",
+    "lm_basics",
+    "mlp",
+    "parallelism",
+    "scaling",
     "neuron",
+    "systems",
     "transformer",
 ]

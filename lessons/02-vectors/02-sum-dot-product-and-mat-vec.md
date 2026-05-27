@@ -70,31 +70,25 @@ Wx = \begin{bmatrix} 17 \\ 39 \end{bmatrix}
 ## Rust Form
 
 ```rust
-fn dot(a: &[f64], b: &[f64]) -> f64 {
-    let mut sum = 0.0;
+use rust_ml_transformer::{DenseMatrix, DenseVector, ModelError, ModelScalar};
 
-    for i in 0..a.len() {
-        sum += a[i] * b[i];
-    }
+fn main() -> Result<(), ModelError> {
+    let a = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?])?;
+    let b = DenseVector::new([ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?])?;
 
-    sum
-}
+    let dot_product = (&a * &b)?;
 
-fn mat_vec_mul(matrix: &[Vec<f64>], vector: &[f64]) -> Vec<f64> {
-    let rows = matrix.len();
-    let mut result = vec![0.0; rows];
+    let matrix = DenseMatrix::from_rows([
+        [ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?],
+        [ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?],
+    ])?;
+    let vector = DenseVector::new([ModelScalar::try_from(5.0)?, ModelScalar::try_from(6.0)?])?;
 
-    for r in 0..rows {
-        let mut sum = 0.0;
+    let output = (&matrix * &vector)?;
 
-        for c in 0..vector.len() {
-            sum += matrix[r][c] * vector[c];
-        }
-
-        result[r] = sum;
-    }
-
-    result
+    println!("dot product = {dot_product}");
+    println!("matrix-vector output width = {}", output.len());
+    Ok(())
 }
 ```
 
@@ -106,6 +100,14 @@ Later, a neuron uses a dot product.
 Later still, attention uses dot products too.
 
 The surrounding architecture changes. The arithmetic family does not.
+
+## Concept Trace
+
+- **Object/newtype:** dot products later connect `FeatureVector`, `WeightVector`, `Query`, `Key`, and `AttentionScore`.
+- **Invariant:** paired vectors must have compatible widths before multiplication and summation.
+- **Map:** aligned vectors -> weighted evidence -> one scalar score.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 01_score_one_pair`.
+- **Failure signal:** your result has the wrong shape because you did not reduce pairwise products into one score.
 
 ## Short Practice
 

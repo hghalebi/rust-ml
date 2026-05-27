@@ -88,23 +88,26 @@ That is why the gradient factors multiply:
 
 ### Cleaner Rust with operator traits
 
-The noisy version of this lesson uses `.0` constantly because every newtype wraps an `f64`.
+The raw-storage version of this lesson peels values apart constantly. That
+teaches the computer's storage detail instead of the learner's mental model.
 
-For the teaching code, a better compromise is:
+The crate version uses a better compromise:
 
 - keep the semantic wrappers
-- overload the specific operators that are mathematically valid
+- overload only the specific operators that are mathematically valid
+- return checked errors when an operation can fail
 - avoid `Deref<Target = f64>`, because it makes every type feel raw again
 
-That gives us readable lines such as:
+That gives us readable typed lines such as:
 
 ```text
-x1 * w1 + x2 * w2 + b
+&features * &weights
+weighted_sum + bias
 prediction - target
 self.w1 = self.w1 - lr * d_loss_d_w1
 ```
 
-The wrappers still mean something. The code just stops shouting about their storage layout.
+The wrappers still mean something. The code just reads like typed composition.
 
 ### Why `dz/dw1 = x1`
 
@@ -177,263 +180,54 @@ w := w - \eta \frac{dL}{dw}
 ## Rust Form
 
 ```rust
-use std::ops::{Add, Mul, Sub};
+use rust_ml_neuron::{
+    Bias, FeatureVector, InputValue, Target, TinyNeuron, TrainingExample, Weight, WeightVector,
+};
 
-#[derive(Debug, Clone, Copy)]
-struct Input(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Weight(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Bias(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Prediction(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Target(f64);
-
-impl Mul<Weight> for Input {
-    type Output = f64;
-
-    fn mul(self, rhs: Weight) -> Self::Output {
-        self.0 * rhs.0
-    }
-}
-
-impl Add<Bias> for f64 {
-    type Output = f64;
-
-    fn add(self, rhs: Bias) -> Self::Output {
-        self + rhs.0
-    }
-}
-
-impl Sub<Target> for Prediction {
-    type Output = f64;
-
-    fn sub(self, rhs: Target) -> Self::Output {
-        self.0 - rhs.0
-    }
-}
-
-impl From<Prediction> for f64 {
-    fn from(value: Prediction) -> Self {
-        value.0
-    }
-}
-
-fn pre_activation(x1: Input, x2: Input, w1: Weight, w2: Weight, b: Bias) -> f64 {
-    x1 * w1 + x2 * w2 + b
-}
-
-fn activation(z: f64) -> Prediction {
-    Prediction(1.0 / (1.0 + (-z).exp()))
-}
-
-fn loss(prediction: Prediction, target: Target) -> f64 {
-    (prediction - target).powi(2)
-}
-
-fn main() {
-    let target = Target(1.0);
-    let z = pre_activation(Input(1.0), Input(0.0), Weight(0.8), Weight(-0.4), Bias(0.1));
-    let y_hat = activation(z);
-    let loss_value = loss(y_hat, target);
-
-    println!(
-        "z = {:.4}, y_hat = {:.4}, loss = {:.4}",
-        z,
-        f64::from(y_hat),
-        loss_value
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let neuron = TinyNeuron::new(
+        WeightVector::two(Weight::try_from(0.8)?, Weight::try_from(-0.4)?),
+        Bias::try_from(0.1)?,
     );
+    let example = TrainingExample::new(
+        FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?),
+        Target::try_from(1.0)?,
+    );
+
+    let z = neuron.raw_score(example.features())?;
+    let prediction = neuron.predict(example.features())?;
+    let loss = neuron.loss(&example)?;
+
+    println!("z = {z:.4}");
+    println!("prediction = {prediction:.4}");
+    println!("loss = {loss:.4}");
+
+    Ok(())
 }
 ```
 
 ```rust
-use std::ops::{Add, Mul, Sub};
+use rust_ml_neuron::{
+    FeatureVector, InputValue, LearningRate, Target, TinyNeuron, TrainingExample,
+};
 
-#[derive(Debug, Clone, Copy)]
-struct Input(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Weight(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Bias(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Prediction(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Target(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct LearningRate(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Gradient(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Adjustment(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Neuron {
-    w1: Weight,
-    w2: Weight,
-    b: Bias,
-}
-
-impl Mul<Weight> for Input {
-    type Output = f64;
-
-    fn mul(self, rhs: Weight) -> Self::Output {
-        self.0 * rhs.0
-    }
-}
-
-impl Add<Bias> for f64 {
-    type Output = f64;
-
-    fn add(self, rhs: Bias) -> Self::Output {
-        self + rhs.0
-    }
-}
-
-impl Sub<Target> for Prediction {
-    type Output = f64;
-
-    fn sub(self, rhs: Target) -> Self::Output {
-        self.0 - rhs.0
-    }
-}
-
-impl From<Input> for f64 {
-    fn from(value: Input) -> Self {
-        value.0
-    }
-}
-
-impl From<Prediction> for f64 {
-    fn from(value: Prediction) -> Self {
-        value.0
-    }
-}
-
-impl Mul<Gradient> for LearningRate {
-    type Output = Adjustment;
-
-    fn mul(self, rhs: Gradient) -> Self::Output {
-        Adjustment(self.0 * rhs.0)
-    }
-}
-
-impl Sub<Adjustment> for Weight {
-    type Output = Weight;
-
-    fn sub(self, rhs: Adjustment) -> Self::Output {
-        Weight(self.0 - rhs.0)
-    }
-}
-
-impl Sub<Adjustment> for Bias {
-    type Output = Bias;
-
-    fn sub(self, rhs: Adjustment) -> Self::Output {
-        Bias(self.0 - rhs.0)
-    }
-}
-
-fn pre_activation(x1: Input, x2: Input, w1: Weight, w2: Weight, b: Bias) -> f64 {
-    x1 * w1 + x2 * w2 + b
-}
-
-fn activation(z: f64) -> Prediction {
-    Prediction(1.0 / (1.0 + (-z).exp()))
-}
-
-fn sigmoid_derivative_from_output(output: f64) -> f64 {
-    output * (1.0 - output)
-}
-
-fn loss(prediction: Prediction, target: Target) -> f64 {
-    (prediction - target).powi(2)
-}
-
-impl Neuron {
-    fn forward(&self, x1: Input, x2: Input) -> Prediction {
-        let z = pre_activation(x1, x2, self.w1, self.w2, self.b);
-        activation(z)
-    }
-
-    fn train_one_step(
-        &mut self,
-        x1: Input,
-        x2: Input,
-        target: Target,
-        lr: LearningRate,
-    ) -> f64 {
-        let z = pre_activation(x1, x2, self.w1, self.w2, self.b);
-        let prediction = activation(z);
-        let current_loss = loss(prediction, target);
-
-        let d_loss_d_prediction = 2.0 * (prediction - target);
-        let d_prediction_d_pre_activation =
-            sigmoid_derivative_from_output(f64::from(prediction));
-
-        let d_pre_activation_d_w1 = f64::from(x1);
-        let d_pre_activation_d_w2 = f64::from(x2);
-        let d_pre_activation_d_b = 1.0;
-
-        let d_loss_d_w1 = Gradient(
-            d_loss_d_prediction
-            * d_prediction_d_pre_activation
-            * d_pre_activation_d_w1,
-        );
-
-        let d_loss_d_w2 = Gradient(
-            d_loss_d_prediction
-            * d_prediction_d_pre_activation
-            * d_pre_activation_d_w2,
-        );
-
-        let d_loss_d_b = Gradient(
-            d_loss_d_prediction
-            * d_prediction_d_pre_activation
-            * d_pre_activation_d_b,
-        );
-
-        self.w1 = self.w1 - lr * d_loss_d_w1;
-        self.w2 = self.w2 - lr * d_loss_d_w2;
-        self.b = self.b - lr * d_loss_d_b;
-
-        current_loss
-    }
-}
-
-fn main() {
-    let mut neuron = Neuron {
-        w1: Weight(0.5),
-        w2: Weight(-0.3),
-        b: Bias(0.1),
-    };
-
-    let before = neuron.forward(Input(1.0), Input(0.0));
-    let loss_before = neuron.train_one_step(
-        Input(1.0),
-        Input(0.0),
-        Target(1.0),
-        LearningRate(0.1),
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let mut neuron = TinyNeuron::lesson_seed()?;
+    let example = TrainingExample::new(
+        FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?),
+        Target::try_from(1.0)?,
     );
-    let after = neuron.forward(Input(1.0), Input(0.0));
 
-    println!(
-        "before={:.4}, loss={:.4}, after={:.4}",
-        f64::from(before),
-        loss_before,
-        f64::from(after)
-    );
+    let before = neuron.predict(example.features())?;
+    let step = neuron.train_one_step(&example, LearningRate::try_from(0.1)?)?;
+    let after = neuron.predict(example.features())?;
+
+    println!("before={before:.4}");
+    println!("loss before={:.4}", step.loss_before());
+    println!("loss after={:.4}", step.loss_after());
+    println!("after={after:.4}");
+
+    Ok(())
 }
 ```
 
@@ -456,6 +250,14 @@ blame -> trace -> adjust
 backpropagation stops looking mystical. It becomes disciplined bookkeeping over a composition of functions.
 
 That is the right mental model before you move to larger networks.
+
+## Concept Trace
+
+- **Object/newtype:** `FeatureVector`, `WeightedSum`, `Prediction`, `Loss`, `Gradient`, and `Adjustment`.
+- **Invariant:** the forward chain and feedback chain must preserve each role instead of collapsing into anonymous numbers.
+- **Map:** `FeatureVector -> WeightedSum -> Prediction -> Loss`, then feedback maps loss back to parameter adjustments.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training`.
+- **Failure signal:** you can say "backpropagation" but cannot name the path from one parameter to the loss.
 
 ## Short Practice
 
