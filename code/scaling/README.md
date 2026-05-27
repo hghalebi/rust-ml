@@ -9,6 +9,7 @@ It teaches scaling as typed evidence:
 ```text
 ExperimentConfig -> TrainingRun -> MetricRecord -> ScalingFit
 ScalingFit + TrainingRun -> ScalingCandidate -> ScalingTradeoff
+ReviewedMetricRecord* -> PublicScalingReport
 ```
 
 ## Owns
@@ -25,6 +26,7 @@ ScalingFit + TrainingRun -> ScalingCandidate -> ScalingTradeoff
 - log-log power-law fitting over compute and validation loss
 - forecast errors and learner-facing limitation reports
 - typed tradeoff decisions between candidate runs
+- reviewed metric records and public reports that reject restricted or private experiment evidence
 
 ## Layout
 
@@ -38,6 +40,7 @@ examples/
   03_forecast_loss.rs
   04_report_limitations.rs
   05_tradeoff_decision.rs
+  06_public_report.rs
 ```
 
 ## Learning Ladder
@@ -47,6 +50,7 @@ examples/
 3. `03_forecast_loss` uses the fitted curve to forecast a larger run.
 4. `04_report_limitations` packages the result with an explicit limitation.
 5. `05_tradeoff_decision` compares a baseline and candidate run with typed loss and compute tradeoffs.
+6. `06_public_report` checks that only public metric records can produce learner-facing scaling reports.
 
 ## Category Lens
 
@@ -59,11 +63,26 @@ MetricRecords -> ScalingFit
 ScalingFit + ComputeBudgetFlops -> ForecastLoss
 ForecastLoss + ValidationLoss -> LossDelta
 ScalingCandidate + ScalingCandidate -> ScalingTradeoff
+ReviewedMetricRecord* -> PublicScalingReport
 ```
 
 The composition rule is accountability. A fitted curve is meaningful only when
 each loss still points back to the run, token count, parameter estimate, and
 compute budget that produced it.
+
+## Three Lenses
+
+**Rust syntax:** `ReviewedMetricRecord` pairs a `MetricRecord` with a
+`MetricVisibility` enum. `PublicScalingReport::from_reviewed_records` consumes
+only records whose visibility is public.
+
+**ML concept:** scaling reports are evidence claims. Public teaching material
+should show inspectable toy runs without leaking restricted experiment evidence
+or private measurements.
+
+**Category-theory concept:** the public report is not a formatting step. It is a
+typed map from reviewed evidence objects into a new object that exists only when
+the publication boundary and fitting invariants both hold.
 
 ## Run
 
@@ -77,6 +96,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 02_fit_po
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 03_forecast_loss
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 04_report_limitations
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 05_tradeoff_decision
+cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 06_public_report
 ```
 
 ## Scope
@@ -84,3 +104,5 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 05_tradeo
 This crate does not claim to discover a real frontier scaling law.
 
 The goal is to teach disciplined evidence: every loss should point back to the config, step count, token count, parameter estimate, and compute estimate that produced it.
+Public examples add one more discipline: restricted or private metric records do
+not become learner-facing reports.

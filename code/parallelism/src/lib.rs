@@ -7,12 +7,14 @@
 //! GlobalBatchSize / WorldSize -> LocalBatchSize
 //! ModelWidth / WorldSize -> ShardWidth
 //! LayerCount / WorldSize -> LayersPerRank
+//! CollectiveTrace + ParallelTraceVisibility -> PublicParallelismReport
 //! CommunicationBytes + CommunicationBytes -> CommunicationBytes
 //! ```
 //!
 //! Raw learner literals enter through `TryFrom` adapters. Public teaching APIs
 //! then move through semantic values such as ranks, worlds, shard sizes,
-//! pipeline stages, communication rounds, and byte budgets.
+//! pipeline stages, communication rounds, byte budgets, and public-report
+//! review boundaries.
 
 pub mod error;
 
@@ -858,11 +860,121 @@ impl CollectiveTrace {
     }
 }
 
+/// Publication class attached to a parallelism trace before public report release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParallelTraceVisibility {
+    /// Safe to include in learner-facing public parallelism reports.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for ParallelTraceVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the parallelism-report publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicParallelismDecision {
+    /// The trace can appear in a public learner-facing report.
+    Publishable,
+    /// The trace must stay out of public learner-facing reports.
+    Blocked,
+}
+
+/// Collective trace plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedCollectiveTrace {
+    trace: CollectiveTrace,
+    visibility: ParallelTraceVisibility,
+}
+
+impl ReviewedCollectiveTrace {
+    /// Creates a reviewed collective trace.
+    pub fn new(trace: CollectiveTrace, visibility: ParallelTraceVisibility) -> Self {
+        Self { trace, visibility }
+    }
+
+    /// Returns the reviewed collective trace.
+    pub fn trace(&self) -> &CollectiveTrace {
+        &self.trace
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> ParallelTraceVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this trace can enter a public learner-facing report.
+    pub fn release_decision(&self) -> PublicParallelismDecision {
+        match self.visibility {
+            ParallelTraceVisibility::Public => PublicParallelismDecision::Publishable,
+            ParallelTraceVisibility::ResearchRestricted | ParallelTraceVisibility::Private => {
+                PublicParallelismDecision::Blocked
+            }
+        }
+    }
+
+    fn into_trace(self) -> CollectiveTrace {
+        self.trace
+    }
+}
+
+/// Collective trace checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicParallelismReport(CollectiveTrace);
+
+impl PublicParallelismReport {
+    /// Builds a public parallelism report only from a reviewed public trace.
+    pub fn from_reviewed_trace(
+        reviewed: ReviewedCollectiveTrace,
+    ) -> Result<Self, ParallelismError> {
+        if reviewed.release_decision() == PublicParallelismDecision::Blocked {
+            return Err(ParallelismError::invalid_public_report(
+                "PublicParallelismReport::from_reviewed_trace",
+                "public parallelism reports cannot include restricted or private collective traces",
+            ));
+        }
+
+        Ok(Self(reviewed.into_trace()))
+    }
+
+    /// Returns the checked collective trace.
+    pub fn trace(&self) -> &CollectiveTrace {
+        &self.0
+    }
+
+    /// Returns the public collective kind.
+    pub fn kind(&self) -> CollectiveKind {
+        self.0.kind()
+    }
+
+    /// Returns the public communication estimate.
+    pub fn communication(&self) -> CommunicationBytes {
+        self.0.communication()
+    }
+
+    /// Returns the public reduced scalar value.
+    pub fn reduced_value(&self) -> TensorElement {
+        self.0.reduced_value()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         CollectiveTrace, CommunicationBytes, DataParallelLayout, Error, GlobalBatchSize,
-        LayerCount, MicroBatchCount, ModelWidth, ParallelStrategy, PipelineLayout, TensorElement,
+        LayerCount, MicroBatchCount, ModelWidth, ParallelStrategy, ParallelTraceVisibility,
+        PipelineLayout, PublicParallelismReport, ReviewedCollectiveTrace, TensorElement,
         TensorLine, TensorParallelLayout, WorldSize, shard_tensor_line,
     };
 
@@ -873,6 +985,16 @@ mod tests {
             TensorElement::try_from(3.0)?,
             TensorElement::try_from(4.0)?,
         ])
+    }
+
+    fn collective_trace() -> Result<CollectiveTrace, Error> {
+        let plan = shard_tensor_line(
+            values()?,
+            WorldSize::try_from(2)?,
+            ParallelStrategy::DataParallel,
+        )?;
+
+        CollectiveTrace::all_reduce(plan, CommunicationBytes::try_from(64)?)
     }
 
     #[test]
@@ -933,15 +1055,46 @@ mod tests {
 
     #[test]
     fn all_reduce_reports_reduced_value_and_typed_communication() -> Result<(), Error> {
-        let plan = shard_tensor_line(
-            values()?,
-            WorldSize::try_from(2)?,
-            ParallelStrategy::DataParallel,
-        )?;
-        let trace = CollectiveTrace::all_reduce(plan, CommunicationBytes::try_from(64)?)?;
+        let trace = collective_trace()?;
 
         assert_eq!(trace.reduced_value(), TensorElement::try_from(10.0)?);
         assert_eq!(trace.communication(), CommunicationBytes::try_from(128)?);
+        Ok(())
+    }
+
+    #[test]
+    fn public_parallelism_report_accepts_public_collective_trace() -> Result<(), Error> {
+        let report = PublicParallelismReport::from_reviewed_trace(ReviewedCollectiveTrace::new(
+            collective_trace()?,
+            ParallelTraceVisibility::Public,
+        ))?;
+
+        assert_eq!(report.reduced_value(), TensorElement::try_from(10.0)?);
+        assert_eq!(report.communication(), CommunicationBytes::try_from(128)?);
+        Ok(())
+    }
+
+    #[test]
+    fn public_parallelism_report_blocks_restricted_and_private_collective_traces()
+    -> Result<(), Error> {
+        let restricted =
+            PublicParallelismReport::from_reviewed_trace(ReviewedCollectiveTrace::new(
+                collective_trace()?,
+                ParallelTraceVisibility::ResearchRestricted,
+            ));
+        let private = PublicParallelismReport::from_reviewed_trace(ReviewedCollectiveTrace::new(
+            collective_trace()?,
+            ParallelTraceVisibility::Private,
+        ));
+
+        assert!(matches!(
+            restricted.err(),
+            Some(Error::InvalidPublicReport { .. })
+        ));
+        assert!(matches!(
+            private.err(),
+            Some(Error::InvalidPublicReport { .. })
+        ));
         Ok(())
     }
 }

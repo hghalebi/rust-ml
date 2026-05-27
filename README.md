@@ -137,14 +137,14 @@ rust-ml/
 
 - `lessons/` is the source of truth for written teaching content.
 - `code/` follows the lesson progression and now includes a real tested `transformer` crate.
-- `code/systems` is the active R2 systems-measurement bridge for the CS336 Rust equivalent track.
+- `code/systems` is the active R2 systems-measurement and public-report bridge for the CS336 Rust equivalent track.
 - `code/kernels` is the active kernels-and-tiling bridge for the CS336 Rust equivalent track.
-- `code/scaling` is the active R3 scaling-evidence bridge for the CS336 Rust equivalent track.
+- `code/scaling` is the active R3 scaling-evidence and public-report bridge for the CS336 Rust equivalent track.
 - `code/data` is the active R4 data-preparation bridge for the CS336 Rust equivalent track.
 - `code/evaluation` is the active evaluation bridge for the CS336 Rust equivalent track.
 - `code/inference` is the active inference bridge for the CS336 Rust equivalent track.
-- `code/parallelism` is the active parallelism bridge for the CS336 Rust equivalent track.
-- `code/alignment` is the active R5 post-training signal bridge for the CS336 Rust equivalent track.
+- `code/parallelism` is the active parallelism and public-report bridge for the CS336 Rust equivalent track.
+- `code/alignment` is the active R5 post-training signal and public-release bridge for the CS336 Rust equivalent track.
 - `book/` is not the public surface right now; this is a repo-first learning resource.
 - `lessons/COURSE-STRUCTURE.md` is the canonical structure guide for module and lesson contracts.
 - `lessons/CONCEPT-ATLAS.md` is the learner-facing map from ML concepts to Rust newtypes, composable maps, and runnable proofs.
@@ -280,11 +280,12 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 02_attent
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 03_median_timing
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithmetic_intensity
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 05_memory_hierarchy
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 06_public_report
 ```
 
 The systems crate covers:
 
-- `BatchSize`, `SequenceLength`, `ModelWidth`, `Bytes`, `BytesPerSecond`, `MemoryLevel`, `Flops`, `ElapsedNanos`, and `ArithmeticIntensity`
+- `BatchSize`, `SequenceLength`, `ModelWidth`, `Bytes`, `BytesPerSecond`, `MemoryLevel`, `Flops`, `ElapsedNanos`, `ArithmeticIntensity`, and `PublicSystemsReport`
 - explicit `TryFrom` adapters for raw learner literals
 - activation memory estimates
 - matrix-vector FLOP and byte estimates
@@ -292,6 +293,7 @@ The systems crate covers:
 - median timing over repeated stage measurements
 - arithmetic intensity as the bridge between math and memory traffic
 - accelerator memory hierarchy as typed byte movement and bandwidth
+- a typed public-report boundary that rejects restricted or private measurements
 
 Run the first CS336 Rust kernels artifact:
 
@@ -320,17 +322,19 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 02_fit_po
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 03_forecast_loss
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 04_report_limitations
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 05_tradeoff_decision
+cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 06_public_report
 ```
 
 The scaling crate covers:
 
-- `RunId`, `ParameterCount`, `TokenCount`, `TrainingStep`, `ComputeBudgetFlops`, `ValidationLoss`, `ScalingExponent`, and `ScalingTradeoff`
+- `RunId`, `ParameterCount`, `TokenCount`, `TrainingStep`, `ComputeBudgetFlops`, `ValidationLoss`, `ScalingExponent`, `ScalingTradeoff`, and `PublicScalingReport`
 - explicit `TryFrom` adapters for raw learner literals
 - typed experiment configs and run records
 - checked parameter-token compute estimates
 - log-log power-law fitting over validation loss
 - forecast errors and limitation notes for tiny evidence
 - typed baseline-versus-candidate tradeoff decisions
+- a typed public-report boundary that rejects restricted or private metric records
 
 Run the first CS336 Rust data artifact:
 
@@ -398,15 +402,17 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 01_da
 cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 02_tensor_parallel_width
 cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 03_collective_all_reduce
 cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 04_pipeline_schedule
+cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 05_public_report
 ```
 
 The parallelism crate covers:
 
-- `WorldSize`, `RankIndex`, `RankId`, `GlobalBatchSize`, `ModelWidth`, `LayerCount`, `MicroBatchCount`, and `CommunicationBytes`
+- `WorldSize`, `RankIndex`, `RankId`, `GlobalBatchSize`, `ModelWidth`, `LayerCount`, `MicroBatchCount`, `CommunicationBytes`, and `PublicParallelismReport`
 - explicit `TryFrom` adapters for raw learner literals
 - data-parallel, tensor-parallel, and pipeline-parallel layout summaries
 - rank-owned tensor shards with origin offsets
 - a tiny all-reduce trace and communication estimate
+- a typed public-report boundary that rejects restricted or private collective traces
 
 Run the first CS336 Rust alignment artifact:
 
@@ -416,11 +422,12 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 02_pref
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 03_verifier_feedback
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 04_audit_record
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 05_alignment_workflow
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 06_public_release
 ```
 
 The alignment crate covers:
 
-- `Instruction`, `Response`, `ChosenResponse`, `RejectedResponse`, `RewardScore`, `VerifierResult`, `AlignmentRunId`, `AuditRecord`, `AlignmentWorkflow`, and `AlignmentStage`
+- `Instruction`, `Response`, `ChosenResponse`, `RejectedResponse`, `RewardScore`, `VerifierResult`, `AlignmentRunId`, `AuditRecord`, `AlignmentWorkflow`, `AlignmentStage`, and `PublicAlignmentRelease`
 - explicit `TryFrom` adapters for raw learner literals
 - supervised instruction-response examples
 - preference pairs with distinct chosen and rejected responses
@@ -428,6 +435,7 @@ The alignment crate covers:
 - verifier feedback that keeps failures visible
 - audit records that preserve source and update kind
 - workflow transitions that reject out-of-order alignment updates
+- a typed public-release boundary that rejects restricted or private alignment workflows
 
 Run the advanced Transformer encoder demo:
 

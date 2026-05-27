@@ -29,6 +29,7 @@ It starts with typed post-training signal flow:
 ```text
 PromptedResponse -> PreferenceSignal -> UpdateSignal -> AuditRecord
 AuditRecord -> AlignmentWorkflow -> AlignmentTransition
+ReviewedAlignmentWorkflow -> PublicAlignmentRelease
 ```
 
 Run it with:
@@ -39,16 +40,17 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 02_pref
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 03_verifier_feedback
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 04_audit_record
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 05_alignment_workflow
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 06_public_release
 ```
 
 ## Object/Map Preflight
 
 Before implementation, write this preflight in your assignment notes:
 
-- **Objects:** `Instruction`, `Response`, `PreferencePair`, `RewardScore`, `VerifierResult`, `UpdateSignal`, `AuditRecord`, `AlignmentWorkflow`, `AlignmentStage`.
-- **Maps:** form prompted response, compare preference pair, score reward, preserve verifier feedback, create update signal, write audit record, move the workflow through checked lifecycle stages.
-- **Composition path:** `PromptedResponse -> PreferenceSignal -> VerifierFeedback -> UpdateSignal -> AuditRecord -> AlignmentWorkflow`.
-- **Invariant to protect with newtypes:** feedback must keep its source, role, run identity, lifecycle stage, and failure state visible.
+- **Objects:** `Instruction`, `Response`, `PreferencePair`, `RewardScore`, `VerifierResult`, `UpdateSignal`, `AuditRecord`, `AlignmentWorkflow`, `AlignmentStage`, `AlignmentVisibility`, and `PublicAlignmentRelease`.
+- **Maps:** form prompted response, compare preference pair, score reward, preserve verifier feedback, create update signal, write audit record, move the workflow through checked lifecycle stages, then review it for public release.
+- **Composition path:** `PromptedResponse -> PreferenceSignal -> VerifierFeedback -> UpdateSignal -> AuditRecord -> AlignmentWorkflow -> PublicAlignmentRelease`.
+- **Invariant to protect with newtypes:** feedback must keep its source, role, run identity, lifecycle stage, failure state, and public-release class visible.
 
 ## Expected Deliverables
 
@@ -58,6 +60,7 @@ Before implementation, write this preflight in your assignment notes:
 - one verifier-feedback example that keeps failures visible
 - one audit record that preserves the signal source and run identity
 - one workflow trace that rejects applying an update before audit approval
+- one public-release trace that rejects restricted or private workflows
 
 ## Newtype And Category-Theory Lens
 
@@ -74,16 +77,20 @@ Use newtypes for:
 - `AlignmentWorkflow`
 - `AlignmentStage`
 - `AlignmentTransition`
+- `AlignmentVisibility`
+- `PublicAlignmentRelease`
 
 The feedback composition is:
 
 ```text
 PromptedResponse -> PreferenceSignal -> UpdateSignal -> AuditRecord
 AuditRecord -> AlignmentWorkflow -> AlignmentTransition
+ReviewedAlignmentWorkflow -> PublicAlignmentRelease
 ```
 
 The important invariant is that feedback must keep its source and meaning, and
-workflow stages must prevent out-of-order updates.
+workflow stages must prevent out-of-order updates. A learner-facing public
+release also requires explicit visibility review.
 
 ## Required Checks
 
@@ -92,6 +99,7 @@ workflow stages must prevent out-of-order updates.
 - test reward-score ordering on a tiny fixture
 - record every post-training signal with an auditable source
 - reject workflow transitions that skip the audit gate
+- reject restricted or private workflows at the public-release boundary
 
 ## Assessment Rubric
 
@@ -99,6 +107,7 @@ workflow stages must prevent out-of-order updates.
 - **Feedback integrity:** every update signal keeps its source, meaning, and run identity.
 - **Failure visibility:** verifier failures are represented as data, not hidden behind a success path.
 - **Lifecycle safety:** an update cannot be applied before a signal is audited.
+- **Public safety:** public examples are constructed only from reviewed, public, audit-complete workflows.
 - **Safety restraint:** the assignment explains toy post-training flow without claiming production alignment guarantees.
 
 ## Failure Signals
@@ -108,6 +117,7 @@ workflow stages must prevent out-of-order updates.
 - reward score comparisons use raw floating-point values across the public boundary
 - audit records omit the source of a post-training signal
 - workflow code permits `UpdateApplied` without an audit-approved transition
+- restricted or private feedback can appear in learner-facing public release material
 
 ## Suggested Repo Integration
 

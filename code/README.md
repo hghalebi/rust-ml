@@ -82,6 +82,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 02_attent
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 03_median_timing
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithmetic_intensity
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 05_memory_hierarchy
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 06_public_report
 ```
 
 Run the CS336 Rust kernels examples:
@@ -101,6 +102,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 02_fit_po
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 03_forecast_loss
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 04_report_limitations
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 05_tradeoff_decision
+cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 06_public_report
 ```
 
 Run the CS336 Rust R4 data examples:
@@ -140,6 +142,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 01_da
 cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 02_tensor_parallel_width
 cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 03_collective_all_reduce
 cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 04_pipeline_schedule
+cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 05_public_report
 ```
 
 Run the CS336 Rust R5 alignment examples:
@@ -150,6 +153,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 02_pref
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 03_verifier_feedback
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 04_audit_record
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 05_alignment_workflow
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 06_public_release
 ```
 
 Run the advanced Transformer example:
@@ -170,11 +174,11 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encod
 | [attention](attention/README.md) | Active crate | Beginner scaled dot-product attention companion crate with typed Q/K/V roles and ops-based newtype arithmetic. |
 | [transformer](transformer/README.md) | Active crate | Real tested encoder-path teaching crate with typed architecture configuration, expert routing, and ops-based positional/residual arithmetic. |
 | [lm_basics](lm_basics/README.md) | Active crate | First CS336 Rust language-modeling artifact: tokenization, checked IDs, next-token batches, loss, and one update. |
-| [systems](systems/README.md) | Active crate | First CS336 Rust systems artifact: typed memory, bandwidth, hierarchy, FLOP, timing, and arithmetic-intensity estimates. |
+| [systems](systems/README.md) | Active crate | First CS336 Rust systems artifact: typed memory, bandwidth, hierarchy, FLOP, timing, arithmetic-intensity estimates, and public report review. |
 | [kernels](kernels/README.md) | Active crate | First CS336 Rust kernels artifact: typed tiling, reductions, matrix-vector traces, and resource estimates. |
-| [scaling](scaling/README.md) | Active crate | First CS336 Rust scaling artifact: typed experiment records, power-law fitting, forecasts, tradeoffs, and limitations. |
+| [scaling](scaling/README.md) | Active crate | First CS336 Rust scaling artifact: typed experiment records, power-law fitting, forecasts, tradeoffs, limitations, and public report review. |
 | [data](data/README.md) | Active crate | First CS336 Rust data artifact: typed normalization, filtering, deduplication, shards, source mixtures, and public corpus manifests. |
 | [evaluation](evaluation/README.md) | Active crate | First CS336 Rust evaluation artifact: typed examples, predictions, reports, exact-match accuracy, run comparison, and public report review. |
 | [inference](inference/README.md) | Active crate | First CS336 Rust inference artifact: typed decoding controls, KV-cache traces, latency budgets, and public trace review. |
-| [parallelism](parallelism/README.md) | Active crate | First CS336 Rust parallelism artifact: typed ranks, sharding plans, collective traces, and pipeline schedules. |
-| [alignment](alignment/README.md) | Active crate | First CS336 Rust alignment artifact: typed instruction examples, preference signals, verifier feedback, audit records, and workflow transitions. |
+| [parallelism](parallelism/README.md) | Active crate | First CS336 Rust parallelism artifact: typed ranks, sharding plans, collective traces, pipeline schedules, and public report review. |
+| [alignment](alignment/README.md) | Active crate | First CS336 Rust alignment artifact: typed instruction examples, preference signals, verifier feedback, audit records, workflow transitions, and public release review. |

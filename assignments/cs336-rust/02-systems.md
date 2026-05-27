@@ -32,6 +32,7 @@ AttentionEstimate -> Flops
 StageMeasurements -> median elapsed time
 StageMeasurement -> ArithmeticIntensity
 MemoryTransfer -> ElapsedNanos
+ReviewedStageMeasurement* -> PublicSystemsReport
 ```
 
 Run it with:
@@ -42,16 +43,17 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 02_attent
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 03_median_timing
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithmetic_intensity
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 05_memory_hierarchy
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 06_public_report
 ```
 
 ## Object/Map Preflight
 
 Before implementation, write this preflight in your assignment notes:
 
-- **Objects:** `ActivationShape`, `ElementCount`, `Bytes`, `BytesPerSecond`, `MemoryLevel`, `AttentionEstimate`, `Flops`, `StageMeasurements`, `ArithmeticIntensity`.
-- **Maps:** count elements, estimate bytes, estimate attention FLOPs, collect repeated timings, summarize median time, compute arithmetic intensity, estimate memory-transfer time.
-- **Composition path:** `ActivationShape -> ElementCount -> Bytes`, `Bytes + BytesPerSecond + MemoryLevel -> ElapsedNanos`, and `StageMeasurements -> MedianElapsed -> ArithmeticIntensity`.
-- **Invariant to protect with newtypes:** bytes, bandwidth, FLOPs, elapsed time, and intensity are different units and must not be interchangeable numbers.
+- **Objects:** `ActivationShape`, `ElementCount`, `Bytes`, `BytesPerSecond`, `MemoryLevel`, `AttentionEstimate`, `Flops`, `StageMeasurements`, `ArithmeticIntensity`, `MeasurementVisibility`, and `PublicSystemsReport`.
+- **Maps:** count elements, estimate bytes, estimate attention FLOPs, collect repeated timings, summarize median time, compute arithmetic intensity, estimate memory-transfer time, then review measurements for public release.
+- **Composition path:** `ActivationShape -> ElementCount -> Bytes`, `Bytes + BytesPerSecond + MemoryLevel -> ElapsedNanos`, `StageMeasurements -> MedianElapsed -> ArithmeticIntensity`, and `ReviewedStageMeasurement* -> PublicSystemsReport`.
+- **Invariant to protect with newtypes:** bytes, bandwidth, FLOPs, elapsed time, intensity, and public-release class are different meanings and must not be interchangeable numbers.
 
 ## Expected Deliverables
 
@@ -61,6 +63,7 @@ Before implementation, write this preflight in your assignment notes:
 - one hand-computable arithmetic-intensity fixture
 - a short systems note that names the mathematical map that stayed unchanged
 - a memory-hierarchy note that compares the same byte movement through two memory tiers
+- one public report trace that rejects restricted or private stage measurements
 
 ## Newtype And Category-Theory Lens
 
@@ -76,6 +79,8 @@ Use newtypes for:
 - `SequenceLength`
 - `ModelWidth`
 - `StageName`
+- `MeasurementVisibility`
+- `PublicSystemsReport`
 
 Systems work is still composition:
 
@@ -87,6 +92,9 @@ same mathematical map
 same bytes
   -> different memory tier
   -> different transfer time
+
+ReviewedStageMeasurement*
+  -> PublicSystemsReport
 ```
 
 ## Required Checks
@@ -96,6 +104,7 @@ same bytes
 - test arithmetic-intensity calculations on a hand-computable case
 - test memory-transfer calculations on a hand-computable bandwidth case
 - document which optimization changes the implementation, not the mathematical result
+- reject restricted or private measurements at the public-report boundary
 
 ## Assessment Rubric
 
@@ -104,6 +113,7 @@ same bytes
 - **Systems intuition:** the learner can explain whether a stage is compute-heavy or bandwidth-heavy.
 - **Hierarchy intuition:** the learner can explain why the same bytes cost different time at different memory levels.
 - **Mathematical preservation:** optimization changes the schedule or memory pattern without changing the intended function.
+- **Public safety:** public reports are constructed only from reviewed public measurements.
 
 ## Failure Signals
 
@@ -112,6 +122,7 @@ same bytes
 - FLOPs and bytes are mixed through untyped arithmetic
 - an optimization note claims speedup without saying which resource trace improved
 - accelerator discussion names GPU/TPU hardware without tying it to bytes, bandwidth, or transfer time
+- restricted or private benchmark measurements can appear in learner-facing public reports
 
 ## Suggested Repo Integration
 

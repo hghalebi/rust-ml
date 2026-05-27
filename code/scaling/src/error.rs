@@ -133,6 +133,15 @@ pub enum ScalingError {
         /// Human-readable details.
         details: ErrorDetails,
     },
+
+    /// A scaling report failed the learner-facing public-release boundary.
+    #[error("invalid public report in {operation}: {details}")]
+    InvalidPublicReport {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable details.
+        details: ErrorDetails,
+    },
 }
 
 impl ScalingError {
@@ -167,6 +176,13 @@ impl ScalingError {
 
     pub(crate) fn degenerate_fit(operation: &'static str, details: &'static str) -> Self {
         Self::DegenerateFit {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_report(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicReport {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

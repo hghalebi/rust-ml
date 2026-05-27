@@ -124,6 +124,15 @@ pub enum SystemsError {
         /// Human-readable details.
         details: ErrorDetails,
     },
+
+    /// A systems report failed the learner-facing public-release boundary.
+    #[error("invalid public report in {operation}: {details}")]
+    InvalidPublicReport {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable details.
+        details: ErrorDetails,
+    },
 }
 
 impl SystemsError {
@@ -151,6 +160,13 @@ impl SystemsError {
 
     pub(crate) fn overflow(operation: &'static str, details: &'static str) -> Self {
         Self::Overflow {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_report(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicReport {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

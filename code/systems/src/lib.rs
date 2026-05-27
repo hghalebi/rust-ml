@@ -9,12 +9,13 @@
 //! repeated timings -> median timing
 //! FLOPs / bytes -> arithmetic intensity
 //! bytes / bandwidth -> transfer time
+//! ReviewedStageMeasurement* -> PublicSystemsReport
 //! ```
 //!
 //! Raw learner literals enter through `TryFrom` adapters. Public teaching APIs
 //! then move through semantic values such as [`BatchSize`], [`SequenceLength`],
 //! [`ModelWidth`], [`Bytes`], [`BytesPerSecond`], [`Flops`], and
-//! [`ElapsedNanos`].
+//! [`PublicSystemsReport`].
 
 pub mod error;
 
@@ -761,12 +762,122 @@ impl StageMeasurements {
     }
 }
 
+/// Publication class attached to a systems measurement before public report release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MeasurementVisibility {
+    /// Safe to include in learner-facing public systems reports.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for MeasurementVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the systems-report publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicSystemsDecision {
+    /// The measurement can appear in a public learner-facing report.
+    Publishable,
+    /// The measurement must stay out of public learner-facing reports.
+    Blocked,
+}
+
+/// Stage measurement plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewedStageMeasurement {
+    measurement: StageMeasurement,
+    visibility: MeasurementVisibility,
+}
+
+impl ReviewedStageMeasurement {
+    /// Creates a reviewed stage measurement.
+    pub fn new(measurement: StageMeasurement, visibility: MeasurementVisibility) -> Self {
+        Self {
+            measurement,
+            visibility,
+        }
+    }
+
+    /// Returns the reviewed stage measurement.
+    pub fn measurement(&self) -> &StageMeasurement {
+        &self.measurement
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> MeasurementVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this measurement can enter a public learner-facing report.
+    pub fn release_decision(&self) -> PublicSystemsDecision {
+        match self.visibility {
+            MeasurementVisibility::Public => PublicSystemsDecision::Publishable,
+            MeasurementVisibility::ResearchRestricted | MeasurementVisibility::Private => {
+                PublicSystemsDecision::Blocked
+            }
+        }
+    }
+
+    fn into_measurement(self) -> StageMeasurement {
+        self.measurement
+    }
+}
+
+/// Systems measurement report checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublicSystemsReport(StageMeasurements);
+
+impl PublicSystemsReport {
+    /// Builds a public systems report only from reviewed public stage measurements.
+    pub fn from_reviewed_measurements(
+        measurements: impl IntoIterator<Item = ReviewedStageMeasurement>,
+    ) -> Result<Self, SystemsError> {
+        let mut public_measurements = Vec::new();
+
+        for measurement in measurements {
+            if measurement.release_decision() == PublicSystemsDecision::Blocked {
+                return Err(SystemsError::invalid_public_report(
+                    "PublicSystemsReport::from_reviewed_measurements",
+                    "public systems reports cannot include restricted or private measurements",
+                ));
+            }
+            public_measurements.push(measurement.into_measurement());
+        }
+
+        Ok(Self(StageMeasurements::from_measurements(
+            public_measurements,
+        )?))
+    }
+
+    /// Returns the checked measurement set.
+    pub fn measurements(&self) -> &StageMeasurements {
+        &self.0
+    }
+
+    /// Returns the median elapsed time across public measurements.
+    pub fn median_elapsed(&self) -> Result<ElapsedNanos, SystemsError> {
+        self.0.median_elapsed()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         ActivationShape, AttentionEstimate, BatchSize, Bytes, BytesPerSecond, ColumnCount,
-        ElapsedNanos, ElementSize, Flops, MatrixVectorShape, MemoryLevel, MemoryTransfer,
-        ModelWidth, RowCount, SequenceLength, StageMeasurement, StageMeasurements, StageName,
+        ElapsedNanos, ElementSize, Flops, MatrixVectorShape, MeasurementVisibility, MemoryLevel,
+        MemoryTransfer, ModelWidth, PublicSystemsReport, ReviewedStageMeasurement, RowCount,
+        SequenceLength, StageMeasurement, StageMeasurements, StageName,
     };
     use crate::error::SystemsError;
 
@@ -914,5 +1025,74 @@ mod tests {
     fn bandwidth_rejects_zero() {
         let error = BytesPerSecond::try_from(0_u128).err();
         assert!(matches!(error, Some(SystemsError::EmptyInput { .. })));
+    }
+
+    fn public_measurement() -> Result<ReviewedStageMeasurement, SystemsError> {
+        Ok(ReviewedStageMeasurement::new(
+            StageMeasurement::new(
+                StageName::try_from("public-matvec")?,
+                ElapsedNanos::try_from(20_u128)?,
+                Flops::try_from(200_u64)?,
+                Bytes::try_from(100_u64)?,
+            ),
+            MeasurementVisibility::Public,
+        ))
+    }
+
+    #[test]
+    fn public_systems_report_accepts_only_public_measurements() -> Result<(), SystemsError> {
+        let report = PublicSystemsReport::from_reviewed_measurements([
+            public_measurement()?,
+            ReviewedStageMeasurement::new(
+                StageMeasurement::new(
+                    StageName::try_from("public-attention")?,
+                    ElapsedNanos::try_from(40_u128)?,
+                    Flops::try_from(400_u64)?,
+                    Bytes::try_from(200_u64)?,
+                ),
+                MeasurementVisibility::Public,
+            ),
+        ])?;
+
+        assert_eq!(report.median_elapsed()?.to_string(), "30 ns");
+        assert_eq!(report.measurements().measurements().len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn public_systems_report_blocks_restricted_and_private_measurements() -> Result<(), SystemsError>
+    {
+        let restricted =
+            PublicSystemsReport::from_reviewed_measurements([ReviewedStageMeasurement::new(
+                StageMeasurement::new(
+                    StageName::try_from("restricted-gpu-run")?,
+                    ElapsedNanos::try_from(10_u128)?,
+                    Flops::try_from(200_u64)?,
+                    Bytes::try_from(100_u64)?,
+                ),
+                MeasurementVisibility::ResearchRestricted,
+            )])
+            .err();
+        let private =
+            PublicSystemsReport::from_reviewed_measurements([ReviewedStageMeasurement::new(
+                StageMeasurement::new(
+                    StageName::try_from("private-host-run")?,
+                    ElapsedNanos::try_from(10_u128)?,
+                    Flops::try_from(200_u64)?,
+                    Bytes::try_from(100_u64)?,
+                ),
+                MeasurementVisibility::Private,
+            )])
+            .err();
+
+        assert!(matches!(
+            restricted,
+            Some(SystemsError::InvalidPublicReport { .. })
+        ));
+        assert!(matches!(
+            private,
+            Some(SystemsError::InvalidPublicReport { .. })
+        ));
+        Ok(())
     }
 }

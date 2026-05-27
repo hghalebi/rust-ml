@@ -5,12 +5,13 @@
 //! ```text
 //! ExperimentConfig -> TrainingRun -> MetricRecord -> ScalingFit
 //! ScalingFit + TrainingRun -> ScalingCandidate -> ScalingTradeoff
+//! ReviewedMetricRecord* -> PublicScalingReport
 //! ```
 //!
 //! Raw learner literals enter through `TryFrom` adapters. The public teaching
 //! path then uses semantic values such as [`ParameterCount`], [`TokenCount`],
 //! [`ComputeBudgetFlops`], [`ValidationLoss`], [`ScalingExponent`], and
-//! [`ScalingTradeoff`].
+//! [`PublicScalingReport`].
 
 pub mod error;
 
@@ -993,12 +994,126 @@ impl fmt::Display for ScalingReport {
     }
 }
 
+/// Publication class attached to a metric record before public report release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MetricVisibility {
+    /// Safe to include in learner-facing public scaling reports.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for MetricVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the scaling-report publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicScalingDecision {
+    /// The metric record can appear in a public learner-facing report.
+    Publishable,
+    /// The metric record must stay out of public learner-facing reports.
+    Blocked,
+}
+
+/// Metric record plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedMetricRecord {
+    record: MetricRecord,
+    visibility: MetricVisibility,
+}
+
+impl ReviewedMetricRecord {
+    /// Creates a reviewed metric record.
+    pub fn new(record: MetricRecord, visibility: MetricVisibility) -> Self {
+        Self { record, visibility }
+    }
+
+    /// Returns the reviewed metric record.
+    pub fn record(&self) -> &MetricRecord {
+        &self.record
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> MetricVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this record can enter a public learner-facing report.
+    pub fn release_decision(&self) -> PublicScalingDecision {
+        match self.visibility {
+            MetricVisibility::Public => PublicScalingDecision::Publishable,
+            MetricVisibility::ResearchRestricted | MetricVisibility::Private => {
+                PublicScalingDecision::Blocked
+            }
+        }
+    }
+
+    fn into_record(self) -> MetricRecord {
+        self.record
+    }
+}
+
+/// Scaling report checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicScalingReport(ScalingReport);
+
+impl PublicScalingReport {
+    /// Builds a public scaling report only from reviewed public metric records.
+    pub fn from_reviewed_records(
+        records: impl IntoIterator<Item = ReviewedMetricRecord>,
+        limitation: LimitationNote,
+    ) -> Result<Self, ScalingError> {
+        let mut public_records = Vec::new();
+
+        for record in records {
+            if record.release_decision() == PublicScalingDecision::Blocked {
+                return Err(ScalingError::invalid_public_report(
+                    "PublicScalingReport::from_reviewed_records",
+                    "public scaling reports cannot include restricted or private metric records",
+                ));
+            }
+            public_records.push(record.into_record());
+        }
+
+        let records = MetricRecords::from_records(public_records)?;
+        let fit = records.fit_power_law()?;
+
+        Ok(Self(fit.report_with(limitation)))
+    }
+
+    /// Returns the checked scaling report.
+    pub fn report(&self) -> &ScalingReport {
+        &self.0
+    }
+
+    /// Returns the fitted curve.
+    pub fn fit(&self) -> ScalingFit {
+        self.0.fit()
+    }
+
+    /// Returns the public limitation note.
+    pub fn limitation(&self) -> &LimitationNote {
+        self.0.limitation()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        ExperimentConfig, LayerCount, LimitationNote, MetricRecord, MetricRecords, ModelWidth,
-        PredictedLossTradeoff, RunId, ScalingError, ScalingRecommendation, TokenCount,
-        TrainingStep, ValidationLoss,
+        ExperimentConfig, LayerCount, LimitationNote, MetricRecord, MetricRecords,
+        MetricVisibility, ModelWidth, PredictedLossTradeoff, PublicScalingReport,
+        ReviewedMetricRecord, RunId, ScalingError, ScalingRecommendation, TokenCount, TrainingStep,
+        ValidationLoss,
     };
 
     fn planned_record(
@@ -1014,6 +1129,16 @@ mod tests {
         );
         let run = config.plan_run(TrainingStep::try_from(1_u64)?)?;
         Ok(MetricRecord::from_run(run, loss))
+    }
+
+    fn public_record(
+        run_id: RunId,
+        width: ModelWidth,
+    ) -> Result<ReviewedMetricRecord, ScalingError> {
+        Ok(ReviewedMetricRecord::new(
+            planned_record(run_id, width, ValidationLoss::try_from(1.0)?)?,
+            MetricVisibility::Public,
+        ))
     }
 
     #[test]
@@ -1182,6 +1307,60 @@ mod tests {
             PredictedLossTradeoff::CandidateLower(_)
         ));
         assert!(tradeoff.to_string().contains("candidate"));
+        Ok(())
+    }
+
+    #[test]
+    fn public_scaling_report_accepts_only_public_metric_records() -> Result<(), ScalingError> {
+        let report = PublicScalingReport::from_reviewed_records(
+            [
+                public_record(RunId::try_from("public-small")?, ModelWidth::try_from(1)?)?,
+                public_record(RunId::try_from("public-medium")?, ModelWidth::try_from(2)?)?,
+            ],
+            LimitationNote::try_from("two public toy runs teach direction, not deployment law")?,
+        )?;
+
+        assert_eq!(report.fit().records_used().to_string(), "2");
+        assert!(report.limitation().to_string().contains("toy runs"));
+        Ok(())
+    }
+
+    #[test]
+    fn public_scaling_report_blocks_restricted_and_private_metric_records()
+    -> Result<(), ScalingError> {
+        let restricted = PublicScalingReport::from_reviewed_records(
+            [ReviewedMetricRecord::new(
+                planned_record(
+                    RunId::try_from("restricted-run")?,
+                    ModelWidth::try_from(1)?,
+                    ValidationLoss::try_from(1.0)?,
+                )?,
+                MetricVisibility::ResearchRestricted,
+            )],
+            LimitationNote::try_from("blocked before fitting")?,
+        )
+        .err();
+        let private = PublicScalingReport::from_reviewed_records(
+            [ReviewedMetricRecord::new(
+                planned_record(
+                    RunId::try_from("private-run")?,
+                    ModelWidth::try_from(1)?,
+                    ValidationLoss::try_from(1.0)?,
+                )?,
+                MetricVisibility::Private,
+            )],
+            LimitationNote::try_from("blocked before fitting")?,
+        )
+        .err();
+
+        assert!(matches!(
+            restricted,
+            Some(ScalingError::InvalidPublicReport { .. })
+        ));
+        assert!(matches!(
+            private,
+            Some(ScalingError::InvalidPublicReport { .. })
+        ));
         Ok(())
     }
 }

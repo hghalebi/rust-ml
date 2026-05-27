@@ -198,15 +198,19 @@ The first executable CS336 Rust artifacts are:
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 04_training_step
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithmetic_intensity
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 05_memory_hierarchy
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 06_public_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 04_kernel_estimate
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 04_report_limitations
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 05_tradeoff_decision
+cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 06_public_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 05_public_manifest
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 05_public_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 05_public_trace
 cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 04_pipeline_schedule
+cargo run --manifest-path code/Cargo.toml -p rust_ml_parallelism --example 05_public_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 04_audit_record
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 05_alignment_workflow
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 06_public_release
 ```
 
 ## How To Study

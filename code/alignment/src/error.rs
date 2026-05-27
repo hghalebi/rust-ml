@@ -133,6 +133,15 @@ pub enum AlignmentError {
         /// Human-readable details.
         details: ErrorDetails,
     },
+
+    /// A workflow failed the learner-facing public-release boundary.
+    #[error("invalid public release in {operation}: {details}")]
+    InvalidPublicRelease {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable details.
+        details: ErrorDetails,
+    },
 }
 
 impl AlignmentError {
@@ -167,6 +176,13 @@ impl AlignmentError {
 
     pub(crate) fn invalid_transition(operation: &'static str, details: &'static str) -> Self {
         Self::InvalidTransition {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_release(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicRelease {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

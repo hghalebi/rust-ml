@@ -5,12 +5,14 @@
 //! ```text
 //! PromptedResponse -> PreferenceSignal -> UpdateSignal -> AuditRecord
 //! AuditRecord -> AlignmentWorkflow -> AlignmentTransition
+//! ReviewedAlignmentWorkflow -> PublicAlignmentRelease
 //! ```
 //!
 //! Raw learner strings and scores enter through `TryFrom` adapters. Once inside
 //! the crate, public APIs use semantic values such as [`Instruction`],
 //! [`ChosenResponse`], [`RejectedResponse`], [`RewardScore`],
-//! [`VerifierFeedback`], [`AlignmentRunId`], and [`AlignmentWorkflow`].
+//! [`VerifierFeedback`], [`AlignmentRunId`], [`AlignmentWorkflow`], and
+//! [`PublicAlignmentRelease`].
 
 pub mod error;
 
@@ -760,12 +762,132 @@ impl fmt::Display for AlignmentWorkflow {
     }
 }
 
+/// Publication class attached to an alignment workflow before public release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlignmentVisibility {
+    /// Safe to include in learner-facing public alignment material.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for AlignmentVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the alignment-publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicAlignmentDecision {
+    /// The workflow can appear in a public learner-facing release.
+    Publishable,
+    /// The workflow must stay out of public learner-facing releases.
+    Blocked,
+}
+
+/// Alignment workflow plus explicit public-release review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedAlignmentWorkflow {
+    workflow: AlignmentWorkflow,
+    visibility: AlignmentVisibility,
+}
+
+impl ReviewedAlignmentWorkflow {
+    /// Creates a reviewed alignment workflow.
+    pub fn new(workflow: AlignmentWorkflow, visibility: AlignmentVisibility) -> Self {
+        Self {
+            workflow,
+            visibility,
+        }
+    }
+
+    /// Returns the reviewed workflow.
+    pub fn workflow(&self) -> &AlignmentWorkflow {
+        &self.workflow
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> AlignmentVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this workflow can enter public learner-facing material.
+    pub fn release_decision(&self) -> PublicAlignmentDecision {
+        match self.visibility {
+            AlignmentVisibility::Public => PublicAlignmentDecision::Publishable,
+            AlignmentVisibility::ResearchRestricted | AlignmentVisibility::Private => {
+                PublicAlignmentDecision::Blocked
+            }
+        }
+    }
+
+    fn into_workflow(self) -> AlignmentWorkflow {
+        self.workflow
+    }
+}
+
+/// Alignment workflow checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicAlignmentRelease(AlignmentWorkflow);
+
+impl PublicAlignmentRelease {
+    /// Creates a public release only after explicit publication review and audit completion.
+    pub fn from_reviewed_workflow(
+        reviewed: ReviewedAlignmentWorkflow,
+    ) -> Result<Self, AlignmentError> {
+        if reviewed.release_decision() == PublicAlignmentDecision::Blocked {
+            return Err(AlignmentError::invalid_public_release(
+                "PublicAlignmentRelease::from_reviewed_workflow",
+                "public alignment releases cannot include restricted or private workflows",
+            ));
+        }
+
+        if reviewed.workflow().stage() != AlignmentStage::UpdateApplied {
+            return Err(AlignmentError::invalid_public_release(
+                "PublicAlignmentRelease::from_reviewed_workflow",
+                "public alignment releases require an audited and applied workflow",
+            ));
+        }
+
+        Ok(Self(reviewed.into_workflow()))
+    }
+
+    /// Returns the checked alignment workflow.
+    pub fn workflow(&self) -> &AlignmentWorkflow {
+        &self.0
+    }
+
+    /// Returns the alignment run identity.
+    pub fn run_id(&self) -> &AlignmentRunId {
+        self.0.run_id()
+    }
+
+    /// Returns the release stage, which is always update-applied after construction.
+    pub fn stage(&self) -> AlignmentStage {
+        self.0.stage()
+    }
+
+    /// Returns the released audit record.
+    pub fn latest_record(&self) -> Option<&AuditRecord> {
+        self.0.latest_record()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        AlignmentError, AlignmentRunId, AlignmentStage, AlignmentWorkflow, AuditNote, AuditRecord,
-        ChosenResponse, Instruction, InstructionExample, PreferencePair, PreferenceRewards,
-        PreferenceSignal, ReasoningTrace, RejectedResponse, Response, RewardScore, SignalSource,
+        AlignmentError, AlignmentRunId, AlignmentStage, AlignmentVisibility, AlignmentWorkflow,
+        AuditNote, AuditRecord, ChosenResponse, Instruction, InstructionExample, PreferencePair,
+        PreferenceRewards, PreferenceSignal, PublicAlignmentRelease, ReasoningTrace,
+        RejectedResponse, Response, ReviewedAlignmentWorkflow, RewardScore, SignalSource,
         UpdateKind, UpdateSignal, VerifierFeedback, VerifierResult,
     };
 
@@ -775,6 +897,22 @@ mod tests {
 
     fn source() -> Result<SignalSource, AlignmentError> {
         SignalSource::try_from("public-toy-fixture")
+    }
+
+    fn applied_workflow() -> Result<AlignmentWorkflow, AlignmentError> {
+        let run_id = AlignmentRunId::try_from("align-run-public")?;
+        let example =
+            InstructionExample::new(instruction()?, Response::try_from("2 + 2 = 4")?, source()?);
+        let record = AuditRecord::new(
+            run_id.clone(),
+            UpdateSignal::Supervised(example),
+            AuditNote::try_from("approved public toy signal")?,
+        );
+
+        AlignmentWorkflow::new(run_id)
+            .record_signal(record)?
+            .approve_audit()?
+            .apply_update()
     }
 
     #[test]
@@ -921,6 +1059,68 @@ mod tests {
         assert!(matches!(
             error,
             Some(AlignmentError::InvalidTransition { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn public_alignment_release_accepts_public_applied_workflow() -> Result<(), AlignmentError> {
+        let release = PublicAlignmentRelease::from_reviewed_workflow(
+            ReviewedAlignmentWorkflow::new(applied_workflow()?, AlignmentVisibility::Public),
+        )?;
+
+        assert_eq!(release.stage(), AlignmentStage::UpdateApplied);
+        assert_eq!(release.run_id().to_string(), "align-run-public");
+        assert!(release.latest_record().is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn public_alignment_release_blocks_restricted_and_private_workflows()
+    -> Result<(), AlignmentError> {
+        let restricted =
+            PublicAlignmentRelease::from_reviewed_workflow(ReviewedAlignmentWorkflow::new(
+                applied_workflow()?,
+                AlignmentVisibility::ResearchRestricted,
+            ))
+            .err();
+        let private = PublicAlignmentRelease::from_reviewed_workflow(
+            ReviewedAlignmentWorkflow::new(applied_workflow()?, AlignmentVisibility::Private),
+        )
+        .err();
+
+        assert!(matches!(
+            restricted,
+            Some(AlignmentError::InvalidPublicRelease { .. })
+        ));
+        assert!(matches!(
+            private,
+            Some(AlignmentError::InvalidPublicRelease { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn public_alignment_release_requires_completed_audit_lifecycle() -> Result<(), AlignmentError> {
+        let run_id = AlignmentRunId::try_from("align-run-public")?;
+        let example =
+            InstructionExample::new(instruction()?, Response::try_from("2 + 2 = 4")?, source()?);
+        let record = AuditRecord::new(
+            run_id.clone(),
+            UpdateSignal::Supervised(example),
+            AuditNote::try_from("recorded but not yet audit-approved")?,
+        );
+        let workflow = AlignmentWorkflow::new(run_id).record_signal(record)?;
+
+        let error = PublicAlignmentRelease::from_reviewed_workflow(ReviewedAlignmentWorkflow::new(
+            workflow,
+            AlignmentVisibility::Public,
+        ))
+        .err();
+
+        assert!(matches!(
+            error,
+            Some(AlignmentError::InvalidPublicRelease { .. })
         ));
         Ok(())
     }
