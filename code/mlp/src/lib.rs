@@ -722,8 +722,9 @@ fn add_bias(
 #[cfg(test)]
 mod tests {
     use super::{
-        BiasValue, BiasVector, HiddenLayer, InputValue, InputVector, MlpError, OutputLayer,
-        Prediction, TinyMlp, WeightMatrix, WeightRow, WeightValue, relu,
+        BiasValue, BiasVector, HiddenActivationValue, HiddenLayer, HiddenPreActivationValue,
+        InputValue, InputVector, MlpError, OutputLayer, Prediction, TinyMlp, WeightMatrix,
+        WeightRow, WeightValue, relu,
     };
 
     fn input(left: InputValue, right: InputValue) -> Result<InputVector, MlpError> {
@@ -753,14 +754,23 @@ mod tests {
             InputValue::try_from(0.0)?,
         )?)?;
         let activation = relu(&pre)?;
-        let pre_values = pre.values().map(|value| value.as_f64()).collect::<Vec<_>>();
-        let activation_values = activation
-            .values()
-            .map(|value| value.as_f64())
-            .collect::<Vec<_>>();
+        let pre_values = pre.values().copied().collect::<Vec<_>>();
+        let activation_values = activation.values().copied().collect::<Vec<_>>();
 
-        assert_eq!(pre_values, vec![1.0, -1.0]);
-        assert_eq!(activation_values, vec![1.0, 0.0]);
+        assert_eq!(
+            pre_values,
+            vec![
+                HiddenPreActivationValue::try_from(1.0)?,
+                HiddenPreActivationValue::try_from(-1.0)?
+            ]
+        );
+        assert_eq!(
+            activation_values,
+            vec![
+                HiddenActivationValue::try_from(1.0)?,
+                HiddenActivationValue::try_from(0.0)?
+            ]
+        );
         Ok(())
     }
 

@@ -118,6 +118,11 @@ impl AttentionWeight {
     fn as_f64(self) -> f64 {
         self.0
     }
+
+    #[cfg(test)]
+    fn is_close_to(self, expected: Self, tolerance: Self) -> bool {
+        (self.as_f64() - expected.as_f64()).abs() <= tolerance.as_f64().abs()
+    }
 }
 
 finite_scalar!(
@@ -140,6 +145,11 @@ impl ProjectionOutput {
 impl AttentionScore {
     fn zero() -> Result<Self, AttentionError> {
         Self::from_raw(0.0)
+    }
+
+    #[cfg(test)]
+    fn is_close_to(self, expected: Self, tolerance: Self) -> bool {
+        (self.as_f64() - expected.as_f64()).abs() <= tolerance.as_f64().abs()
     }
 
     fn scaled_by(self, width: VectorWidth) -> Result<Self, AttentionError> {
@@ -608,6 +618,19 @@ impl AttentionWeights {
     /// Returns weight count.
     pub fn len(&self) -> TokenCount {
         TokenCount(self.0.len())
+    }
+
+    #[cfg(test)]
+    fn sum_is_close_to(&self, expected: AttentionWeight, tolerance: AttentionWeight) -> bool {
+        let initial = match AttentionWeight::try_from(0.0) {
+            Ok(value) => value,
+            Err(_) => return false,
+        };
+        let sum = self.values().copied().try_fold(initial, |sum, value| {
+            AttentionWeight::try_from(sum.as_f64() + value.as_f64())
+        });
+
+        matches!(sum, Ok(actual) if actual.is_close_to(expected, tolerance))
     }
 }
 
@@ -1268,15 +1291,20 @@ impl AttentionHead {
 #[cfg(test)]
 mod tests {
     use super::{
-        AttentionError, AttentionHead, AttentionScore, AttentionScores, AttentionWeight,
-        AttentionWeights, Key, KeyComponent, KeyLayer, KeyProjection, ProjectionBias,
-        ProjectionBiasValue, ProjectionRow, ProjectionWeight, Query, QueryComponent, QueryLayer,
-        QueryProjection, TokenComponent, TokenEmbedding, TokenIndex, TokenSequence, Value,
-        ValueComponent, ValueLayer, ValueProjection, ValueSequence, VectorWidth, softmax,
+        AttentionError, AttentionHead, AttentionOutputComponent, AttentionScore, AttentionScores,
+        AttentionWeight, AttentionWeights, Key, KeyComponent, KeyLayer, KeyProjection,
+        ProjectionBias, ProjectionBiasValue, ProjectionRow, ProjectionWeight, Query,
+        QueryComponent, QueryLayer, QueryProjection, TokenComponent, TokenEmbedding, TokenIndex,
+        TokenSequence, Value, ValueComponent, ValueLayer, ValueProjection, ValueSequence,
+        VectorWidth, softmax,
     };
 
-    fn assert_close_score(left: AttentionScore, right: AttentionScore) {
-        assert!((left.as_f64() - right.as_f64()).abs() < 1e-6);
+    fn assert_close_score(
+        left: AttentionScore,
+        right: AttentionScore,
+    ) -> Result<(), AttentionError> {
+        assert!(left.is_close_to(right, AttentionScore::try_from(1e-6)?));
+        Ok(())
     }
 
     fn token(
@@ -1328,7 +1356,7 @@ mod tests {
         let key = key(KeyComponent::try_from(1.0)?, KeyComponent::try_from(0.0)?)?;
         let score = (&query * &key)?;
 
-        assert_close_score(score, AttentionScore::try_from(1.0 / 2.0_f64.sqrt())?);
+        assert_close_score(score, AttentionScore::try_from(1.0 / 2.0_f64.sqrt())?)?;
         Ok(())
     }
 
@@ -1339,15 +1367,17 @@ mod tests {
             AttentionScore::try_from(1.0)?,
             AttentionScore::try_from(0.0)?,
         ])?)?;
-        let values = weights
-            .values()
-            .map(|value| value.as_f64())
-            .collect::<Vec<_>>();
-        let sum: f64 = values.iter().sum();
-
-        assert!((sum - 1.0).abs() < 1e-6);
-        assert!(values[0] > values[1]);
-        assert!(values[1] > values[2]);
+        assert!(weights.sum_is_close_to(
+            AttentionWeight::try_from(1.0)?,
+            AttentionWeight::try_from(1e-6)?
+        ));
+        assert!(
+            weights
+                .values()
+                .copied()
+                .zip(weights.values().copied().skip(1))
+                .all(|(left, right)| left > right)
+        );
         Ok(())
     }
 
@@ -1369,12 +1399,15 @@ mod tests {
         ])?;
 
         let output = (&weights * &values)?;
-        let output_values = output
-            .values()
-            .map(|value| value.as_f64())
-            .collect::<Vec<_>>();
+        let output_values = output.values().copied().collect::<Vec<_>>();
 
-        assert_eq!(output_values, vec![1.5, 1.0]);
+        assert_eq!(
+            output_values,
+            vec![
+                AttentionOutputComponent::try_from(1.5)?,
+                AttentionOutputComponent::try_from(1.0)?
+            ]
+        );
         Ok(())
     }
 
@@ -1403,19 +1436,22 @@ mod tests {
     fn identity_attention_prefers_matching_token() -> Result<(), AttentionError> {
         let head = AttentionHead::identity(VectorWidth::try_from(2)?)?;
         let trace = head.trace_token(&sequence()?, TokenIndex::try_from(0)?)?;
-        let weights = trace
-            .weights()
-            .values()
-            .map(|weight| weight.as_f64())
-            .collect::<Vec<_>>();
-        let output = trace
-            .output()
-            .values()
-            .map(|value| value.as_f64())
-            .collect::<Vec<_>>();
-
-        assert!(weights[0] > weights[1]);
-        assert!(output[0] > output[1]);
+        assert!(
+            trace
+                .weights()
+                .values()
+                .copied()
+                .zip(trace.weights().values().copied().skip(1))
+                .all(|(left, right)| left > right)
+        );
+        assert!(
+            trace
+                .output()
+                .values()
+                .copied()
+                .zip(trace.output().values().copied().skip(1))
+                .all(|(left, right)| left > right)
+        );
         Ok(())
     }
 

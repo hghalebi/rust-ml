@@ -13,6 +13,7 @@ CODE_ROOT = ROOT / "code"
 STRICT_PUBLIC_API_PATHS = (
     CODE_ROOT / "alignment" / "src",
     CODE_ROOT / "attention" / "src",
+    CODE_ROOT / "category_lens" / "src",
     CODE_ROOT / "data" / "src",
     CODE_ROOT / "evaluation" / "src",
     CODE_ROOT / "inference" / "src",
@@ -61,15 +62,7 @@ STRICT_TYPED_TEST_HELPER_PATHS = (
     CODE_ROOT / "transformer" / "src" / "types.rs",
 )
 
-STRICT_TYPED_TEST_BODY_PATHS = (
-    CODE_ROOT / "evaluation" / "src" / "lib.rs",
-    CODE_ROOT / "scaling" / "src" / "lib.rs",
-    CODE_ROOT / "systems" / "src" / "lib.rs",
-    CODE_ROOT / "transformer" / "src" / "attention.rs",
-    CODE_ROOT / "transformer" / "src" / "math.rs",
-    CODE_ROOT / "transformer" / "src" / "transformer.rs",
-    CODE_ROOT / "transformer" / "src" / "types.rs",
-)
+STRICT_TYPED_TEST_BODY_PATHS = STRICT_PUBLIC_API_PATHS
 
 PANIC_PATTERNS = (
     ("unwrap", re.compile(r"\.unwrap\s*\(")),

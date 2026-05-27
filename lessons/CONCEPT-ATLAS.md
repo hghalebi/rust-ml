@@ -26,6 +26,7 @@ name for the object.
 
 | Stage | Objects | Invariants | Starts in |
 | --- | --- | --- | --- |
+| Category lens | `TypedObject`, `TypedMap`, `CompositionTrace` | adjacent maps compose only when the middle object matches | [`code/category_lens`](../code/category_lens/README.md) |
 | Scalar meaning | `InputValue`, `Weight`, `Bias`, `Target` | finite values, probability ranges where needed | [`code/neuron`](../code/neuron/README.md) |
 | Vector meaning | `FeatureVector`, `WeightVector`, `InputVector` | matching widths, non-empty vectors | [`lessons/02-vectors`](02-vectors/README.md) |
 | Prediction path | `WeightedSum`, `PreActivation`, `Prediction`, `Loss` | finite arithmetic, valid prediction range | [`code/neuron`](../code/neuron/README.md) |
@@ -48,6 +49,7 @@ The course repeatedly asks you to name the map before trusting the code.
 
 | Map | Plain-English reading | Executable anchor |
 | --- | --- | --- |
+| `TypedObject -> TypedMap -> CompositionTrace` | name the object/map rule before applying it to ML | `rust_ml_category_lens --example 02_compose_neuron_forward` |
 | `FeatureVector * WeightVector -> WeightedSum` | mix input evidence with learned importance | `rust_ml_neuron --example 01_weighted_sum` |
 | `WeightedSum + Bias -> PreActivation -> Prediction` | shift the score, then squash it into a prediction | `rust_ml_neuron --example 02_forward_pass` |
 | `Prediction - Target -> PredictionError -> Adjustment` | compare, blame, and update one parameter path | `rust_ml_neuron --example 03_one_step_training` |

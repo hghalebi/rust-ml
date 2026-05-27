@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "alignment",
     "attention",
+    "category_lens",
     "data",
     "evaluation",
     "inference",

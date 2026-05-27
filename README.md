@@ -94,6 +94,7 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 ### Executable companion code
 
 - [Code index](code/README.md)
+- [category lens crate](code/category_lens/README.md)
 - [neuron crate](code/neuron/README.md)
 - [mlp crate](code/mlp/README.md)
 - [attention crate](code/attention/README.md)

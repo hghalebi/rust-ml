@@ -53,6 +53,11 @@ The category-theory reading is:
 small typed maps compose into one model
 ```
 
+The executable version of this idea lives in
+[`code/category_lens`](../code/category_lens/README.md). It names objects,
+maps, and composition directly before the later crates apply the same rule to
+neurons, attention, data, systems, and alignment.
+
 ## Newtypes: Meaning In The Type System
 
 Many ML values are stored as numbers, but they do not mean the same thing.
@@ -121,6 +126,16 @@ FeatureVector -> PreActivation -> Prediction -> Loss
 This is the central habit. Ask what value you have, what value you need next, and what map owns that transformation.
 
 ## Worked Example
+
+First run the smallest object/map example:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 02_compose_neuron_forward
+```
+
+You should see the neuron forward pass collapsed into one composed typed map.
+
+Then run the first concrete ML crate:
 
 Run:
 

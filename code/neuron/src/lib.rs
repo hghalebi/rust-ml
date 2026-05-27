@@ -118,6 +118,20 @@ finite_scalar!(
 );
 finite_scalar!(Loss, "Squared-error loss for one example.", "loss");
 
+impl WeightedSum {
+    #[cfg(test)]
+    fn is_close_to(self, expected: Self, tolerance: Self) -> bool {
+        (self.as_f64() - expected.as_f64()).abs() <= tolerance.as_f64().abs()
+    }
+}
+
+impl PreActivation {
+    #[cfg(test)]
+    fn is_close_to(self, expected: Self, tolerance: Self) -> bool {
+        (self.as_f64() - expected.as_f64()).abs() <= tolerance.as_f64().abs()
+    }
+}
+
 impl Add<WeightedProduct> for WeightedSum {
     type Output = Result<WeightedSum, NeuronError>;
 
@@ -292,6 +306,11 @@ impl Prediction {
 
     fn as_f64(self) -> f64 {
         self.0
+    }
+
+    #[cfg(test)]
+    fn is_close_to(self, expected: Self, tolerance: Self) -> bool {
+        (self.as_f64() - expected.as_f64()).abs() <= tolerance.as_f64().abs()
     }
 
     fn sigmoid_slope(self) -> Result<SigmoidSlope, NeuronError> {
@@ -770,8 +789,9 @@ pub fn squared_error(prediction: Prediction, target: Target) -> Result<Loss, Neu
 #[cfg(test)]
 mod tests {
     use super::{
-        Bias, Dataset, FeatureVector, InputValue, LearningRate, NeuronError, Target, TinyNeuron,
-        TrainingExample, Weight, WeightVector, WeightedSum, weighted_sum,
+        Bias, Dataset, FeatureVector, InputValue, LearningRate, NeuronError, PreActivation,
+        Prediction, Target, TinyNeuron, TrainingExample, Weight, WeightVector, WeightedSum,
+        weighted_sum,
     };
 
     fn features(left: InputValue, right: InputValue) -> FeatureVector {
@@ -782,8 +802,12 @@ mod tests {
         WeightVector::two(left, right)
     }
 
-    fn assert_weighted_sums_close(left: WeightedSum, right: WeightedSum) {
-        assert!((left.as_f64() - right.as_f64()).abs() < 1e-12);
+    fn assert_weighted_sums_close(
+        left: WeightedSum,
+        right: WeightedSum,
+    ) -> Result<(), NeuronError> {
+        assert!(left.is_close_to(right, WeightedSum::try_from(1e-12)?));
+        Ok(())
     }
 
     #[test]
@@ -817,7 +841,7 @@ mod tests {
         let expected = WeightedSum::try_from(0.6)?;
         let actual = weighted_sum(&features, &weights)?;
 
-        assert_weighted_sums_close(actual, expected);
+        assert_weighted_sums_close(actual, expected)?;
         Ok(())
     }
 
@@ -829,7 +853,7 @@ mod tests {
         let expected = WeightedSum::try_from(0.6)?;
         let actual = (&features * &weights)?;
 
-        assert_weighted_sums_close(actual, expected);
+        assert_weighted_sums_close(actual, expected)?;
         Ok(())
     }
 
@@ -858,8 +882,14 @@ mod tests {
         let raw_score = neuron.raw_score(&features)?;
         let prediction = neuron.predict(&features)?;
 
-        assert!((raw_score.as_f64() - 0.9).abs() < 1e-12);
-        assert!((prediction.as_f64() - 0.710_949_502_625).abs() < 1e-9);
+        assert!(raw_score.is_close_to(
+            PreActivation::try_from(0.9)?,
+            PreActivation::try_from(1e-12)?
+        ));
+        assert!(prediction.is_close_to(
+            Prediction::try_from(0.710_949_502_625)?,
+            Prediction::try_from(1e-9)?
+        ));
         Ok(())
     }
 
