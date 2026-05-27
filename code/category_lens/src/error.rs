@@ -104,6 +104,15 @@ pub enum CategoryLensError {
         /// Human-readable explanation.
         details: ErrorDetails,
     },
+
+    /// Restricted or private composition evidence tried to enter learner-facing public material.
+    #[error("invalid public trace in {operation}: {details}")]
+    InvalidPublicTrace {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable explanation.
+        details: ErrorDetails,
+    },
 }
 
 impl CategoryLensError {
@@ -129,6 +138,13 @@ impl CategoryLensError {
 
     pub(crate) fn empty_composition(operation: &'static str, details: &'static str) -> Self {
         Self::EmptyComposition {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_trace(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicTrace {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

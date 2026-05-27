@@ -16,7 +16,8 @@ language modeling from scratch
 For the scraped public course map, see [CS336 source map](references/courses/cs336-language-modeling-from-scratch.md).
 For the object/map/newtype bridge that connects the core lessons to this track,
 see [Concept Atlas](lessons/CONCEPT-ATLAS.md) and the executable primer in
-[`code/category_lens`](code/category_lens/README.md).
+[`code/category_lens`](code/category_lens/README.md), including the first
+`ReviewedCompositionTrace -> PublicCompositionTrace` release boundary.
 
 ## Audience
 
@@ -81,7 +82,7 @@ The current repo already provides the first conceptual bridge:
 - [05 MLP](lessons/05-mlp/README.md): hidden representations, shape flow, and public trace review
 - [06 Attention](lessons/06-attention/README.md): query/key/value roles, scores, weights, value mixing, and public trace review
 - [07 Transformer](lessons/07-transformer/README.md): typed encoder architecture
-- [code/category_lens](code/category_lens/README.md): executable object/map/composition primer with `rust_ml_category_lens`
+- [code/category_lens](code/category_lens/README.md): executable object/map/composition primer with `rust_ml_category_lens` and public composition-trace review
 - [code/lm_basics](code/lm_basics/README.md): first executable CS336 R1 artifact for text-to-loss language modeling and public text review
 - [code/systems](code/systems/README.md): first executable CS336 R2 artifact for typed resource accounting and public report review
 - [code/kernels](code/kernels/README.md): first executable kernels artifact for typed tiling, reductions, matrix-vector traces, resource estimates, and public report review

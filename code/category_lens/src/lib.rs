@@ -8,7 +8,8 @@
 //!
 //! Raw learner text enters through explicit `TryFrom` adapters. Public teaching
 //! APIs then move through semantic values such as [`ObjectName`], [`MapName`],
-//! [`TypedObject`], [`TypedMap`], and [`CompositionTrace`].
+//! [`TypedObject`], [`TypedMap`], [`CompositionTrace`], and
+//! [`PublicCompositionTrace`].
 
 pub mod error;
 
@@ -234,9 +235,115 @@ impl CompositionTrace {
     }
 }
 
+/// Publication class attached to a composition trace before public release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompositionTraceVisibility {
+    /// Safe to include in learner-facing public category-lens material.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for CompositionTraceVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the composition-trace publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicCompositionDecision {
+    /// The trace can appear in public learner-facing material.
+    Publishable,
+    /// The trace must stay out of public learner-facing material.
+    Blocked,
+}
+
+/// Composition trace plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewedCompositionTrace {
+    trace: CompositionTrace,
+    visibility: CompositionTraceVisibility,
+}
+
+impl ReviewedCompositionTrace {
+    /// Creates a reviewed composition trace.
+    pub fn new(trace: CompositionTrace, visibility: CompositionTraceVisibility) -> Self {
+        Self { trace, visibility }
+    }
+
+    /// Returns the reviewed composition trace.
+    pub fn trace(&self) -> &CompositionTrace {
+        &self.trace
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> CompositionTraceVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this trace can enter public learner-facing material.
+    pub fn release_decision(&self) -> PublicCompositionDecision {
+        match self.visibility {
+            CompositionTraceVisibility::Public => PublicCompositionDecision::Publishable,
+            CompositionTraceVisibility::ResearchRestricted
+            | CompositionTraceVisibility::Private => PublicCompositionDecision::Blocked,
+        }
+    }
+
+    fn into_trace(self) -> CompositionTrace {
+        self.trace
+    }
+}
+
+/// Composition trace checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublicCompositionTrace(CompositionTrace);
+
+impl PublicCompositionTrace {
+    /// Builds a public composition trace only from a reviewed public trace.
+    pub fn from_reviewed_trace(
+        reviewed: ReviewedCompositionTrace,
+    ) -> Result<Self, CategoryLensError> {
+        if reviewed.release_decision() == PublicCompositionDecision::Blocked {
+            return Err(CategoryLensError::invalid_public_trace(
+                "PublicCompositionTrace::from_reviewed_trace",
+                "public composition traces cannot include restricted or private map evidence",
+            ));
+        }
+
+        Ok(Self(reviewed.into_trace()))
+    }
+
+    /// Returns the checked composition trace.
+    pub fn trace(&self) -> &CompositionTrace {
+        &self.0
+    }
+
+    /// Iterates over the public maps in learner order.
+    pub fn maps(&self) -> impl ExactSizeIterator<Item = &TypedMap> + '_ {
+        self.0.maps()
+    }
+
+    /// Returns the single composite map represented by the public trace.
+    pub fn composite(&self) -> Result<TypedMap, CategoryLensError> {
+        self.0.composite()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{CategoryLensError, CompositionTrace, MapName, ObjectName, TypedMap, TypedObject};
+    use super::{
+        CategoryLensError, CompositionTrace, CompositionTraceVisibility, MapName, ObjectName,
+        PublicCompositionTrace, ReviewedCompositionTrace, TypedMap, TypedObject,
+    };
 
     fn object(name: ObjectName) -> TypedObject {
         TypedObject::new(name)
@@ -244,6 +351,22 @@ mod tests {
 
     fn map(name: MapName, source: TypedObject, target: TypedObject) -> TypedMap {
         TypedMap::new(name, source, target)
+    }
+
+    fn neuron_trace() -> Result<CompositionTrace, CategoryLensError> {
+        let features = object(ObjectName::try_from("FeatureVector")?);
+        let score = object(ObjectName::try_from("PreActivation")?);
+        let prediction = object(ObjectName::try_from("Prediction")?);
+        let loss = object(ObjectName::try_from("Loss")?);
+        CompositionTrace::from_maps([
+            map(
+                MapName::try_from("raw_score")?,
+                features.clone(),
+                score.clone(),
+            ),
+            map(MapName::try_from("sigmoid")?, score, prediction.clone()),
+            map(MapName::try_from("squared_error")?, prediction, loss),
+        ])
     }
 
     #[test]
@@ -321,6 +444,45 @@ mod tests {
         assert_eq!(trace.maps().len().to_string(), "3");
         assert_eq!(composite.source(), &features);
         assert_eq!(composite.target(), &loss);
+        Ok(())
+    }
+
+    #[test]
+    fn public_composition_trace_accepts_public_reviewed_trace() -> Result<(), CategoryLensError> {
+        let public_trace = PublicCompositionTrace::from_reviewed_trace(
+            ReviewedCompositionTrace::new(neuron_trace()?, CompositionTraceVisibility::Public),
+        )?;
+        let composite = public_trace.composite()?;
+
+        assert_eq!(public_trace.maps().len().to_string(), "3");
+        assert_eq!(
+            composite.to_string(),
+            "squared_error after sigmoid after raw_score: FeatureVector -> Loss"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn public_composition_trace_blocks_restricted_and_private_traces()
+    -> Result<(), CategoryLensError> {
+        let restricted =
+            PublicCompositionTrace::from_reviewed_trace(ReviewedCompositionTrace::new(
+                neuron_trace()?,
+                CompositionTraceVisibility::ResearchRestricted,
+            ));
+        let private = PublicCompositionTrace::from_reviewed_trace(ReviewedCompositionTrace::new(
+            neuron_trace()?,
+            CompositionTraceVisibility::Private,
+        ));
+
+        assert!(matches!(
+            restricted,
+            Err(CategoryLensError::InvalidPublicTrace { .. })
+        ));
+        assert!(matches!(
+            private,
+            Err(CategoryLensError::InvalidPublicTrace { .. })
+        ));
         Ok(())
     }
 }

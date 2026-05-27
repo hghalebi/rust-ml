@@ -18,13 +18,14 @@ systems traces.
 
 - orientation lesson: [The Learning Lens](../../lessons/00-learning-lens.md)
 - cross-module guide: [Concept Atlas](../../lessons/CONCEPT-ATLAS.md)
-- code layer: typed objects, typed maps, and composition errors
+- code layer: typed objects, typed maps, composition errors, and public trace review
 
 ## Current State
 
 - Active crate with typed object and map names
 - Runnable examples for legal and illegal composition
-- Unit tests for name validation, map composition, and trace composition
+- Public composition-trace boundary for learner-facing release
+- Unit tests for name validation, map composition, trace composition, and public trace review
 
 ## Layout
 
@@ -33,6 +34,10 @@ category_lens/
 ├── src/lib.rs
 ├── src/error.rs
 └── examples/
+    ├── 01_objects_and_maps.rs
+    ├── 02_compose_neuron_forward.rs
+    ├── 03_composition_failure.rs
+    └── 04_public_composition_trace.rs
 ```
 
 ## Learning Ladder
@@ -40,6 +45,7 @@ category_lens/
 1. `01_objects_and_maps` names one ML object and one typed map.
 2. `02_compose_neuron_forward` composes the neuron forward path.
 3. `03_composition_failure` shows the typed error when maps do not line up.
+4. `04_public_composition_trace` reviews a trace before it can become learner-facing public material.
 
 ## Category Lens
 
@@ -58,12 +64,23 @@ FeatureVector -> PreActivation -> Prediction
 That is the same rule learners later use for shapes, token roles, residual
 connections, data pipelines, and distributed training plans.
 
+The first public boundary appears here too:
+
+```text
+ReviewedCompositionTrace -> PublicCompositionTrace
+```
+
+A `CompositionTrace` says the maps line up. A `PublicCompositionTrace` says the
+trace was also reviewed as safe for learner-facing public content. Restricted
+or private map evidence is rejected before it can enter published material.
+
 ## Run
 
 ```bash
 cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 01_objects_and_maps
 cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 02_compose_neuron_forward
 cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 03_composition_failure
+cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 04_public_composition_trace
 ```
 
 ## Scope

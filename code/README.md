@@ -36,6 +36,7 @@ Run the category-theory lens examples:
 cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 01_objects_and_maps
 cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 02_compose_neuron_forward
 cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 03_composition_failure
+cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 04_public_composition_trace
 ```
 
 Run the beginner neuron examples:
@@ -173,7 +174,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encod
 
 | Topic | Status | Purpose |
 | --- | --- | --- |
-| [category_lens](category_lens/README.md) | Active crate | The executable object/map/composition lens used across the course. |
+| [category_lens](category_lens/README.md) | Active crate | The executable object/map/composition lens used across the course, including public composition-trace review. |
 | [neuron](neuron/README.md) | Active crate | The first typed trainable model companion crate with public training-step review. |
 | [mlp](mlp/README.md) | Active crate | Tiny typed hidden-layer companion crate for shape flow, representation flow, and public trace review. |
 | [attention](attention/README.md) | Active crate | Beginner scaled dot-product attention companion crate with typed Q/K/V roles, ops-based newtype arithmetic, and public trace review. |

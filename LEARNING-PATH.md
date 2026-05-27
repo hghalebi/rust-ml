@@ -102,6 +102,18 @@ Then skim [lessons/CONCEPT-ATLAS.md](lessons/CONCEPT-ATLAS.md).
 The atlas is the cross-course map. It shows how the same idea appears as an ML
 concept, a Rust newtype, a composable map, and a runnable proof.
 
+Run the category-lens examples before the ML examples:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 01_objects_and_maps
+cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 02_compose_neuron_forward
+cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 03_composition_failure
+cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 04_public_composition_trace
+```
+
+Goal: understand a model path as typed composition, then see that public
+learner-facing traces require review before publication.
+
 ### Step 1: Foundations
 
 Read [lessons/01-foundations](lessons/01-foundations/README.md).
