@@ -7,11 +7,13 @@
 //! ElementCount * ElementSize -> Bytes
 //! ElementCount * FlopsPerElement -> FlopCount
 //! Accumulator + KernelProduct -> Accumulator
+//! ReviewedTiledMatVecTrace -> PublicKernelReport
 //! ```
 //!
 //! Raw learner literals enter through `TryFrom` adapters. Public teaching APIs
 //! then move through semantic values such as matrix shapes, tile shapes,
-//! kernel scalars, byte counts, FLOP counts, and tiled execution traces.
+//! kernel scalars, byte counts, FLOP counts, tiled execution traces, and public
+//! report boundaries.
 
 pub mod error;
 
@@ -1006,12 +1008,120 @@ impl TiledMatVecTrace {
     }
 }
 
+/// Publication class attached to a kernel trace before public report release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KernelTraceVisibility {
+    /// Safe to include in learner-facing public kernel reports.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for KernelTraceVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the kernel-report publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicKernelDecision {
+    /// The trace can appear in a public learner-facing report.
+    Publishable,
+    /// The trace must stay out of public learner-facing reports.
+    Blocked,
+}
+
+/// Tiled kernel trace plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedTiledMatVecTrace {
+    trace: TiledMatVecTrace,
+    visibility: KernelTraceVisibility,
+}
+
+impl ReviewedTiledMatVecTrace {
+    /// Creates a reviewed tiled matrix-vector trace.
+    pub fn new(trace: TiledMatVecTrace, visibility: KernelTraceVisibility) -> Self {
+        Self { trace, visibility }
+    }
+
+    /// Returns the reviewed tiled matrix-vector trace.
+    pub fn trace(&self) -> &TiledMatVecTrace {
+        &self.trace
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> KernelTraceVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this trace can enter a public learner-facing report.
+    pub fn release_decision(&self) -> PublicKernelDecision {
+        match self.visibility {
+            KernelTraceVisibility::Public => PublicKernelDecision::Publishable,
+            KernelTraceVisibility::ResearchRestricted | KernelTraceVisibility::Private => {
+                PublicKernelDecision::Blocked
+            }
+        }
+    }
+
+    fn into_trace(self) -> TiledMatVecTrace {
+        self.trace
+    }
+}
+
+/// Tiled kernel trace checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicKernelReport(TiledMatVecTrace);
+
+impl PublicKernelReport {
+    /// Builds a public kernel report only from a reviewed public trace.
+    pub fn from_reviewed_trace(reviewed: ReviewedTiledMatVecTrace) -> Result<Self, KernelError> {
+        if reviewed.release_decision() == PublicKernelDecision::Blocked {
+            return Err(KernelError::invalid_public_report(
+                "PublicKernelReport::from_reviewed_trace",
+                "public kernel reports cannot include restricted or private tiled traces",
+            ));
+        }
+
+        Ok(Self(reviewed.into_trace()))
+    }
+
+    /// Returns the checked tiled kernel trace.
+    pub fn trace(&self) -> &TiledMatVecTrace {
+        &self.0
+    }
+
+    /// Returns the public tile plan.
+    pub fn tile_plan(&self) -> &TilePlan {
+        self.0.tile_plan()
+    }
+
+    /// Returns the public FLOP estimate.
+    pub fn flops(&self) -> FlopCount {
+        self.0.flops()
+    }
+
+    /// Returns the public HBM byte estimate.
+    pub fn hbm_bytes(&self) -> Bytes {
+        self.0.hbm_bytes()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        ElementSize, ElementwiseTrace, Error, KernelMatrix, KernelScalar, KernelVector,
-        MatrixColumns, MatrixRows, MatrixShape, RowReductionTrace, TileColumns, TilePlan, TileRows,
-        TileShape, TiledMatVecTrace,
+        ElementSize, ElementwiseTrace, Error, KernelMatrix, KernelScalar, KernelTraceVisibility,
+        KernelVector, MatrixColumns, MatrixRows, MatrixShape, PublicKernelReport,
+        ReviewedTiledMatVecTrace, RowReductionTrace, TileColumns, TilePlan, TileRows, TileShape,
+        TiledMatVecTrace,
     };
 
     fn vector(values: impl IntoIterator<Item = KernelScalar>) -> Result<KernelVector, Error> {
@@ -1031,6 +1141,19 @@ mod tests {
                 KernelScalar::try_from(6.0)?,
             ])?,
         ])
+    }
+
+    fn tiled_trace() -> Result<TiledMatVecTrace, Error> {
+        TiledMatVecTrace::run(
+            matrix()?,
+            vector([
+                KernelScalar::try_from(1.0)?,
+                KernelScalar::try_from(0.5)?,
+                KernelScalar::try_from(2.0)?,
+            ])?,
+            TileShape::new(TileRows::try_from(1)?, TileColumns::try_from(2)?),
+            ElementSize::float32(),
+        )
     }
 
     #[test]
@@ -1066,16 +1189,7 @@ mod tests {
 
     #[test]
     fn tiled_matvec_matches_hand_calculation() -> Result<(), Error> {
-        let trace = TiledMatVecTrace::run(
-            matrix()?,
-            vector([
-                KernelScalar::try_from(1.0)?,
-                KernelScalar::try_from(0.5)?,
-                KernelScalar::try_from(2.0)?,
-            ])?,
-            TileShape::new(TileRows::try_from(1)?, TileColumns::try_from(2)?),
-            ElementSize::float32(),
-        )?;
+        let trace = tiled_trace()?;
         let values = trace
             .output()
             .values()
@@ -1113,6 +1227,41 @@ mod tests {
         assert_eq!(format!("{}", trace.element_count()), "3");
         assert_eq!(format!("{}", trace.flops()), "6 FLOPs");
         assert_eq!(format!("{}", trace.hbm_bytes()), "24 bytes");
+        Ok(())
+    }
+
+    #[test]
+    fn public_kernel_report_accepts_public_tiled_trace() -> Result<(), Error> {
+        let report = PublicKernelReport::from_reviewed_trace(ReviewedTiledMatVecTrace::new(
+            tiled_trace()?,
+            KernelTraceVisibility::Public,
+        ))?;
+
+        assert_eq!(format!("{}", report.flops()), "12 FLOPs");
+        assert_eq!(format!("{}", report.hbm_bytes()), "44 bytes");
+        assert_eq!(report.tile_plan().windows().count(), 4);
+        Ok(())
+    }
+
+    #[test]
+    fn public_kernel_report_blocks_restricted_and_private_tiled_traces() -> Result<(), Error> {
+        let restricted = PublicKernelReport::from_reviewed_trace(ReviewedTiledMatVecTrace::new(
+            tiled_trace()?,
+            KernelTraceVisibility::ResearchRestricted,
+        ));
+        let private = PublicKernelReport::from_reviewed_trace(ReviewedTiledMatVecTrace::new(
+            tiled_trace()?,
+            KernelTraceVisibility::Private,
+        ));
+
+        assert!(matches!(
+            restricted.err(),
+            Some(Error::InvalidPublicReport { .. })
+        ));
+        assert!(matches!(
+            private.err(),
+            Some(Error::InvalidPublicReport { .. })
+        ));
         Ok(())
     }
 }

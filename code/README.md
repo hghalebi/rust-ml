@@ -93,6 +93,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 01_elemen
 cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 02_row_sum_reduction
 cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 03_tiled_matvec
 cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 04_kernel_estimate
+cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 05_public_report
 ```
 
 Run the CS336 Rust R3 scaling examples:
@@ -176,7 +177,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encod
 | [transformer](transformer/README.md) | Active crate | Real tested encoder-path teaching crate with typed architecture configuration, expert routing, and ops-based positional/residual arithmetic. |
 | [lm_basics](lm_basics/README.md) | Active crate | First CS336 Rust language-modeling artifact: tokenization, checked IDs, next-token batches, loss, one update, and public text review. |
 | [systems](systems/README.md) | Active crate | First CS336 Rust systems artifact: typed memory, bandwidth, hierarchy, FLOP, timing, arithmetic-intensity estimates, and public report review. |
-| [kernels](kernels/README.md) | Active crate | First CS336 Rust kernels artifact: typed tiling, reductions, matrix-vector traces, and resource estimates. |
+| [kernels](kernels/README.md) | Active crate | First CS336 Rust kernels artifact: typed tiling, reductions, matrix-vector traces, resource estimates, and public report review. |
 | [scaling](scaling/README.md) | Active crate | First CS336 Rust scaling artifact: typed experiment records, power-law fitting, forecasts, tradeoffs, limitations, and public report review. |
 | [data](data/README.md) | Active crate | First CS336 Rust data artifact: typed normalization, filtering, deduplication, shards, source mixtures, and public corpus manifests. |
 | [evaluation](evaluation/README.md) | Active crate | First CS336 Rust evaluation artifact: typed examples, predictions, reports, exact-match accuracy, run comparison, and public report review. |

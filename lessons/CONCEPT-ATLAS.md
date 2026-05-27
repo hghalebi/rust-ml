@@ -38,7 +38,7 @@ name for the object.
 | Transformer encoder | `PositionEncoding`, `TokenSequence`, `AttentionOutputSequence` | same sequence length and `d_model` for residual maps | [`code/transformer`](../code/transformer/README.md) |
 | Language modeling | `RawText`, `ReviewedRawText`, `Token`, `TokenId`, `NextTokenBatch`, `PublicLanguageModelingExample` | known vocabulary, aligned input and target lengths, and public text review | [`code/lm_basics`](../code/lm_basics/README.md) |
 | Systems evidence | `Bytes`, `BytesPerSecond`, `MemoryLevel`, `Flops`, `ElapsedNanos`, `ArithmeticIntensity`, `PublicSystemsReport` | units, memory tiers, and public-report class stay separate during arithmetic | [`code/systems`](../code/systems/README.md) |
-| Kernel tiling | `MatrixShape`, `TileShape`, `TilePlan`, `FlopCount` | tile windows and resource units stay explicit | [`code/kernels`](../code/kernels/README.md) |
+| Kernel tiling | `MatrixShape`, `TileShape`, `TilePlan`, `FlopCount`, `PublicKernelReport` | tile windows, resource units, and public-report class stay explicit | [`code/kernels`](../code/kernels/README.md) |
 | Scaling evidence | `TrainingRun`, `MetricRecord`, `ComputeBudgetFlops`, `ValidationLoss`, `ScalingTradeoff`, `PublicScalingReport` | every loss, recommendation, and public report keeps the run evidence that produced it | [`code/scaling`](../code/scaling/README.md) |
 | Data preparation | `RawDocument`, `NormalizedDocument`, `DedupKey`, `CorpusShard`, `PublicCorpusManifest` | provenance, filter reasons, mixture weights, licenses, and public/private boundaries stay visible | [`code/data`](../code/data/README.md) |
 | Evaluation report | `EvalExample`, `ScoredPrediction`, `EvalReport`, `PublicEvalReport` | prompts, answers, run IDs, metrics, and public-release review stay visible | [`code/evaluation`](../code/evaluation/README.md) |
@@ -69,6 +69,7 @@ The course repeatedly asks you to name the map before trusting the code.
 | `Bytes + BytesPerSecond + MemoryLevel -> ElapsedNanos` | estimate why the same bytes cost different time at different memory tiers | `rust_ml_systems --example 05_memory_hierarchy` |
 | `ReviewedStageMeasurement* -> PublicSystemsReport` | keep restricted or private benchmark measurements out of learner-facing systems reports | `rust_ml_systems --example 06_public_report` |
 | `MatrixRows * MatrixColumns -> ElementCount` | convert shape into compute and memory accounting | `rust_ml_kernels --example 04_kernel_estimate` |
+| `ReviewedTiledMatVecTrace -> PublicKernelReport` | keep restricted or private kernel traces out of learner-facing public reports | `rust_ml_kernels --example 05_public_report` |
 | `MetricRecord -> ScalingFit -> ForecastLoss` | turn runs into a limited, inspectable scaling claim | `rust_ml_scaling --example 03_forecast_loss` |
 | `ScalingCandidate + ScalingCandidate -> ScalingTradeoff` | compare model/data/compute choices without dropping units | `rust_ml_scaling --example 05_tradeoff_decision` |
 | `ReviewedMetricRecord* -> PublicScalingReport` | keep restricted or private experiment evidence out of learner-facing scaling reports | `rust_ml_scaling --example 06_public_report` |

@@ -138,7 +138,7 @@ rust-ml/
 - `lessons/` is the source of truth for written teaching content.
 - `code/` follows the lesson progression and now includes a real tested `transformer` crate.
 - `code/systems` is the active R2 systems-measurement and public-report bridge for the CS336 Rust equivalent track.
-- `code/kernels` is the active kernels-and-tiling bridge for the CS336 Rust equivalent track.
+- `code/kernels` is the active kernels, tiling, and public-report bridge for the CS336 Rust equivalent track.
 - `code/scaling` is the active R3 scaling-evidence and public-report bridge for the CS336 Rust equivalent track.
 - `code/data` is the active R4 data-preparation bridge for the CS336 Rust equivalent track.
 - `code/evaluation` is the active evaluation bridge for the CS336 Rust equivalent track.
@@ -304,17 +304,19 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 01_elemen
 cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 02_row_sum_reduction
 cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 03_tiled_matvec
 cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 04_kernel_estimate
+cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 05_public_report
 ```
 
 The kernels crate covers:
 
-- `MatrixShape`, `TileShape`, `TilePlan`, `KernelScalar`, `Accumulator`, `Bytes`, and `FlopCount`
+- `MatrixShape`, `TileShape`, `TilePlan`, `KernelScalar`, `Accumulator`, `Bytes`, `FlopCount`, and `PublicKernelReport`
 - explicit `TryFrom` adapters for raw learner literals
 - typed `std::ops` arithmetic for element counts, byte counts, FLOP counts, scalar products, and accumulation
 - elementwise GeLU-style traces
 - row reductions through a typed accumulator
 - tiled matrix-vector traces with visible tile windows
 - typed byte and FLOP estimates that keep resource units separate
+- a typed public-report boundary that rejects restricted or private tiled traces
 
 Run the first CS336 Rust scaling artifact:
 

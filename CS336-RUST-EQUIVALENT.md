@@ -47,7 +47,7 @@ After this track, the learner should be able to:
 | 3 | Architectures, hyperparameters | model `TransformerConfig` with validated dimensions, head-width checks, and parameter budgets in [`code/transformer`](code/transformer/README.md) |
 | 4 | Attention alternatives, mixture of experts | compare attention maps and route tokens through typed experts in [`code/transformer`](code/transformer/README.md) |
 | 5 | GPUs, TPUs | model accelerator memory hierarchy as typed byte, bandwidth, memory-tier, transfer-time, and public-report maps in [`code/systems`](code/systems/README.md) |
-| 6 | Kernels and compilation | write tiled CPU kernels and typed resource traces in [`code/kernels`](code/kernels/README.md) before discussing GPU lowering |
+| 6 | Kernels and compilation | write tiled CPU kernels, typed resource traces, and public report reviews in [`code/kernels`](code/kernels/README.md) before discussing GPU lowering |
 | 7 | Parallelism I | split batches and parameters while preserving ownership, shape contracts, and public trace boundaries in [`code/parallelism`](code/parallelism/README.md) |
 | 8 | Parallelism II | reason about communication, synchronization, failure boundaries, and public report review in [`code/parallelism`](code/parallelism/README.md) |
 | 9 | Scaling laws I | log small experiments and fit a simple power-law curve |
@@ -84,7 +84,7 @@ The current repo already provides the first conceptual bridge:
 - [code/category_lens](code/category_lens/README.md): executable object/map/composition primer with `rust_ml_category_lens`
 - [code/lm_basics](code/lm_basics/README.md): first executable CS336 R1 artifact for text-to-loss language modeling and public text review
 - [code/systems](code/systems/README.md): first executable CS336 R2 artifact for typed resource accounting and public report review
-- [code/kernels](code/kernels/README.md): first executable kernels artifact for typed tiling, reductions, matrix-vector traces, and resource estimates
+- [code/kernels](code/kernels/README.md): first executable kernels artifact for typed tiling, reductions, matrix-vector traces, resource estimates, and public report review
 - [code/scaling](code/scaling/README.md): first executable CS336 R3 artifact for typed experiment evidence, power-law fitting, and public report review
 - [code/data](code/data/README.md): first executable CS336 R4 artifact for typed corpus preparation and public manifest boundaries
 - [code/evaluation](code/evaluation/README.md): first executable evaluation artifact for typed examples, predictions, reports, run comparison, and public report review

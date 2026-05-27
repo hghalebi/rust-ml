@@ -160,6 +160,15 @@ pub enum KernelError {
         /// Human-readable details.
         details: ErrorDetails,
     },
+
+    /// Restricted or private kernel evidence tried to enter a learner-facing public report.
+    #[error("invalid public report in {operation}: {details}")]
+    InvalidPublicReport {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable details.
+        details: ErrorDetails,
+    },
 }
 
 impl KernelError {
@@ -198,6 +207,13 @@ impl KernelError {
 
     pub(crate) fn shape_mismatch(operation: &'static str, details: &'static str) -> Self {
         Self::ShapeMismatch {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_report(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicReport {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

@@ -33,7 +33,7 @@ The current public offering is Spring 2026.
 | 3 | Architectures and hyperparameters | typed Transformer configuration and parameter budgets in [`code/transformer`](../../code/transformer/README.md) |
 | 4 | Attention alternatives and mixture of experts | attention variants and typed expert routing in [`code/transformer`](../../code/transformer/README.md) |
 | 5 | GPUs and TPUs | accelerator memory hierarchy as typed byte, bandwidth, memory-tier, transfer-time, and public-report maps in [`code/systems`](../../code/systems/README.md) |
-| 6 | Kernels, Triton | Rust kernel interfaces, tiling intuition, and typed lowering boundaries in [`code/kernels`](../../code/kernels/README.md) |
+| 6 | Kernels, Triton | Rust kernel interfaces, tiling intuition, typed lowering boundaries, and public report review in [`code/kernels`](../../code/kernels/README.md) |
 | 7 | Parallelism | data, tensor, and pipeline parallelism as ownership, partitioning, and public trace-boundary problems in [`code/parallelism`](../../code/parallelism/README.md) |
 | 8 | Parallelism | communication cost, synchronization, distributed shape flow, and public report review in [`code/parallelism`](../../code/parallelism/README.md) |
 | 9 | Scaling laws | typed experiment logs and power-law fitting from small runs |

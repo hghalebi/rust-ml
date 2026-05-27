@@ -201,6 +201,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithm
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 05_memory_hierarchy
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 06_public_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 04_kernel_estimate
+cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 05_public_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 04_report_limitations
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 05_tradeoff_decision
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 06_public_report
