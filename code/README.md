@@ -54,6 +54,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 01_hidden_fea
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 02_shape_flow
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 03_forward_trace
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 04_xor_table
+cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 05_public_trace
 ```
 
 Run the attention bridge examples:
@@ -173,7 +174,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encod
 | --- | --- | --- |
 | [category_lens](category_lens/README.md) | Active crate | The executable object/map/composition lens used across the course. |
 | [neuron](neuron/README.md) | Active crate | The first typed trainable model companion crate. |
-| [mlp](mlp/README.md) | Active crate | Tiny typed hidden-layer companion crate for shape and representation flow. |
+| [mlp](mlp/README.md) | Active crate | Tiny typed hidden-layer companion crate for shape flow, representation flow, and public trace review. |
 | [attention](attention/README.md) | Active crate | Beginner scaled dot-product attention companion crate with typed Q/K/V roles, ops-based newtype arithmetic, and public trace review. |
 | [transformer](transformer/README.md) | Active crate | Real tested encoder-path teaching crate with typed architecture configuration, expert routing, and ops-based positional/residual arithmetic. |
 | [lm_basics](lm_basics/README.md) | Active crate | First CS336 Rust language-modeling artifact: tokenization, checked IDs, next-token batches, loss, one update, and public text review. |

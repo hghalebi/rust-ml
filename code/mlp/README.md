@@ -17,6 +17,7 @@ It teaches the first step beyond a single neuron: hidden activations create inte
 - explicit `TryFrom` adapters for raw learner numbers
 - typed layer roles and shape checks
 - typed `std::ops` arithmetic for dot-product pieces and bias addition
+- public trace review boundary for learner-facing representation evidence
 - no training claim; this crate focuses on representation and shape flow
 
 ## Layout
@@ -30,6 +31,7 @@ examples/
   02_shape_flow.rs
   03_forward_trace.rs
   04_xor_table.rs
+  05_public_trace.rs
 ```
 
 ## Learning Ladder
@@ -38,6 +40,7 @@ examples/
 2. `02_shape_flow` names the typed map through the network.
 3. `03_forward_trace` prints every important intermediate value.
 4. `04_xor_table` shows why hidden representation can solve a pattern one straight-line neuron cannot.
+5. `05_public_trace` shows how a reviewed forward trace becomes publishable learner-facing material.
 
 ## Category Lens
 
@@ -48,6 +51,7 @@ InputVector -> HiddenPreActivation
 HiddenPreActivation -> HiddenActivation
 HiddenActivation -> OutputLogit
 OutputLogit -> Prediction
+ReviewedForwardTrace -> PublicForwardTrace
 ```
 
 The composition rule is shape agreement. A `WeightMatrix` can follow an
@@ -65,6 +69,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 01_hidden_fea
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 02_shape_flow
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 03_forward_trace
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 04_xor_table
+cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 05_public_trace
 ```
 
 ## Scope
@@ -75,6 +80,11 @@ Module 04 teaches the update loop with a single neuron. This crate teaches the n
 
 ```text
 InputVector -> HiddenActivation -> OutputLogit -> Prediction
+ReviewedForwardTrace -> PublicForwardTrace
 ```
 
 The public API avoids raw domain primitives. Examples parse raw numbers at the edge into `InputValue`, `WeightValue`, and `BiasValue`, then the forward pass moves through typed vectors, matrix rows, dimensions, logits, and predictions.
+
+The public trace boundary keeps representation evidence separate from release
+permission: a `ForwardTrace` explains the computation, while a
+`PublicForwardTrace` proves the trace was reviewed for learner-facing use.

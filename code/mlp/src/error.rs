@@ -185,6 +185,15 @@ pub enum MlpError {
         /// Human-readable explanation.
         details: ErrorDetails,
     },
+
+    /// Restricted or private MLP evidence tried to enter a learner-facing public trace.
+    #[error("invalid public trace in {operation}: {details}")]
+    InvalidPublicTrace {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable explanation.
+        details: ErrorDetails,
+    },
 }
 
 impl MlpError {
@@ -237,6 +246,13 @@ impl MlpError {
 
     pub(crate) fn invalid_output_layer(operation: &'static str, details: &'static str) -> Self {
         Self::InvalidOutputLayer {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_trace(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicTrace {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

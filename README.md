@@ -223,17 +223,19 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 01_hidden_fea
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 02_shape_flow
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 03_forward_trace
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 04_xor_table
+cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 05_public_trace
 ```
 
 The MLP crate covers:
 
-- semantic layer roles such as `InputVector`, `HiddenActivation`, `OutputLogit`, and `Prediction`
+- semantic layer roles such as `InputVector`, `HiddenActivation`, `OutputLogit`, `Prediction`, and `PublicForwardTrace`
 - explicit `TryFrom` adapters for raw learner numbers
 - typed arithmetic with `std::ops` for weighted products, sums, and bias addition
 - finite-value and probability-range invariants
 - dense layer shape checks with expressive errors
 - a deterministic XOR-shaped forward pass
 - learner-visible hidden activations and logits
+- public trace review boundaries that keep restricted or private representation traces out of public material
 
 Run the attention bridge ladder:
 

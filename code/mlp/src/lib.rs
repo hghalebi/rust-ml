@@ -11,6 +11,14 @@
 //! teaching APIs then use semantic values such as [`InputValue`],
 //! [`WeightValue`], [`BiasValue`], [`VectorWidth`], [`OutputLogit`], and
 //! [`Prediction`].
+//!
+//! ```text
+//! InputVector -> HiddenPreActivation
+//! HiddenPreActivation -> HiddenActivation
+//! HiddenActivation -> OutputLogit
+//! OutputLogit -> Prediction
+//! ReviewedForwardTrace -> PublicForwardTrace
+//! ```
 
 pub mod error;
 
@@ -242,8 +250,11 @@ impl<T> DenseVector<T> {
 }
 
 impl<T: Copy> DenseVector<T> {
-    fn get(&self, index: usize) -> T {
-        self.values[index]
+    fn first(&self, operation: &'static str, details: &'static str) -> Result<T, MlpError> {
+        self.values
+            .first()
+            .copied()
+            .ok_or(MlpError::invalid_output_layer(operation, details))
     }
 }
 
@@ -384,7 +395,13 @@ impl WeightMatrix {
             ));
         }
 
-        let cols = rows[0].width();
+        let cols = rows
+            .first()
+            .map(WeightRow::width)
+            .ok_or(MlpError::empty_input(
+                "WeightMatrix::from_rows",
+                "matrix cannot be empty",
+            ))?;
         for row in &rows {
             if row.width() != cols {
                 return Err(MlpError::invalid_matrix_data(
@@ -560,7 +577,10 @@ impl OutputLayer {
     pub fn forward(&self, hidden: &HiddenActivation) -> Result<OutputLogit, MlpError> {
         let z = self.weights.multiply_hidden(hidden)?;
         let z = add_bias("OutputLayer::forward", z, &self.bias)?;
-        Ok(OutputLogit::from(z.0.get(0)))
+        Ok(OutputLogit::from(z.0.first(
+            "OutputLayer::forward",
+            "one-logit output layer produced no output value",
+        )?))
     }
 }
 
@@ -592,6 +612,118 @@ impl ForwardTrace {
     /// Final sigmoid prediction.
     pub fn prediction(&self) -> Prediction {
         self.prediction
+    }
+}
+
+/// Publication class attached to an MLP forward trace before public release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MlpTraceVisibility {
+    /// Safe to include in learner-facing public MLP material.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for MlpTraceVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the MLP-trace publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicMlpDecision {
+    /// The trace can appear in public learner-facing material.
+    Publishable,
+    /// The trace must stay out of public learner-facing material.
+    Blocked,
+}
+
+/// MLP forward trace plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedForwardTrace {
+    trace: ForwardTrace,
+    visibility: MlpTraceVisibility,
+}
+
+impl ReviewedForwardTrace {
+    /// Creates a reviewed MLP forward trace.
+    pub fn new(trace: ForwardTrace, visibility: MlpTraceVisibility) -> Self {
+        Self { trace, visibility }
+    }
+
+    /// Returns the reviewed MLP forward trace.
+    pub fn trace(&self) -> &ForwardTrace {
+        &self.trace
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> MlpTraceVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this trace can enter public learner-facing material.
+    pub fn release_decision(&self) -> PublicMlpDecision {
+        match self.visibility {
+            MlpTraceVisibility::Public => PublicMlpDecision::Publishable,
+            MlpTraceVisibility::ResearchRestricted | MlpTraceVisibility::Private => {
+                PublicMlpDecision::Blocked
+            }
+        }
+    }
+
+    fn into_trace(self) -> ForwardTrace {
+        self.trace
+    }
+}
+
+/// MLP forward trace checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicForwardTrace(ForwardTrace);
+
+impl PublicForwardTrace {
+    /// Builds a public MLP trace only from a reviewed public trace.
+    pub fn from_reviewed_trace(reviewed: ReviewedForwardTrace) -> Result<Self, MlpError> {
+        if reviewed.release_decision() == PublicMlpDecision::Blocked {
+            return Err(MlpError::invalid_public_trace(
+                "PublicForwardTrace::from_reviewed_trace",
+                "public MLP traces cannot include restricted or private representation evidence",
+            ));
+        }
+
+        Ok(Self(reviewed.into_trace()))
+    }
+
+    /// Returns the checked MLP forward trace.
+    pub fn trace(&self) -> &ForwardTrace {
+        &self.0
+    }
+
+    /// Returns hidden-layer values before ReLU.
+    pub fn hidden_pre_activation(&self) -> &HiddenPreActivation {
+        self.0.hidden_pre_activation()
+    }
+
+    /// Returns hidden representation after ReLU.
+    pub fn hidden_activation(&self) -> &HiddenActivation {
+        self.0.hidden_activation()
+    }
+
+    /// Returns output logit before sigmoid.
+    pub fn output_logit(&self) -> OutputLogit {
+        self.0.output_logit()
+    }
+
+    /// Returns final sigmoid prediction.
+    pub fn prediction(&self) -> Prediction {
+        self.0.prediction()
     }
 }
 
@@ -723,8 +855,9 @@ fn add_bias(
 mod tests {
     use super::{
         BiasValue, BiasVector, HiddenActivationValue, HiddenLayer, HiddenPreActivationValue,
-        InputValue, InputVector, MlpError, OutputLayer, Prediction, TinyMlp, WeightMatrix,
-        WeightRow, WeightValue, relu,
+        InputValue, InputVector, MlpError, MlpTraceVisibility, OutputLayer, Prediction,
+        PublicForwardTrace, ReviewedForwardTrace, TinyMlp, WeightMatrix, WeightRow, WeightValue,
+        relu,
     };
 
     fn input(left: InputValue, right: InputValue) -> Result<InputVector, MlpError> {
@@ -737,6 +870,13 @@ mod tests {
 
     fn bias(values: impl IntoIterator<Item = BiasValue>) -> Result<BiasVector, MlpError> {
         BiasVector::from_values(values)
+    }
+
+    fn forward_trace() -> Result<super::ForwardTrace, MlpError> {
+        TinyMlp::xor_seed()?.forward(&input(
+            InputValue::try_from(1.0)?,
+            InputValue::try_from(0.0)?,
+        )?)
     }
 
     #[test]
@@ -868,5 +1008,42 @@ mod tests {
 
         assert!(matches!(too_high, Err(MlpError::OutOfRange { .. })));
         assert!(matches!(too_low, Err(MlpError::OutOfRange { .. })));
+    }
+
+    #[test]
+    fn public_forward_trace_accepts_public_reviewed_trace() -> Result<(), MlpError> {
+        let public_trace = PublicForwardTrace::from_reviewed_trace(ReviewedForwardTrace::new(
+            forward_trace()?,
+            MlpTraceVisibility::Public,
+        ))?;
+
+        assert!(public_trace.prediction() > Prediction::try_from(0.9)?);
+        assert_eq!(
+            public_trace.hidden_activation().width(),
+            TinyMlp::xor_seed()?.hidden_dim()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn public_forward_trace_blocks_restricted_and_private_traces() -> Result<(), MlpError> {
+        let restricted = PublicForwardTrace::from_reviewed_trace(ReviewedForwardTrace::new(
+            forward_trace()?,
+            MlpTraceVisibility::ResearchRestricted,
+        ));
+        let private = PublicForwardTrace::from_reviewed_trace(ReviewedForwardTrace::new(
+            forward_trace()?,
+            MlpTraceVisibility::Private,
+        ));
+
+        assert!(matches!(
+            restricted.err(),
+            Some(MlpError::InvalidPublicTrace { .. })
+        ));
+        assert!(matches!(
+            private.err(),
+            Some(MlpError::InvalidPublicTrace { .. })
+        ));
+        Ok(())
     }
 }

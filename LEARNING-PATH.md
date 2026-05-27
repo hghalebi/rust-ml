@@ -147,9 +147,13 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 01_hidden_fea
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 02_shape_flow
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 03_forward_trace
 cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 04_xor_table
+cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 05_public_trace
 ```
 
 Goal: understand hidden layers as representation maps and shape flow as typed composition.
+
+Also learn where the public boundary lives: `ForwardTrace` is computation
+evidence, while `PublicForwardTrace` is reviewed learner-facing evidence.
 
 ### Step 6: Attention Bridge
 

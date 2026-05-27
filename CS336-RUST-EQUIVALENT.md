@@ -78,7 +78,7 @@ The current repo already provides the first conceptual bridge:
 
 - [03 Neuron](lessons/03-neuron/README.md): typed prediction and update roles
 - [04 Learning](lessons/04-learning/README.md): feedback loops and epochs
-- [05 MLP](lessons/05-mlp/README.md): hidden representations and shape flow
+- [05 MLP](lessons/05-mlp/README.md): hidden representations, shape flow, and public trace review
 - [06 Attention](lessons/06-attention/README.md): query/key/value roles, scores, weights, value mixing, and public trace review
 - [07 Transformer](lessons/07-transformer/README.md): typed encoder architecture
 - [code/category_lens](code/category_lens/README.md): executable object/map/composition primer with `rust_ml_category_lens`

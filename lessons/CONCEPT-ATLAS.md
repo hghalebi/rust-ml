@@ -31,7 +31,7 @@ name for the object.
 | Vector meaning | `FeatureVector`, `WeightVector`, `InputVector` | matching widths, non-empty vectors | [`lessons/02-vectors`](02-vectors/README.md) |
 | Prediction path | `WeightedSum`, `PreActivation`, `Prediction`, `Loss` | finite arithmetic, valid prediction range | [`code/neuron`](../code/neuron/README.md) |
 | Learning path | `PredictionError`, `Gradient`, `Adjustment`, `LearningRate` | positive learning rate, checked update arithmetic | [`lessons/04-learning`](04-learning/README.md) |
-| Hidden representation | `HiddenActivation`, `OutputLogit`, `MatrixShape` | layer widths agree before composition | [`code/mlp`](../code/mlp/README.md) |
+| Hidden representation | `HiddenActivation`, `OutputLogit`, `MatrixShape`, `PublicForwardTrace` | layer widths agree before composition, and public trace review is explicit | [`code/mlp`](../code/mlp/README.md) |
 | Sequence attention | `TokenEmbedding`, `Query`, `Key`, `Value`, `PublicAttentionTrace` | shared model width, role-specific vectors, and public trace review | [`code/attention`](../code/attention/README.md) |
 | Architecture choices | `TransformerConfig`, `LayerCount`, `HeadCount`, `FeedForwardWidth` | model width divides evenly into attention heads | [`code/transformer`](../code/transformer/README.md) |
 | Expert routing | `ExpertScores`, `ExpertChoice`, `ExpertRoute`, `ExpertBank` | one score per expert, then an existing expert applies the token map | [`code/transformer`](../code/transformer/README.md) |
@@ -57,6 +57,7 @@ The course repeatedly asks you to name the map before trusting the code.
 | `WeightedSum + Bias -> PreActivation -> Prediction` | shift the score, then squash it into a prediction | `rust_ml_neuron --example 02_forward_pass` |
 | `Prediction - Target -> PredictionError -> Adjustment` | compare, blame, and update one parameter path | `rust_ml_neuron --example 03_one_step_training` |
 | `InputVector -> HiddenActivation -> Prediction` | build a representation before the final judgment | `rust_ml_mlp --example 03_forward_trace` |
+| `ReviewedForwardTrace -> PublicForwardTrace` | keep restricted or private hidden-representation evidence out of learner-facing traces | `rust_ml_mlp --example 05_public_trace` |
 | `Query * Key -> AttentionScore -> AttentionWeight` | decide which token should influence this token | `rust_ml_attention --example 02_softmax_focus` |
 | `AttentionWeight * Value -> AttentionOutput` | mix value vectors according to the attention distribution | `rust_ml_attention --example 03_weighted_sum` |
 | `ReviewedAttentionTrace -> PublicAttentionTrace` | keep restricted or private attention evidence out of learner-facing traces | `rust_ml_attention --example 05_public_trace` |
