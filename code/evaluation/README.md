@@ -8,6 +8,7 @@ It teaches evaluation as a typed harness:
 
 ```text
 EvalExample + ModelPrediction -> ScoredPrediction -> EvalReport
+ReviewedScoredPrediction* -> PublicEvalReport
 ```
 
 ## Owns
@@ -22,6 +23,7 @@ EvalExample + ModelPrediction -> ScoredPrediction -> EvalReport
 - deterministic exact-match scoring after whitespace and case normalization
 - report construction that rejects duplicate example IDs
 - typed `std::ops` arithmetic for correct-count division and accuracy deltas
+- public evaluation reports that reject restricted or private examples before publication
 - expressive `thiserror` diagnostics through `EvaluationError`
 
 ## Layout
@@ -35,6 +37,7 @@ examples/
   02_accuracy_report.rs
   03_reject_mismatched_ids.rs
   04_compare_runs.rs
+  05_public_report.rs
 ```
 
 ## Learning Ladder
@@ -43,6 +46,7 @@ examples/
 2. `02_accuracy_report` builds an exact-match report from scored predictions.
 3. `03_reject_mismatched_ids` shows why predictions must stay attached to the correct example.
 4. `04_compare_runs` compares two runs through a typed accuracy delta.
+5. `05_public_report` checks that learner-facing reports contain only public examples.
 
 ## Category Lens
 
@@ -52,10 +56,13 @@ Read evaluation as a composition that preserves evidence:
 EvalExample + ModelPrediction -> ScoredPrediction
 ScoredPrediction* -> EvalReport
 EvalReport + EvalReport -> AccuracyDelta
+ReviewedScoredPrediction* -> PublicEvalReport
 ```
 
 The composition rule is identity preservation. A metric is only meaningful when
 the prediction, reference answer, example ID, and run ID remain visible.
+Public release adds one more rule: the examples behind a learner-facing report
+must be explicitly reviewed as public before the report can be published.
 
 ## Run
 
@@ -68,6 +75,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 01_sco
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 02_accuracy_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 03_reject_mismatched_ids
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 04_compare_runs
+cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 05_public_report
 ```
 
 ## Scope
@@ -77,5 +85,5 @@ language-model evaluation strategy.
 
 The goal is to teach the invariants first: a metric has a named behavior, every
 prediction belongs to one example, every report belongs to one run, and every
-comparison preserves the baseline being compared.
-
+comparison preserves the baseline being compared. Public examples require an
+explicit publication review before they enter a public report.

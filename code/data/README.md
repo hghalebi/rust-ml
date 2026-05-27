@@ -8,6 +8,7 @@ It teaches data preparation as a typed corpus pipeline:
 
 ```text
 RawDocument -> NormalizedDocument -> FilterDecision -> CorpusShard
+DatasetCard -> PublicCorpusManifest
 ```
 
 ## Owns
@@ -24,6 +25,8 @@ RawDocument -> NormalizedDocument -> FilterDecision -> CorpusShard
 - deterministic duplicate keys for normalized text
 - corpus shard construction from accepted filter decisions
 - source mixture validation with non-negative weights and positive total weight
+- public corpus manifests that reject restricted or private source cards before publication
+- ops-based checked addition for document counts and token budgets
 
 ## Layout
 
@@ -36,6 +39,7 @@ examples/
   02_filter_and_dedup.rs
   03_build_shard.rs
   04_source_mixture.rs
+  05_public_manifest.rs
 ```
 
 ## Learning Ladder
@@ -44,6 +48,7 @@ examples/
 2. `02_filter_and_dedup` shows accepted, duplicate, and too-short decisions with explicit reasons.
 3. `03_build_shard` builds a tiny shard from accepted decisions.
 4. `04_source_mixture` validates a source mixture.
+5. `05_public_manifest` makes the public/private corpus boundary executable.
 
 ## Category Lens
 
@@ -55,11 +60,13 @@ NormalizedDocument -> DedupKey
 NormalizedDocument -> FilterDecision
 AcceptedDocuments -> CorpusShard
 SourceWeights -> SourceMixture
+DatasetCard -> PublicCorpusManifest
 ```
 
 The composition rule is evidence preservation. A document should not become
 training data unless its source, normalized text, dedup key, and filtering
-decision remain visible.
+decision remain visible. A source should not become public learner-facing
+material unless its license and visibility evidence pass the manifest boundary.
 
 ## Run
 
@@ -72,10 +79,11 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 01_normalize
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 02_filter_and_dedup
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 03_build_shard
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 04_source_mixture
+cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 05_public_manifest
 ```
 
 ## Scope
 
 This crate intentionally uses tiny public-safe strings, not real web-scale corpora.
 
-The goal is to teach the invariants first: every document has a source, every transformation is deterministic, every rejection has a reason, and every source mixture has a meaningful total.
+The goal is to teach the invariants first: every document has a source, every transformation is deterministic, every rejection has a reason, every source mixture has a meaningful total, and every public manifest excludes restricted or private source cards.

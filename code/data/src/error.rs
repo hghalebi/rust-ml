@@ -124,6 +124,15 @@ pub enum DataError {
         /// Human-readable details.
         details: ErrorDetails,
     },
+
+    /// A manifest entry violated the public learner-facing boundary.
+    #[error("invalid manifest entry in {operation}: {details}")]
+    InvalidManifestEntry {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable details.
+        details: ErrorDetails,
+    },
 }
 
 impl DataError {
@@ -146,6 +155,20 @@ impl DataError {
         Self::NonFiniteValue {
             role: ValueRole::new(role),
             value: RejectedScalar::new(value),
+        }
+    }
+
+    pub(crate) fn overflow(operation: &'static str, details: &'static str) -> Self {
+        Self::Overflow {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_manifest_entry(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidManifestEntry {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
         }
     }
 }

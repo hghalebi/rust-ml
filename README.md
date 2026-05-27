@@ -339,16 +339,19 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 01_normalize
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 02_filter_and_dedup
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 03_build_shard
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 04_source_mixture
+cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 05_public_manifest
 ```
 
 The data crate covers:
 
-- `DocumentId`, `SourceName`, `RawText`, `NormalizedText`, `DedupKey`, `FilterReason`, `MixtureWeight`, and `CorpusShard`
+- `DocumentId`, `SourceName`, `RawText`, `NormalizedText`, `DedupKey`, `FilterReason`, `MixtureWeight`, `CorpusShard`, `DatasetCard`, and `PublicCorpusManifest`
 - explicit `TryFrom` adapters for raw learner literals
 - deterministic normalization
 - durable filter decisions with rejection reasons
 - duplicate detection by normalized-text key
 - source mixtures with non-negative weights and a positive total
+- a typed public manifest boundary that rejects restricted or private source cards
+- readable checked newtype addition for manifest document and token totals
 
 Run the first CS336 Rust evaluation artifact:
 
@@ -357,15 +360,17 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 01_sco
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 02_accuracy_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 03_reject_mismatched_ids
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 04_compare_runs
+cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 05_public_report
 ```
 
 The evaluation crate covers:
 
-- `ExampleId`, `EvalRunId`, `Prompt`, `ExpectedAnswer`, `ModelAnswer`, `Correctness`, `ExactMatchAccuracy`, and `AccuracyDelta`
+- `ExampleId`, `EvalRunId`, `Prompt`, `ExpectedAnswer`, `ModelAnswer`, `Correctness`, `ExactMatchAccuracy`, `AccuracyDelta`, and `PublicEvalReport`
 - explicit `TryFrom` adapters for raw learner literals
 - deterministic exact-match scoring after whitespace and case normalization
 - report construction that rejects duplicate example IDs
 - typed run comparison through accuracy deltas
+- a typed public-report boundary that rejects restricted or private evaluation examples
 
 Run the first CS336 Rust inference artifact:
 
@@ -374,15 +379,17 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 01_gree
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 02_sampling_controls
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 03_kv_cache_trace
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 04_latency_budget
+cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 05_public_trace
 ```
 
 The inference crate covers:
 
-- `PromptTokens`, `TokenId`, `ContextWindow`, `SamplingMode`, `DecodeStep`, `KvCacheEntry`, and `LatencyBudget`
+- `PromptTokens`, `TokenId`, `ContextWindow`, `SamplingMode`, `DecodeStep`, `KvCacheEntry`, `LatencyBudget`, and `PublicDecodeTrace`
 - explicit `TryFrom` adapters for raw learner literals
 - deterministic greedy and top-k decoding controls
 - KV-cache traces that distinguish prompt-prefix and generated-token entries
 - typed latency estimates for prefill plus per-token generation
+- a typed public-trace boundary that rejects restricted or private prompts, outputs, and cache records
 
 Run the first CS336 Rust parallelism artifact:
 

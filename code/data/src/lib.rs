@@ -9,7 +9,9 @@
 //! Raw learner strings enter only through `TryFrom` adapters. The public
 //! pipeline then talks about semantic values such as [`DocumentId`],
 //! [`SourceName`], [`RawText`], [`DedupKey`], [`FilterReason`], and
-//! [`MixtureWeight`].
+//! [`MixtureWeight`]. Public publication uses a separate manifest boundary:
+//! [`DatasetCard`] records source evidence, while [`PublicCorpusManifest`]
+//! accepts only cards marked safe for the learner-facing public repo.
 
 pub mod error;
 
@@ -705,12 +707,353 @@ impl SamplingMixture {
     }
 }
 
+/// Human-readable name for a release manifest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ManifestName(String);
+
+impl ManifestName {
+    fn from_owned(value: String) -> Result<Self, DataError> {
+        validate_nonempty(
+            &value,
+            "ManifestName::try_from",
+            "manifest name cannot be empty",
+        )?;
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for ManifestName {
+    type Error = DataError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_owned(value.to_owned())
+    }
+}
+
+impl TryFrom<String> for ManifestName {
+    type Error = DataError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_owned(value)
+    }
+}
+
+impl fmt::Display for ManifestName {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
+/// License or provenance label for a dataset card.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LicenseName(String);
+
+impl LicenseName {
+    fn from_owned(value: String) -> Result<Self, DataError> {
+        validate_nonempty(
+            &value,
+            "LicenseName::try_from",
+            "license name cannot be empty",
+        )?;
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for LicenseName {
+    type Error = DataError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_owned(value.to_owned())
+    }
+}
+
+impl TryFrom<String> for LicenseName {
+    type Error = DataError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_owned(value)
+    }
+}
+
+impl fmt::Display for LicenseName {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
+/// Publication class attached to a source before it can enter a public manifest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DatasetVisibility {
+    /// Safe to describe in learner-facing public material.
+    Public,
+    /// Available only under a research or classroom access condition.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for DatasetVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision for the public-release boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicReleaseDecision {
+    /// The source can appear in the public learner-facing manifest.
+    Publishable,
+    /// The source must be kept out of the public learner-facing manifest.
+    Blocked,
+}
+
+/// Number of documents represented by one dataset card.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DocumentCount(usize);
+
+impl DocumentCount {
+    fn from_raw(value: usize) -> Result<Self, DataError> {
+        Ok(Self(positive_usize(
+            "document count must be greater than zero",
+            "DocumentCount::from_raw",
+            value,
+        )?))
+    }
+
+    fn zero() -> Self {
+        Self(0)
+    }
+}
+
+impl TryFrom<usize> for DocumentCount {
+    type Error = DataError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        Self::from_raw(value)
+    }
+}
+
+impl Add for DocumentCount {
+    type Output = Result<DocumentCount, DataError>;
+
+    fn add(self, right: DocumentCount) -> Self::Output {
+        let value = self.0.checked_add(right.0).ok_or_else(|| {
+            DataError::overflow(
+                "DocumentCount::add",
+                "document counts exceeded machine capacity",
+            )
+        })?;
+        Ok(Self(value))
+    }
+}
+
+impl fmt::Display for DocumentCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, formatter)
+    }
+}
+
+/// Number of training tokens represented by one dataset card.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TokenBudget(usize);
+
+impl TokenBudget {
+    fn from_raw(value: usize) -> Result<Self, DataError> {
+        Ok(Self(positive_usize(
+            "token budget must be greater than zero",
+            "TokenBudget::from_raw",
+            value,
+        )?))
+    }
+
+    fn zero() -> Self {
+        Self(0)
+    }
+}
+
+impl TryFrom<usize> for TokenBudget {
+    type Error = DataError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        Self::from_raw(value)
+    }
+}
+
+impl Add for TokenBudget {
+    type Output = Result<TokenBudget, DataError>;
+
+    fn add(self, right: TokenBudget) -> Self::Output {
+        let value = self.0.checked_add(right.0).ok_or_else(|| {
+            DataError::overflow(
+                "TokenBudget::add",
+                "token budgets exceeded machine capacity",
+            )
+        })?;
+        Ok(Self(value))
+    }
+}
+
+impl fmt::Display for TokenBudget {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, formatter)
+    }
+}
+
+/// Aggregate manifest totals after typed validation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CorpusTotals {
+    documents: DocumentCount,
+    tokens: TokenBudget,
+}
+
+impl CorpusTotals {
+    fn zero() -> Self {
+        Self {
+            documents: DocumentCount::zero(),
+            tokens: TokenBudget::zero(),
+        }
+    }
+
+    /// Returns the total number of documents.
+    pub fn documents(&self) -> DocumentCount {
+        self.documents
+    }
+
+    /// Returns the total token budget.
+    pub fn tokens(&self) -> TokenBudget {
+        self.tokens
+    }
+}
+
+/// Evidence card for one source before release.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DatasetCard {
+    source: SourceName,
+    license: LicenseName,
+    visibility: DatasetVisibility,
+    documents: DocumentCount,
+    tokens: TokenBudget,
+}
+
+impl DatasetCard {
+    /// Creates a dataset card from already typed source metadata.
+    pub fn new(
+        source: SourceName,
+        license: LicenseName,
+        visibility: DatasetVisibility,
+        documents: DocumentCount,
+        tokens: TokenBudget,
+    ) -> Self {
+        Self {
+            source,
+            license,
+            visibility,
+            documents,
+            tokens,
+        }
+    }
+
+    /// Returns the source name.
+    pub fn source(&self) -> &SourceName {
+        &self.source
+    }
+
+    /// Returns the license or provenance label.
+    pub fn license(&self) -> &LicenseName {
+        &self.license
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> DatasetVisibility {
+        self.visibility
+    }
+
+    /// Returns the source document count.
+    pub fn documents(&self) -> DocumentCount {
+        self.documents
+    }
+
+    /// Returns the source token budget.
+    pub fn tokens(&self) -> TokenBudget {
+        self.tokens
+    }
+
+    /// Classifies whether this source can enter the public learner-facing manifest.
+    pub fn release_decision(&self) -> PublicReleaseDecision {
+        match self.visibility {
+            DatasetVisibility::Public => PublicReleaseDecision::Publishable,
+            DatasetVisibility::ResearchRestricted | DatasetVisibility::Private => {
+                PublicReleaseDecision::Blocked
+            }
+        }
+    }
+}
+
+/// Public learner-facing corpus manifest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublicCorpusManifest {
+    name: ManifestName,
+    cards: Vec<DatasetCard>,
+    totals: CorpusTotals,
+}
+
+impl PublicCorpusManifest {
+    /// Creates a non-empty public manifest from its first checked dataset card.
+    pub fn from_card(name: ManifestName, card: DatasetCard) -> Result<Self, DataError> {
+        let mut manifest = Self {
+            name,
+            cards: Vec::new(),
+            totals: CorpusTotals::zero(),
+        };
+        manifest.add_card(card)?;
+        Ok(manifest)
+    }
+
+    /// Adds one dataset card after checking the public-release boundary.
+    pub fn add_card(&mut self, card: DatasetCard) -> Result<(), DataError> {
+        if card.release_decision() == PublicReleaseDecision::Blocked {
+            return Err(DataError::invalid_manifest_entry(
+                "PublicCorpusManifest::add_card",
+                "public manifests cannot include restricted or private sources",
+            ));
+        }
+
+        let documents = (self.totals.documents + card.documents())?;
+        let tokens = (self.totals.tokens + card.tokens())?;
+
+        self.cards.push(card);
+        self.totals = CorpusTotals { documents, tokens };
+        Ok(())
+    }
+
+    /// Returns the manifest name.
+    pub fn name(&self) -> &ManifestName {
+        &self.name
+    }
+
+    /// Iterates over public dataset cards.
+    pub fn cards(&self) -> impl ExactSizeIterator<Item = &DatasetCard> + '_ {
+        self.cards.iter()
+    }
+
+    /// Returns aggregate manifest totals.
+    pub fn totals(&self) -> CorpusTotals {
+        self.totals
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        CorpusShard, DataError, DedupIndex, DocumentFilter, DocumentId, FilterDecision,
-        FilterReason, MinTokenCount, MixtureWeight, NormalizationRules, RawDocument, RawText,
-        SamplingMixture, SourceName, SourceWeight,
+        CorpusShard, DataError, DatasetCard, DatasetVisibility, DedupIndex, DocumentCount,
+        DocumentFilter, DocumentId, FilterDecision, FilterReason, LicenseName, ManifestName,
+        MinTokenCount, MixtureWeight, NormalizationRules, PublicCorpusManifest, RawDocument,
+        RawText, SamplingMixture, SourceName, SourceWeight, TokenBudget,
     };
 
     fn document(id: DocumentId, source: SourceName, text: RawText) -> RawDocument {
@@ -851,6 +1194,99 @@ mod tests {
         ])?;
 
         assert_eq!(mixture.total_weight().to_string(), "1.0000");
+        Ok(())
+    }
+
+    #[test]
+    fn public_manifest_accepts_only_public_cards_and_tracks_totals() -> Result<(), DataError> {
+        let public_card = DatasetCard::new(
+            SourceName::try_from("synthetic-public-notes")?,
+            LicenseName::try_from("CC0-synthetic")?,
+            DatasetVisibility::Public,
+            DocumentCount::try_from(2)?,
+            TokenBudget::try_from(128)?,
+        );
+        let mut manifest = PublicCorpusManifest::from_card(
+            ManifestName::try_from("learner-face-v1")?,
+            public_card,
+        )?;
+
+        manifest.add_card(DatasetCard::new(
+            SourceName::try_from("tiny-permissive-examples")?,
+            LicenseName::try_from("MIT-example-text")?,
+            DatasetVisibility::Public,
+            DocumentCount::try_from(3)?,
+            TokenBudget::try_from(256)?,
+        ))?;
+
+        assert_eq!(manifest.name().to_string(), "learner-face-v1");
+        assert_eq!(manifest.totals().documents().to_string(), "5");
+        assert_eq!(manifest.totals().tokens().to_string(), "384");
+        Ok(())
+    }
+
+    #[test]
+    fn public_manifest_blocks_restricted_and_private_cards() -> Result<(), DataError> {
+        let public_card = DatasetCard::new(
+            SourceName::try_from("synthetic-public-notes")?,
+            LicenseName::try_from("CC0-synthetic")?,
+            DatasetVisibility::Public,
+            DocumentCount::try_from(1)?,
+            TokenBudget::try_from(64)?,
+        );
+        let mut manifest = PublicCorpusManifest::from_card(
+            ManifestName::try_from("learner-face-v1")?,
+            public_card,
+        )?;
+
+        let restricted = manifest.add_card(DatasetCard::new(
+            SourceName::try_from("restricted-classroom-corpus")?,
+            LicenseName::try_from("classroom-only")?,
+            DatasetVisibility::ResearchRestricted,
+            DocumentCount::try_from(1)?,
+            TokenBudget::try_from(64)?,
+        ));
+        let private = manifest.add_card(DatasetCard::new(
+            SourceName::try_from("private-notes")?,
+            LicenseName::try_from("not-for-public-release")?,
+            DatasetVisibility::Private,
+            DocumentCount::try_from(1)?,
+            TokenBudget::try_from(64)?,
+        ));
+
+        assert!(matches!(
+            restricted,
+            Err(DataError::InvalidManifestEntry { .. })
+        ));
+        assert!(matches!(
+            private,
+            Err(DataError::InvalidManifestEntry { .. })
+        ));
+        assert_eq!(manifest.totals().documents().to_string(), "1");
+        Ok(())
+    }
+
+    #[test]
+    fn public_manifest_totals_are_checked_for_overflow() -> Result<(), DataError> {
+        let max_card = DatasetCard::new(
+            SourceName::try_from("large-public-shard")?,
+            LicenseName::try_from("public-domain")?,
+            DatasetVisibility::Public,
+            DocumentCount::try_from(usize::MAX)?,
+            TokenBudget::try_from(1)?,
+        );
+        let mut manifest =
+            PublicCorpusManifest::from_card(ManifestName::try_from("overflow-check")?, max_card)?;
+
+        let overflow = manifest.add_card(DatasetCard::new(
+            SourceName::try_from("one-more-public-document")?,
+            LicenseName::try_from("public-domain")?,
+            DatasetVisibility::Public,
+            DocumentCount::try_from(1)?,
+            TokenBudget::try_from(1)?,
+        ));
+
+        assert!(matches!(overflow, Err(DataError::Overflow { .. })));
         Ok(())
     }
 }

@@ -178,6 +178,15 @@ pub enum InferenceError {
         /// Human-readable details.
         details: ErrorDetails,
     },
+
+    /// A decode trace violated the public learner-facing boundary.
+    #[error("invalid public trace in {operation}: {details}")]
+    InvalidPublicTrace {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable details.
+        details: ErrorDetails,
+    },
 }
 
 impl InferenceError {
@@ -238,6 +247,13 @@ impl InferenceError {
 
     pub(crate) fn duplicate_value(operation: &'static str, details: &'static str) -> Self {
         Self::DuplicateValue {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_trace(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicTrace {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

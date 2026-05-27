@@ -110,6 +110,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 01_normalize
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 02_filter_and_dedup
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 03_build_shard
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 04_source_mixture
+cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 05_public_manifest
 ```
 
 Run the CS336 Rust evaluation examples:
@@ -119,6 +120,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 01_sco
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 02_accuracy_report
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 03_reject_mismatched_ids
 cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 04_compare_runs
+cargo run --manifest-path code/Cargo.toml -p rust_ml_evaluation --example 05_public_report
 ```
 
 Run the CS336 Rust inference examples:
@@ -128,6 +130,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 01_gree
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 02_sampling_controls
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 03_kv_cache_trace
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 04_latency_budget
+cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 05_public_trace
 ```
 
 Run the CS336 Rust parallelism examples:
@@ -170,8 +173,8 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encod
 | [systems](systems/README.md) | Active crate | First CS336 Rust systems artifact: typed memory, bandwidth, hierarchy, FLOP, timing, and arithmetic-intensity estimates. |
 | [kernels](kernels/README.md) | Active crate | First CS336 Rust kernels artifact: typed tiling, reductions, matrix-vector traces, and resource estimates. |
 | [scaling](scaling/README.md) | Active crate | First CS336 Rust scaling artifact: typed experiment records, power-law fitting, forecasts, tradeoffs, and limitations. |
-| [data](data/README.md) | Active crate | First CS336 Rust data artifact: typed normalization, filtering, deduplication, shards, and source mixtures. |
-| [evaluation](evaluation/README.md) | Active crate | First CS336 Rust evaluation artifact: typed examples, predictions, reports, exact-match accuracy, and run comparison. |
-| [inference](inference/README.md) | Active crate | First CS336 Rust inference artifact: typed decoding controls, KV-cache traces, and latency budgets. |
+| [data](data/README.md) | Active crate | First CS336 Rust data artifact: typed normalization, filtering, deduplication, shards, source mixtures, and public corpus manifests. |
+| [evaluation](evaluation/README.md) | Active crate | First CS336 Rust evaluation artifact: typed examples, predictions, reports, exact-match accuracy, run comparison, and public report review. |
+| [inference](inference/README.md) | Active crate | First CS336 Rust inference artifact: typed decoding controls, KV-cache traces, latency budgets, and public trace review. |
 | [parallelism](parallelism/README.md) | Active crate | First CS336 Rust parallelism artifact: typed ranks, sharding plans, collective traces, and pipeline schedules. |
 | [alignment](alignment/README.md) | Active crate | First CS336 Rust alignment artifact: typed instruction examples, preference signals, verifier feedback, audit records, and workflow transitions. |

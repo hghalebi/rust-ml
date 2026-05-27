@@ -51,11 +51,11 @@ After this track, the learner should be able to:
 | 7 | Parallelism I | split batches and parameters while preserving ownership and shape contracts in [`code/parallelism`](code/parallelism/README.md) |
 | 8 | Parallelism II | reason about communication, synchronization, and failure boundaries in [`code/parallelism`](code/parallelism/README.md) |
 | 9 | Scaling laws I | log small experiments and fit a simple power-law curve |
-| 10 | Inference | implement decoding, typed sampling controls, KV-cache traces, and latency budgets in [`code/inference`](code/inference/README.md) |
+| 10 | Inference | implement decoding, typed sampling controls, KV-cache traces, latency budgets, and public trace reviews in [`code/inference`](code/inference/README.md) |
 | 11 | Scaling laws II | use fitted curves to compare data, model, and compute tradeoffs in [`code/scaling`](code/scaling/README.md) |
-| 12 | Evaluation | build metric newtypes and deterministic evaluation records in [`code/evaluation`](code/evaluation/README.md) |
-| 13 | Data sources | stream documents through `DocumentId`, `Source`, and `CorpusShard` types |
-| 14 | Data filtering | implement filters, dedup keys, mixture weights, and provenance checks |
+| 12 | Evaluation | build metric newtypes, deterministic evaluation records, and public report reviews in [`code/evaluation`](code/evaluation/README.md) |
+| 13 | Data sources | stream documents through `DocumentId`, `Source`, `CorpusShard`, and public manifest types in [`code/data`](code/data/README.md) |
+| 14 | Data filtering | implement filters, dedup keys, mixture weights, provenance checks, and public/private source boundaries in [`code/data`](code/data/README.md) |
 | 15 | SFT and RLHF | represent instruction examples and preference pairs with explicit roles |
 | 16 | RLVR | model verifier feedback and rollout traces as typed learning signals |
 | 17 | Alignment systems | design auditable alignment pipelines with checked state transitions in [`code/alignment`](code/alignment/README.md) |
@@ -69,7 +69,7 @@ The Rust sequence mirrors the public assignment themes while staying original:
 1. [R1 Basics](assignments/cs336-rust/01-basics.md): tokenizer, checked token IDs, next-token batches, loss, and a tiny trainable language-modeling core in [`code/lm_basics`](code/lm_basics/README.md).
 2. [R2 Systems](assignments/cs336-rust/02-systems.md): profiling, memory accounting, attention FLOP estimates, median timings, and arithmetic intensity in [`code/systems`](code/systems/README.md).
 3. [R3 Scaling](assignments/cs336-rust/03-scaling.md): experiment logs, scaling curves, component ablations, and forecast limitations in [`code/scaling`](code/scaling/README.md).
-4. [R4 Data](assignments/cs336-rust/04-data.md): corpus ingestion, filtering, deduplication, and sampling mixtures in [`code/data`](code/data/README.md).
+4. [R4 Data](assignments/cs336-rust/04-data.md): corpus ingestion, filtering, deduplication, sampling mixtures, and public corpus manifests in [`code/data`](code/data/README.md).
 5. [R5 Alignment](assignments/cs336-rust/05-alignment.md): supervised finetuning data, preference pairs, verifier feedback, and safety notes in [`code/alignment`](code/alignment/README.md).
 
 ## Repository Integration
@@ -86,9 +86,9 @@ The current repo already provides the first conceptual bridge:
 - [code/systems](code/systems/README.md): first executable CS336 R2 artifact for typed resource accounting
 - [code/kernels](code/kernels/README.md): first executable kernels artifact for typed tiling, reductions, matrix-vector traces, and resource estimates
 - [code/scaling](code/scaling/README.md): first executable CS336 R3 artifact for typed experiment evidence and power-law fitting
-- [code/data](code/data/README.md): first executable CS336 R4 artifact for typed corpus preparation
-- [code/evaluation](code/evaluation/README.md): first executable evaluation artifact for typed examples, predictions, reports, and run comparison
-- [code/inference](code/inference/README.md): first executable inference artifact for typed decoding controls, KV-cache traces, and latency budgets
+- [code/data](code/data/README.md): first executable CS336 R4 artifact for typed corpus preparation and public manifest boundaries
+- [code/evaluation](code/evaluation/README.md): first executable evaluation artifact for typed examples, predictions, reports, run comparison, and public report review
+- [code/inference](code/inference/README.md): first executable inference artifact for typed decoding controls, KV-cache traces, latency budgets, and public trace review
 - [code/parallelism](code/parallelism/README.md): first executable parallelism artifact for typed ranks, sharding plans, collective traces, and pipeline schedules
 - [code/alignment](code/alignment/README.md): first executable CS336 R5 artifact for typed post-training signals
 

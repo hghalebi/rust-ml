@@ -37,11 +37,11 @@ The current public offering is Spring 2026.
 | 7 | Parallelism | data, tensor, and pipeline parallelism as ownership and partitioning problems in [`code/parallelism`](../../code/parallelism/README.md) |
 | 8 | Parallelism | communication cost, synchronization, and distributed shape flow in [`code/parallelism`](../../code/parallelism/README.md) |
 | 9 | Scaling laws | typed experiment logs and power-law fitting from small runs |
-| 10 | Inference | decoding, KV cache roles, batching, and latency budgets in [`code/inference`](../../code/inference/README.md) |
+| 10 | Inference | decoding, KV cache roles, batching, latency budgets, and public trace review in [`code/inference`](../../code/inference/README.md) |
 | 11 | Scaling laws | using fitted laws to reason about model, data, and compute choices in [`code/scaling`](../../code/scaling/README.md) |
-| 12 | Evaluation | deterministic eval harnesses and metric newtypes in [`code/evaluation`](../../code/evaluation/README.md) |
-| 13 | Data sources and datasets | streaming corpora, document IDs, and dataset manifests |
-| 14 | Data filtering, deduplication, mixing, synthetic data | typed filters, dedup keys, sampling mixtures, and provenance |
+| 12 | Evaluation | deterministic eval harnesses, metric newtypes, and public report reviews in [`code/evaluation`](../../code/evaluation/README.md) |
+| 13 | Data sources and datasets | streaming corpora, document IDs, and public dataset manifests in [`code/data`](../../code/data/README.md) |
+| 14 | Data filtering, deduplication, mixing, synthetic data | typed filters, dedup keys, sampling mixtures, provenance, and public/private source boundaries in [`code/data`](../../code/data/README.md) |
 | 15 | Mid/post-training and SFT/RLHF | instruction examples, preference data, and policy updates |
 | 16 | Post-training and RLVR | reward signals, verifiers, rollouts, and reasoning traces |
 | 17 | Alignment - multimodality and RL systems | alignment pipelines as auditable state machines in [`code/alignment`](../../code/alignment/README.md) |

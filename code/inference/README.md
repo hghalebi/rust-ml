@@ -8,6 +8,7 @@ It teaches autoregressive inference as a typed trace:
 
 ```text
 PromptTokens + DecodeRequest -> DecodeTrace
+ReviewedDecodeTrace -> PublicDecodeTrace
 ```
 
 ## Owns
@@ -22,6 +23,7 @@ PromptTokens + DecodeRequest -> DecodeTrace
 - deterministic greedy and top-k selection over a tiny next-token model
 - KV-cache trace that separates prompt-prefix entries from generated-token entries
 - typed `std::ops` arithmetic for context growth, generated-token accumulation, cache insertion, temperature scaling, token budgets, and latency estimates
+- public decode traces that reject restricted or private prompts, outputs, and cache records before publication
 - expressive `thiserror` diagnostics through `InferenceError`
 
 ## Layout
@@ -35,6 +37,7 @@ examples/
   02_sampling_controls.rs
   03_kv_cache_trace.rs
   04_latency_budget.rs
+  05_public_trace.rs
 ```
 
 ## Learning Ladder
@@ -43,6 +46,7 @@ examples/
 2. `02_sampling_controls` shows top-k and temperature as semantic controls, not loose numbers.
 3. `03_kv_cache_trace` prints prompt and generated entries in the toy KV cache.
 4. `04_latency_budget` estimates prefill plus per-token generation latency with typed units.
+5. `05_public_trace` checks that learner-facing traces contain only public reviewed content.
 
 ## Category Lens
 
@@ -53,11 +57,14 @@ ContextTokens + TokenId -> ContextTokens
 KvCache + KvCacheEntry -> KvCache
 GeneratedTokens + TokenId -> GeneratedTokens
 LatencyMillis + LatencyMillis -> LatencyMillis
+ReviewedDecodeTrace -> PublicDecodeTrace
 ```
 
 The composition rule is state preservation. Each generated token must update
 the context, the generated sequence, and the cache together, or the trace stops
-being trustworthy.
+being trustworthy. Public release adds one more rule: prompts, generated text,
+and cache records must be reviewed as public before the trace enters
+learner-facing material.
 
 ## Run
 
@@ -70,6 +77,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 01_gree
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 02_sampling_controls
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 03_kv_cache_trace
 cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 04_latency_budget
+cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 05_public_trace
 ```
 
 ## Scope
@@ -80,4 +88,5 @@ sampling, paged attention, speculative decoding, or GPU kernels.
 The goal is to teach the invariants first: prompt tokens must fit the context
 window, token IDs must fit the vocabulary, sampling controls must be typed, the
 KV cache must stay aligned with generated steps, and latency estimates should
-carry units.
+carry units. Public traces require explicit publication review before they are
+shown as learner-facing examples.

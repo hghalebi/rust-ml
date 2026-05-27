@@ -40,8 +40,9 @@ name for the object.
 | Systems evidence | `Bytes`, `BytesPerSecond`, `MemoryLevel`, `Flops`, `ElapsedNanos`, `ArithmeticIntensity` | units and memory tiers stay separate during arithmetic | [`code/systems`](../code/systems/README.md) |
 | Kernel tiling | `MatrixShape`, `TileShape`, `TilePlan`, `FlopCount` | tile windows and resource units stay explicit | [`code/kernels`](../code/kernels/README.md) |
 | Scaling evidence | `TrainingRun`, `MetricRecord`, `ComputeBudgetFlops`, `ValidationLoss`, `ScalingTradeoff` | every loss and recommendation keeps the run evidence that produced it | [`code/scaling`](../code/scaling/README.md) |
-| Data preparation | `RawDocument`, `NormalizedDocument`, `DedupKey`, `CorpusShard` | provenance, filter reasons, and mixture weights stay visible | [`code/data`](../code/data/README.md) |
-| Inference trace | `DecodeRequest`, `SamplingMode`, `KvCacheEntry`, `LatencyBudget` | context, cache, and generated tokens advance together | [`code/inference`](../code/inference/README.md) |
+| Data preparation | `RawDocument`, `NormalizedDocument`, `DedupKey`, `CorpusShard`, `PublicCorpusManifest` | provenance, filter reasons, mixture weights, licenses, and public/private boundaries stay visible | [`code/data`](../code/data/README.md) |
+| Evaluation report | `EvalExample`, `ScoredPrediction`, `EvalReport`, `PublicEvalReport` | prompts, answers, run IDs, metrics, and public-release review stay visible | [`code/evaluation`](../code/evaluation/README.md) |
+| Inference trace | `DecodeRequest`, `SamplingMode`, `KvCacheEntry`, `LatencyBudget`, `PublicDecodeTrace` | context, cache, generated tokens, and public-release review advance together | [`code/inference`](../code/inference/README.md) |
 | Parallel training | `WorldSize`, `RankId`, `RankShard`, `CommunicationBytes` | every shard keeps its rank, origin, and communication units | [`code/parallelism`](../code/parallelism/README.md) |
 | Post-training signals | `PreferencePair`, `RewardScore`, `VerifierFeedback`, `AuditRecord`, `AlignmentWorkflow` | signal source, failure meaning, and lifecycle stage are preserved | [`code/alignment`](../code/alignment/README.md) |
 
@@ -69,7 +70,10 @@ The course repeatedly asks you to name the map before trusting the code.
 | `MetricRecord -> ScalingFit -> ForecastLoss` | turn runs into a limited, inspectable scaling claim | `rust_ml_scaling --example 03_forecast_loss` |
 | `ScalingCandidate + ScalingCandidate -> ScalingTradeoff` | compare model/data/compute choices without dropping units | `rust_ml_scaling --example 05_tradeoff_decision` |
 | `RawDocument -> NormalizedDocument -> FilterDecision` | make data quality a typed part of the model path | `rust_ml_data --example 02_filter_and_dedup` |
+| `DatasetCard -> PublicCorpusManifest` | keep restricted or private source evidence out of learner-facing public content | `rust_ml_data --example 05_public_manifest` |
+| `ReviewedScoredPrediction -> PublicEvalReport` | keep restricted or private evaluation examples out of learner-facing public reports | `rust_ml_evaluation --example 05_public_report` |
 | `ContextTokens + TokenId -> ContextTokens` | grow one autoregressive trace without losing the cache boundary | `rust_ml_inference --example 03_kv_cache_trace` |
+| `ReviewedDecodeTrace -> PublicDecodeTrace` | keep restricted or private generated traces out of learner-facing public content | `rust_ml_inference --example 05_public_trace` |
 | `GlobalBatchSize / WorldSize -> LocalBatchSize` | split a global object into rank-owned local work | `rust_ml_parallelism --example 01_data_parallel_batch` |
 | `PreferenceSignal -> UpdateSignal -> AuditRecord` | keep post-training feedback auditable | `rust_ml_alignment --example 04_audit_record` |
 | `AuditRecord -> AlignmentWorkflow -> AlignmentTransition` | prevent an alignment update from skipping the audit gate | `rust_ml_alignment --example 05_alignment_workflow` |

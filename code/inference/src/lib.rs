@@ -11,7 +11,12 @@
 //!
 //! Raw learner literals enter through `TryFrom` adapters. The public teaching
 //! path then speaks in semantic values: token IDs, sampling controls, context
-//! windows, decode steps, KV-cache entries, and latency budgets.
+//! windows, decode steps, KV-cache entries, and latency budgets. Public release
+//! uses a separate trace boundary:
+//!
+//! ```text
+//! ReviewedDecodeTrace -> PublicDecodeTrace
+//! ```
 
 pub mod error;
 
@@ -1294,6 +1299,103 @@ impl DecodeTrace {
     }
 }
 
+/// Publication class attached to a decode trace before public release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TraceVisibility {
+    /// Safe to include in learner-facing public inference examples.
+    Public,
+    /// Useful for restricted review, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for TraceVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the inference-trace publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicTraceDecision {
+    /// The trace can appear in a public learner-facing artifact.
+    Publishable,
+    /// The trace must stay out of public learner-facing artifacts.
+    Blocked,
+}
+
+/// Decode trace plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedDecodeTrace {
+    trace: DecodeTrace,
+    visibility: TraceVisibility,
+}
+
+impl ReviewedDecodeTrace {
+    /// Creates a reviewed decode trace.
+    pub fn new(trace: DecodeTrace, visibility: TraceVisibility) -> Self {
+        Self { trace, visibility }
+    }
+
+    /// Returns the decode trace.
+    pub fn trace(&self) -> &DecodeTrace {
+        &self.trace
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> TraceVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this trace can enter public learner-facing material.
+    pub fn release_decision(&self) -> PublicTraceDecision {
+        match self.visibility {
+            TraceVisibility::Public => PublicTraceDecision::Publishable,
+            TraceVisibility::ResearchRestricted | TraceVisibility::Private => {
+                PublicTraceDecision::Blocked
+            }
+        }
+    }
+
+    fn into_trace(self) -> DecodeTrace {
+        self.trace
+    }
+}
+
+/// Decode trace checked for public learner-facing release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicDecodeTrace(DecodeTrace);
+
+impl PublicDecodeTrace {
+    /// Creates a public trace only after explicit publication review.
+    pub fn from_reviewed_trace(reviewed: ReviewedDecodeTrace) -> Result<Self, InferenceError> {
+        if reviewed.release_decision() == PublicTraceDecision::Blocked {
+            return Err(InferenceError::invalid_public_trace(
+                "PublicDecodeTrace::from_reviewed_trace",
+                "public traces cannot include restricted or private prompts, outputs, or cache records",
+            ));
+        }
+
+        Ok(Self(reviewed.into_trace()))
+    }
+
+    /// Returns the checked decode trace.
+    pub fn trace(&self) -> &DecodeTrace {
+        &self.0
+    }
+
+    /// Returns generated tokens from the checked trace.
+    pub fn generated_tokens(&self) -> &GeneratedTokens {
+        self.0.generated_tokens()
+    }
+}
+
 /// Runs one deterministic autoregressive decode.
 pub fn decode<M>(model: &M, request: DecodeRequest) -> Result<DecodeTrace, InferenceError>
 where
@@ -1510,9 +1612,10 @@ mod tests {
     use super::{
         ContextWindow, DecodeRequest, GeneratedTokenCount, LatencyBudget, LatencyMillis, Logit,
         MaxNewTokens, NextTokenRule, PromptTokens, RankedToken, SamplingMode, Temperature, TokenId,
-        TokenIndex, TokenRankings, TopK, ToyNextTokenModel, VocabularySize, decode,
+        TokenIndex, TokenRankings, TopK, ToyNextTokenModel, TraceVisibility, VocabularySize,
+        decode,
     };
-    use crate::{Error, LatencyReport};
+    use crate::{Error, LatencyReport, PublicDecodeTrace, ReviewedDecodeTrace};
 
     fn token(index: TokenIndex, vocabulary_size: VocabularySize) -> Result<TokenId, Error> {
         TokenId::new(index, vocabulary_size)
@@ -1677,6 +1780,75 @@ mod tests {
         )?;
 
         assert_eq!(report.total(), LatencyMillis::try_from(20)?);
+        Ok(())
+    }
+
+    #[test]
+    fn public_decode_trace_accepts_public_reviewed_trace() -> Result<(), Error> {
+        let model = demo_model()?;
+        let vocabulary_size = VocabularySize::try_from(4)?;
+        let prompt =
+            PromptTokens::from_tokens([token(TokenIndex::try_from(0)?, vocabulary_size)?])?;
+        let trace = decode(
+            &model,
+            DecodeRequest::new(
+                prompt,
+                ContextWindow::try_from(4)?,
+                MaxNewTokens::try_from(2)?,
+                SamplingMode::Greedy,
+            )?,
+        )?;
+
+        let public_trace = PublicDecodeTrace::from_reviewed_trace(ReviewedDecodeTrace::new(
+            trace,
+            TraceVisibility::Public,
+        ))?;
+
+        assert_eq!(
+            public_trace.generated_tokens().count(),
+            GeneratedTokenCount::from_raw(2)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn public_decode_trace_blocks_restricted_and_private_traces() -> Result<(), Error> {
+        let model = demo_model()?;
+        let vocabulary_size = VocabularySize::try_from(4)?;
+        let restricted_prompt =
+            PromptTokens::from_tokens([token(TokenIndex::try_from(0)?, vocabulary_size)?])?;
+        let private_prompt =
+            PromptTokens::from_tokens([token(TokenIndex::try_from(0)?, vocabulary_size)?])?;
+        let restricted_trace = decode(
+            &model,
+            DecodeRequest::new(
+                restricted_prompt,
+                ContextWindow::try_from(4)?,
+                MaxNewTokens::try_from(1)?,
+                SamplingMode::Greedy,
+            )?,
+        )?;
+        let private_trace = decode(
+            &model,
+            DecodeRequest::new(
+                private_prompt,
+                ContextWindow::try_from(4)?,
+                MaxNewTokens::try_from(1)?,
+                SamplingMode::Greedy,
+            )?,
+        )?;
+
+        let restricted = PublicDecodeTrace::from_reviewed_trace(ReviewedDecodeTrace::new(
+            restricted_trace,
+            TraceVisibility::ResearchRestricted,
+        ));
+        let private = PublicDecodeTrace::from_reviewed_trace(ReviewedDecodeTrace::new(
+            private_trace,
+            TraceVisibility::Private,
+        ));
+
+        assert!(matches!(restricted, Err(Error::InvalidPublicTrace { .. })));
+        assert!(matches!(private, Err(Error::InvalidPublicTrace { .. })));
         Ok(())
     }
 }

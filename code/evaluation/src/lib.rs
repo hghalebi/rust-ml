@@ -8,7 +8,12 @@
 //!
 //! Raw learner text enters through `TryFrom` adapters. Once inside the public
 //! API, prompts, answers, example IDs, run IDs, counts, and scores are semantic
-//! values that cannot be mixed accidentally.
+//! values that cannot be mixed accidentally. Public release uses a second
+//! checked map:
+//!
+//! ```text
+//! ReviewedScoredPrediction* -> PublicEvalReport
+//! ```
 
 pub mod error;
 
@@ -499,11 +504,117 @@ pub fn compare_accuracy(
     newer.accuracy() - baseline.accuracy()
 }
 
+/// Publication class for an evaluated example.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExampleVisibility {
+    /// Safe to include in learner-facing public report examples.
+    Public,
+    /// Useful for internal study but not safe for the public report surface.
+    ResearchRestricted,
+    /// Must never appear in public learner-facing report examples.
+    Private,
+}
+
+impl fmt::Display for ExampleVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the evaluation-publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicReportDecision {
+    /// The scored prediction can appear in a public learner-facing report.
+    Publishable,
+    /// The scored prediction must stay out of a public learner-facing report.
+    Blocked,
+}
+
+/// A scored prediction plus publication evidence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewedScoredPrediction {
+    record: ScoredPrediction,
+    visibility: ExampleVisibility,
+}
+
+impl ReviewedScoredPrediction {
+    /// Creates a reviewed scored prediction.
+    pub fn new(record: ScoredPrediction, visibility: ExampleVisibility) -> Self {
+        Self { record, visibility }
+    }
+
+    /// Returns the scored prediction.
+    pub fn record(&self) -> &ScoredPrediction {
+        &self.record
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> ExampleVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this record can enter a public learner-facing report.
+    pub fn release_decision(&self) -> PublicReportDecision {
+        match self.visibility {
+            ExampleVisibility::Public => PublicReportDecision::Publishable,
+            ExampleVisibility::ResearchRestricted | ExampleVisibility::Private => {
+                PublicReportDecision::Blocked
+            }
+        }
+    }
+
+    fn into_record(self) -> ScoredPrediction {
+        self.record
+    }
+}
+
+/// Evaluation report checked for public learner-facing release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicEvalReport(EvalReport);
+
+impl PublicEvalReport {
+    /// Builds a public report only from reviewed public examples.
+    pub fn from_reviewed_records(
+        run_id: EvalRunId,
+        records: impl IntoIterator<Item = ReviewedScoredPrediction>,
+    ) -> Result<Self, EvaluationError> {
+        let mut publishable_records = Vec::new();
+
+        for record in records {
+            if record.release_decision() == PublicReportDecision::Blocked {
+                return Err(EvaluationError::invalid_public_report(
+                    "PublicEvalReport::from_reviewed_records",
+                    "public reports cannot include restricted or private evaluation examples",
+                ));
+            }
+            publishable_records.push(record.into_record());
+        }
+
+        Ok(Self(EvalReport::from_records(run_id, publishable_records)?))
+    }
+
+    /// Returns the checked evaluation report.
+    pub fn report(&self) -> &EvalReport {
+        &self.0
+    }
+
+    /// Returns exact-match accuracy for the public report.
+    pub fn accuracy(&self) -> ExactMatchAccuracy {
+        self.0.accuracy()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        EvalExample, EvalReport, EvalRunId, ExampleId, ExpectedAnswer, ModelAnswer,
-        ModelPrediction, Prompt, ScoredPrediction, compare_accuracy,
+        EvalExample, EvalReport, EvalRunId, ExampleId, ExampleVisibility, ExpectedAnswer,
+        ModelAnswer, ModelPrediction, Prompt, PublicEvalReport, ReviewedScoredPrediction,
+        ScoredPrediction, compare_accuracy,
     };
     use crate::error::EvaluationError;
 
@@ -513,6 +624,21 @@ mod tests {
 
     fn prediction(id: ExampleId, answer: ModelAnswer) -> ModelPrediction {
         ModelPrediction::new(id, answer)
+    }
+
+    fn scored_record(
+        id: ExampleId,
+        expected: ExpectedAnswer,
+        answer: ModelAnswer,
+    ) -> Result<ScoredPrediction, EvaluationError> {
+        ScoredPrediction::exact_match(
+            example(
+                id.clone(),
+                Prompt::try_from("public learner-safe prompt")?,
+                expected,
+            ),
+            prediction(id, answer),
+        )
     }
 
     #[test]
@@ -669,6 +795,71 @@ mod tests {
         let delta = compare_accuracy(&newer, &baseline)?;
 
         assert_eq!(delta.to_string(), "+0.500");
+        Ok(())
+    }
+
+    #[test]
+    fn public_eval_report_accepts_public_reviewed_records() -> Result<(), EvaluationError> {
+        let report = PublicEvalReport::from_reviewed_records(
+            EvalRunId::try_from("public-eval")?,
+            [
+                ReviewedScoredPrediction::new(
+                    scored_record(
+                        ExampleId::try_from("ex-1")?,
+                        ExpectedAnswer::try_from("newtype")?,
+                        ModelAnswer::try_from("newtype")?,
+                    )?,
+                    ExampleVisibility::Public,
+                ),
+                ReviewedScoredPrediction::new(
+                    scored_record(
+                        ExampleId::try_from("ex-2")?,
+                        ExpectedAnswer::try_from("typed error")?,
+                        ModelAnswer::try_from("typed error")?,
+                    )?,
+                    ExampleVisibility::Public,
+                ),
+            ],
+        )?;
+
+        assert_eq!(report.report().count().to_string(), "2");
+        assert_eq!(report.accuracy().to_string(), "1.000");
+        Ok(())
+    }
+
+    #[test]
+    fn public_eval_report_blocks_restricted_and_private_records() -> Result<(), EvaluationError> {
+        let restricted = PublicEvalReport::from_reviewed_records(
+            EvalRunId::try_from("public-eval")?,
+            [ReviewedScoredPrediction::new(
+                scored_record(
+                    ExampleId::try_from("ex-1")?,
+                    ExpectedAnswer::try_from("newtype")?,
+                    ModelAnswer::try_from("newtype")?,
+                )?,
+                ExampleVisibility::ResearchRestricted,
+            )],
+        );
+        let private = PublicEvalReport::from_reviewed_records(
+            EvalRunId::try_from("public-eval")?,
+            [ReviewedScoredPrediction::new(
+                scored_record(
+                    ExampleId::try_from("ex-1")?,
+                    ExpectedAnswer::try_from("newtype")?,
+                    ModelAnswer::try_from("newtype")?,
+                )?,
+                ExampleVisibility::Private,
+            )],
+        );
+
+        assert!(matches!(
+            restricted,
+            Err(EvaluationError::InvalidPublicReport { .. })
+        ));
+        assert!(matches!(
+            private,
+            Err(EvaluationError::InvalidPublicReport { .. })
+        ));
         Ok(())
     }
 }
