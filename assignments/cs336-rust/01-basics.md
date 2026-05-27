@@ -8,6 +8,7 @@ This assignment turns the language-modeling problem into typed maps:
 
 ```text
 RawText -> TokenSequence -> TokenIds -> Logits -> Loss
+ReviewedRawText -> PublicLanguageModelingExample
 ```
 
 ## What You Build
@@ -29,6 +30,7 @@ It intentionally starts with a tiny bigram language model before moving to Trans
 
 ```text
 RawText -> TokenTextSequence -> Vocabulary -> TokenIdSequence -> NextTokenBatch -> Logits -> Loss -> Update
+ReviewedRawText -> PublicLanguageModelingExample
 ```
 
 Run it with:
@@ -38,16 +40,17 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 01_toke
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 02_next_token_batch
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 03_uniform_loss
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 04_training_step
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 05_public_training_example
 ```
 
 ## Object/Map Preflight
 
 Before implementation, write this preflight in your assignment notes:
 
-- **Objects:** `RawText`, `TokenTextSequence`, `Vocabulary`, `TokenIdSequence`, `NextTokenBatch`, `Logits`, `Loss`.
-- **Maps:** tokenize text, build vocabulary, encode tokens, build next-token pairs, score logits, compute loss, apply update.
-- **Composition path:** `RawText -> TokenTextSequence -> Vocabulary -> TokenIdSequence -> NextTokenBatch -> Logits -> Loss -> Update`.
-- **Invariant to protect with newtypes:** a token ID is valid only inside the vocabulary that produced it.
+- **Objects:** `RawText`, `ReviewedRawText`, `PublicLanguageModelingExample`, `TokenTextSequence`, `Vocabulary`, `TokenIdSequence`, `NextTokenBatch`, `Logits`, `Loss`.
+- **Maps:** review text for public release, tokenize text, build vocabulary, encode tokens, build next-token pairs, score logits, compute loss, apply update.
+- **Composition path:** `ReviewedRawText -> PublicLanguageModelingExample -> NextTokenBatch -> Logits -> Loss -> Update`.
+- **Invariant to protect with newtypes:** a token ID is valid only inside the vocabulary that produced it, and restricted or private text cannot become public learner material.
 
 ## Expected Deliverables
 
@@ -56,6 +59,7 @@ Before implementation, write this preflight in your assignment notes:
 - a next-token batch constructor that keeps inputs and targets aligned
 - a hand-computable loss fixture with the expected value written down
 - one runnable example that shows loss before and after a tiny update
+- one public-training example that rejects restricted or private text before tokenization
 
 ## Newtype And Category-Theory Lens
 
@@ -72,8 +76,12 @@ Use newtypes for:
 - `Logit`
 - `Loss`
 - `LearningRate`
+- `TextVisibility`
+- `ReviewedRawText`
+- `PublicLanguageModelingExample`
 
 Raw literals should enter through explicit `TryFrom` adapters. For example, a tiny input string becomes `RawText` before tokenization, and a learning-rate literal becomes `LearningRate` before optimization.
+Public learner examples should then wrap `RawText` in `ReviewedRawText` and cross the `PublicLanguageModelingExample` boundary before publishing the path.
 
 Read the model as composition:
 
@@ -87,6 +95,7 @@ TokenIds -> Embeddings -> ContextualStates -> Logits -> Loss
 - reject batches whose input and target lengths do not match
 - test loss on a tiny hand-computable example
 - run one training step and print loss before and after
+- reject restricted or private raw text at the public-example boundary
 
 ## Assessment Rubric
 
@@ -94,6 +103,7 @@ TokenIds -> Embeddings -> ContextualStates -> Logits -> Loss
 - **Compositional clarity:** each map in the pipeline has a clear input type, output type, and validation point.
 - **Numerical honesty:** the toy loss result is small enough for a learner to verify by hand.
 - **Executable learning:** examples run locally and show the learner what changed after each step.
+- **Public safety:** public examples use tiny reviewed text and block restricted or private text before tokenization.
 
 ## Failure Signals
 
@@ -101,6 +111,7 @@ TokenIds -> Embeddings -> ContextualStates -> Logits -> Loss
 - batch construction can silently drop or pad a target without saying why
 - the loss fixture only checks that code runs, not that the number is correct
 - the update example changes parameters without showing whether loss moved
+- restricted or private text can become learner-facing training data
 
 ## Suggested Repo Integration
 

@@ -196,6 +196,7 @@ The first executable CS336 Rust artifacts are:
 
 ```bash
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 04_training_step
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 05_public_training_example
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithmetic_intensity
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 05_memory_hierarchy
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 06_public_report

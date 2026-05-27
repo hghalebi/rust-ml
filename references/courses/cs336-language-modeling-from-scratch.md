@@ -28,7 +28,7 @@ The current public offering is Spring 2026.
 
 | Meeting | Public topic | Rust equivalent direction |
 | --- | --- | --- |
-| 1 | Overview, tokenization | typed text, tokens, vocabulary IDs, and BPE-style merges |
+| 1 | Overview, tokenization | typed text, tokens, vocabulary IDs, BPE-style merges, and public text review in [`code/lm_basics`](../../code/lm_basics/README.md) |
 | 2 | PyTorch and resource accounting | Rust tensor loops, FLOPs, memory traffic, and arithmetic intensity |
 | 3 | Architectures and hyperparameters | typed Transformer configuration and parameter budgets in [`code/transformer`](../../code/transformer/README.md) |
 | 4 | Attention alternatives and mixture of experts | attention variants and typed expert routing in [`code/transformer`](../../code/transformer/README.md) |

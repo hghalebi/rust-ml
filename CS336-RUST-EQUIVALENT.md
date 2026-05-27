@@ -42,7 +42,7 @@ After this track, the learner should be able to:
 
 | Unit | Public CS336 topic | Original Rust lab direction |
 | --- | --- | --- |
-| 1 | Overview, tokenization | build typed `RawText -> TokenSequence -> TokenIds` maps |
+| 1 | Overview, tokenization | build typed `RawText -> TokenSequence -> TokenIds` maps with public text review in [`code/lm_basics`](code/lm_basics/README.md) |
 | 2 | Resource accounting | count FLOPs, bytes moved, arithmetic intensity, and public measurement reports for tiny layers |
 | 3 | Architectures, hyperparameters | model `TransformerConfig` with validated dimensions, head-width checks, and parameter budgets in [`code/transformer`](code/transformer/README.md) |
 | 4 | Attention alternatives, mixture of experts | compare attention maps and route tokens through typed experts in [`code/transformer`](code/transformer/README.md) |
@@ -66,7 +66,7 @@ After this track, the learner should be able to:
 
 The Rust sequence mirrors the public assignment themes while staying original:
 
-1. [R1 Basics](assignments/cs336-rust/01-basics.md): tokenizer, checked token IDs, next-token batches, loss, and a tiny trainable language-modeling core in [`code/lm_basics`](code/lm_basics/README.md).
+1. [R1 Basics](assignments/cs336-rust/01-basics.md): tokenizer, checked token IDs, next-token batches, loss, public text review, and a tiny trainable language-modeling core in [`code/lm_basics`](code/lm_basics/README.md).
 2. [R2 Systems](assignments/cs336-rust/02-systems.md): profiling, memory accounting, attention FLOP estimates, median timings, arithmetic intensity, and public report review in [`code/systems`](code/systems/README.md).
 3. [R3 Scaling](assignments/cs336-rust/03-scaling.md): experiment logs, scaling curves, component ablations, forecast limitations, and public report review in [`code/scaling`](code/scaling/README.md).
 4. [R4 Data](assignments/cs336-rust/04-data.md): corpus ingestion, filtering, deduplication, sampling mixtures, and public corpus manifests in [`code/data`](code/data/README.md).
@@ -82,7 +82,7 @@ The current repo already provides the first conceptual bridge:
 - [06 Attention](lessons/06-attention/README.md): query/key/value roles, scores, weights, and value mixing
 - [07 Transformer](lessons/07-transformer/README.md): typed encoder architecture
 - [code/category_lens](code/category_lens/README.md): executable object/map/composition primer with `rust_ml_category_lens`
-- [code/lm_basics](code/lm_basics/README.md): first executable CS336 R1 artifact for text-to-loss language modeling
+- [code/lm_basics](code/lm_basics/README.md): first executable CS336 R1 artifact for text-to-loss language modeling and public text review
 - [code/systems](code/systems/README.md): first executable CS336 R2 artifact for typed resource accounting and public report review
 - [code/kernels](code/kernels/README.md): first executable kernels artifact for typed tiling, reductions, matrix-vector traces, and resource estimates
 - [code/scaling](code/scaling/README.md): first executable CS336 R3 artifact for typed experiment evidence, power-law fitting, and public report review

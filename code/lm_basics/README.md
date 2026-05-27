@@ -8,6 +8,7 @@ It teaches the first language-modeling boundary:
 
 ```text
 RawText -> TokenTextSequence -> Vocabulary -> TokenIdSequence -> NextTokenBatch -> Logits -> Loss
+ReviewedRawText -> PublicLanguageModelingExample
 ```
 
 ## Owns
@@ -24,6 +25,7 @@ RawText -> TokenTextSequence -> Vocabulary -> TokenIdSequence -> NextTokenBatch 
 - next-token batch construction
 - tiny trainable bigram language model
 - cross-entropy loss and one gradient step
+- reviewed raw text and public examples that reject restricted or private text before tokenization
 
 ## Layout
 
@@ -36,6 +38,7 @@ examples/
   02_next_token_batch.rs
   03_uniform_loss.rs
   04_training_step.rs
+  05_public_training_example.rs
 ```
 
 ## Learning Ladder
@@ -44,6 +47,7 @@ examples/
 2. `02_next_token_batch` creates input/target next-token pairs.
 3. `03_uniform_loss` computes cross-entropy for a uniform model.
 4. `04_training_step` applies one update and prints loss before and after.
+5. `05_public_training_example` makes the public/private text boundary executable.
 
 ## Category Lens
 
@@ -55,10 +59,14 @@ TokenTextSequence + Vocabulary -> TokenIdSequence
 TokenIdSequence -> NextTokenBatch
 TokenId -> LogitRow -> Loss
 NextTokenBatch + LearningRate -> TrainingStepTrace
+ReviewedRawText -> PublicLanguageModelingExample
 ```
 
 The composition rule is vocabulary agreement. Token IDs, batches, logits, and
 loss all have to live over the same `VocabularySize` before the maps compose.
+The public-content rule comes even earlier: raw text must be reviewed as public
+before it can become a learner-facing token sequence, vocabulary, batch, and
+training trace.
 In code, the first maps can be read as typed operations:
 
 ```rust
@@ -81,6 +89,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 01_toke
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 02_next_token_batch
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 03_uniform_loss
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 04_training_step
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 05_public_training_example
 ```
 
 ## Scope
@@ -90,3 +99,6 @@ This is intentionally a bigram model, not a Transformer.
 It gives learners a small executable version of the language-modeling pipeline before they move into Transformer-scale architecture.
 
 The public API is intentionally newtype-first: raw strings, indexes, and floats are accepted only at validation boundaries, then the rest of the pipeline moves through semantic Rust types.
+Public training examples add a release boundary: restricted or private text is
+blocked before tokenization so learner-facing examples cannot leak private
+source material.

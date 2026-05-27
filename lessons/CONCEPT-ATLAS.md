@@ -36,7 +36,7 @@ name for the object.
 | Architecture choices | `TransformerConfig`, `LayerCount`, `HeadCount`, `FeedForwardWidth` | model width divides evenly into attention heads | [`code/transformer`](../code/transformer/README.md) |
 | Expert routing | `ExpertScores`, `ExpertChoice`, `ExpertRoute`, `ExpertBank` | one score per expert, then an existing expert applies the token map | [`code/transformer`](../code/transformer/README.md) |
 | Transformer encoder | `PositionEncoding`, `TokenSequence`, `AttentionOutputSequence` | same sequence length and `d_model` for residual maps | [`code/transformer`](../code/transformer/README.md) |
-| Language modeling | `RawText`, `Token`, `TokenId`, `NextTokenBatch` | known vocabulary, aligned input and target lengths | [`code/lm_basics`](../code/lm_basics/README.md) |
+| Language modeling | `RawText`, `ReviewedRawText`, `Token`, `TokenId`, `NextTokenBatch`, `PublicLanguageModelingExample` | known vocabulary, aligned input and target lengths, and public text review | [`code/lm_basics`](../code/lm_basics/README.md) |
 | Systems evidence | `Bytes`, `BytesPerSecond`, `MemoryLevel`, `Flops`, `ElapsedNanos`, `ArithmeticIntensity`, `PublicSystemsReport` | units, memory tiers, and public-report class stay separate during arithmetic | [`code/systems`](../code/systems/README.md) |
 | Kernel tiling | `MatrixShape`, `TileShape`, `TilePlan`, `FlopCount` | tile windows and resource units stay explicit | [`code/kernels`](../code/kernels/README.md) |
 | Scaling evidence | `TrainingRun`, `MetricRecord`, `ComputeBudgetFlops`, `ValidationLoss`, `ScalingTradeoff`, `PublicScalingReport` | every loss, recommendation, and public report keeps the run evidence that produced it | [`code/scaling`](../code/scaling/README.md) |
@@ -64,6 +64,7 @@ The course repeatedly asks you to name the map before trusting the code.
 | `TokenEmbedding + PositionEncoding -> TokenEmbedding` | add position without changing token width | `rust_ml_transformer --example encoder_demo` |
 | `RawText -> TokenTextSequence -> TokenIdSequence` | turn text into checked language-model input | `rust_ml_lm_basics --example 01_tokenize_and_encode` |
 | `NextTokenBatch -> Logits -> Loss -> Update` | make the smallest complete language-model training loop | `rust_ml_lm_basics --example 04_training_step` |
+| `ReviewedRawText -> PublicLanguageModelingExample` | keep restricted or private text out of learner-facing language-model examples | `rust_ml_lm_basics --example 05_public_training_example` |
 | `ActivationShape -> ElementCount -> Bytes` | convert model shape into memory evidence | `rust_ml_systems --example 01_memory_accounting` |
 | `Bytes + BytesPerSecond + MemoryLevel -> ElapsedNanos` | estimate why the same bytes cost different time at different memory tiers | `rust_ml_systems --example 05_memory_hierarchy` |
 | `ReviewedStageMeasurement* -> PublicSystemsReport` | keep restricted or private benchmark measurements out of learner-facing systems reports | `rust_ml_systems --example 06_public_report` |

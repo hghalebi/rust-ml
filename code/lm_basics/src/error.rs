@@ -235,6 +235,15 @@ pub enum LmBasicsError {
         /// Vocabulary size.
         vocab_size: VocabularySizeDiagnostic,
     },
+
+    /// Restricted or private text tried to enter a learner-facing public example.
+    #[error("invalid public example in {operation}: {details}")]
+    InvalidPublicExample {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable details.
+        details: ErrorDetails,
+    },
 }
 
 impl LmBasicsError {
@@ -290,6 +299,13 @@ impl LmBasicsError {
             operation: OperationName::new(operation),
             id: RequestedTokenId::new(id),
             vocab_size: VocabularySizeDiagnostic::new(vocab_size),
+        }
+    }
+
+    pub(crate) fn invalid_public_example(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicExample {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
         }
     }
 }

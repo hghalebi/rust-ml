@@ -5,11 +5,13 @@
 //!
 //! ```text
 //! RawText -> Tokens -> TokenIds -> Batch -> Logits -> Loss -> Update
+//! ReviewedRawText -> PublicLanguageModelingExample
 //! ```
 //!
 //! Raw learner data enters through explicit `TryFrom` adapters. Once a value is
 //! inside the crate's domain model, public APIs use semantic types instead of
-//! unlabelled primitives.
+//! unlabelled primitives. Public examples add one more typed gate: reviewed text
+//! must be classified as public before it can become learner-facing material.
 
 pub mod error;
 
@@ -429,6 +431,75 @@ impl Mul<&TokenTextSequence> for &Vocabulary {
 
     fn mul(self, tokens: &TokenTextSequence) -> Self::Output {
         self.encode(tokens)
+    }
+}
+
+/// Publication class attached to raw text before learner-facing release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextVisibility {
+    /// Safe to include in learner-facing public language-modeling examples.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for TextVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the language-modeling public-example boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicTextDecision {
+    /// The text can appear in a public learner-facing example.
+    Publishable,
+    /// The text must stay out of public learner-facing examples.
+    Blocked,
+}
+
+/// Raw text plus explicit public-release review evidence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewedRawText {
+    text: RawText,
+    visibility: TextVisibility,
+}
+
+impl ReviewedRawText {
+    /// Creates reviewed raw text.
+    pub fn new(text: RawText, visibility: TextVisibility) -> Self {
+        Self { text, visibility }
+    }
+
+    /// Returns the reviewed raw text.
+    pub fn text(&self) -> &RawText {
+        &self.text
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> TextVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this text can enter public learner-facing material.
+    pub fn release_decision(&self) -> PublicTextDecision {
+        match self.visibility {
+            TextVisibility::Public => PublicTextDecision::Publishable,
+            TextVisibility::ResearchRestricted | TextVisibility::Private => {
+                PublicTextDecision::Blocked
+            }
+        }
+    }
+
+    fn into_text(self) -> RawText {
+        self.text
     }
 }
 
@@ -895,6 +966,70 @@ impl Mul<&NextTokenBatch> for &TinyBigramLanguageModel {
     }
 }
 
+/// First language-modeling path checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicLanguageModelingExample {
+    text: RawText,
+    tokens: TokenTextSequence,
+    vocabulary: Vocabulary,
+    ids: TokenIdSequence,
+    batch: NextTokenBatch,
+}
+
+impl PublicLanguageModelingExample {
+    /// Builds a public example only from reviewed public text.
+    pub fn from_reviewed_text(
+        reviewed: ReviewedRawText,
+        tokenizer: WhitespaceTokenizer,
+    ) -> Result<Self, LmBasicsError> {
+        if reviewed.release_decision() == PublicTextDecision::Blocked {
+            return Err(LmBasicsError::invalid_public_example(
+                "PublicLanguageModelingExample::from_reviewed_text",
+                "public language-modeling examples cannot include restricted or private text",
+            ));
+        }
+
+        let text = reviewed.into_text();
+        let tokens = tokenizer.tokenize(&text)?;
+        let vocabulary = Vocabulary::from_tokens(&tokens)?;
+        let ids = (&vocabulary * &tokens)?;
+        let batch = NextTokenBatch::from_sequence(&ids)?;
+
+        Ok(Self {
+            text,
+            tokens,
+            vocabulary,
+            ids,
+            batch,
+        })
+    }
+
+    /// Returns the checked public text.
+    pub fn text(&self) -> &RawText {
+        &self.text
+    }
+
+    /// Returns the tokenized public text.
+    pub fn tokens(&self) -> &TokenTextSequence {
+        &self.tokens
+    }
+
+    /// Returns the public-example vocabulary.
+    pub fn vocabulary(&self) -> &Vocabulary {
+        &self.vocabulary
+    }
+
+    /// Returns the checked token ids.
+    pub fn ids(&self) -> &TokenIdSequence {
+        &self.ids
+    }
+
+    /// Returns the next-token batch derived from the public text.
+    pub fn batch(&self) -> &NextTokenBatch {
+        &self.batch
+    }
+}
+
 fn softmax(logits: &LogitRow) -> Result<Vec<f64>, LmBasicsError> {
     let max = logits
         .logits()
@@ -916,15 +1051,23 @@ fn softmax(logits: &LogitRow) -> Result<Vec<f64>, LmBasicsError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        LearningRate, LmBasicsError, Loss, LossComparison, LossTolerance, NextTokenBatch, RawText,
-        TinyBigramLanguageModel, Token, TokenId, TokenIdSequence, TokenIndex, Vocabulary,
-        VocabularySize, WhitespaceTokenizer,
+        ContextLength, LearningRate, LmBasicsError, Loss, LossComparison, LossTolerance,
+        NextTokenBatch, PublicLanguageModelingExample, RawText, ReviewedRawText, TextVisibility,
+        TinyBigramLanguageModel, Token, TokenCount, TokenId, TokenIdSequence, TokenIndex,
+        Vocabulary, VocabularySize, WhitespaceTokenizer,
     };
 
     fn tiny_vocab() -> Result<Vocabulary, LmBasicsError> {
         let text = RawText::try_from("red blue red")?;
         let tokens = WhitespaceTokenizer.tokenize(&text)?;
         Vocabulary::from_tokens(&tokens)
+    }
+
+    fn public_reviewed_text() -> Result<ReviewedRawText, LmBasicsError> {
+        Ok(ReviewedRawText::new(
+            RawText::try_from("red blue red")?,
+            TextVisibility::Public,
+        ))
     }
 
     #[test]
@@ -1046,6 +1189,48 @@ mod tests {
         let trace = model.train_one_step(&batch, LearningRate::try_from(0.5)?)?;
 
         assert!(trace.loss_after() < trace.loss_before());
+        Ok(())
+    }
+
+    #[test]
+    fn public_language_modeling_example_accepts_public_text() -> Result<(), LmBasicsError> {
+        let example = PublicLanguageModelingExample::from_reviewed_text(
+            public_reviewed_text()?,
+            WhitespaceTokenizer,
+        )?;
+
+        assert_eq!(example.tokens().len(), TokenCount::try_from(3)?);
+        assert_eq!(example.vocabulary().size(), VocabularySize::try_from(2)?);
+        assert_eq!(
+            example.batch().context_length(),
+            ContextLength::from_token_count(TokenCount::try_from(2)?)?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn public_language_modeling_example_blocks_restricted_and_private_text()
+    -> Result<(), LmBasicsError> {
+        let restricted = PublicLanguageModelingExample::from_reviewed_text(
+            ReviewedRawText::new(
+                RawText::try_from("red blue red")?,
+                TextVisibility::ResearchRestricted,
+            ),
+            WhitespaceTokenizer,
+        );
+        let private = PublicLanguageModelingExample::from_reviewed_text(
+            ReviewedRawText::new(RawText::try_from("red blue red")?, TextVisibility::Private),
+            WhitespaceTokenizer,
+        );
+
+        assert!(matches!(
+            restricted.err(),
+            Some(LmBasicsError::InvalidPublicExample { .. })
+        ));
+        assert!(matches!(
+            private.err(),
+            Some(LmBasicsError::InvalidPublicExample { .. })
+        ));
         Ok(())
     }
 }

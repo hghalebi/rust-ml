@@ -261,16 +261,18 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 01_toke
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 02_next_token_batch
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 03_uniform_loss
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 04_training_step
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 05_public_training_example
 ```
 
 The language-modeling basics crate covers:
 
-- `RawText`, `Token`, `TokenId`, `VocabularySize`, `ContextLength`, `Position`, `Logit`, `Loss`, and `LearningRate`
+- `RawText`, `Token`, `TokenId`, `VocabularySize`, `ContextLength`, `Position`, `Logit`, `Loss`, `LearningRate`, and `PublicLanguageModelingExample`
 - explicit `TryFrom` adapters for raw learner literals
 - checked vocabulary encoding
 - next-token batch construction
 - uniform cross-entropy loss
 - one tiny gradient step over a bigram logit table
+- a typed public-example boundary that rejects restricted or private text before tokenization
 
 Run the first CS336 Rust systems artifact:
 
