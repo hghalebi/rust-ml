@@ -15,6 +15,7 @@ It keeps the beginner model explicit:
 - typed model: `TinyNeuron`
 - explicit errors through `NeuronError`
 - learner-visible `TrainingStep` values for gradients, loss before, and loss after
+- public training-step review boundary for learner-facing update evidence
 
 ## Owns
 
@@ -32,6 +33,7 @@ examples/
   02_forward_pass.rs
   03_one_step_training.rs
   04_and_gate_epoch.rs
+  05_public_training_step.rs
 ```
 
 ## Learning Ladder
@@ -40,6 +42,7 @@ examples/
 2. `02_forward_pass` adds bias and sigmoid: `mix -> squash`.
 3. `03_one_step_training` exposes `blame -> trace -> adjust` for one labeled example.
 4. `04_and_gate_epoch` repeats updates across a tiny AND dataset so learners can watch average loss move.
+5. `05_public_training_step` shows how reviewed update evidence becomes publishable learner-facing material.
 
 ## Category Lens
 
@@ -51,6 +54,7 @@ WeightedSum + Bias -> PreActivation
 PreActivation -> Prediction
 Prediction + Target -> Loss
 Loss -> Gradient -> Adjustment
+ReviewedTrainingStep -> PublicTrainingStep
 ```
 
 The composition rule is alignment. Every input feature needs exactly one
@@ -68,6 +72,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighte
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 05_public_training_step
 ```
 
 ## Scope
@@ -78,6 +83,11 @@ The goal is one complete mental model:
 
 ```text
 weighted sum -> sigmoid -> loss -> gradient update
+ReviewedTrainingStep -> PublicTrainingStep
 ```
 
 The public API avoids raw domain primitives: examples parse raw numbers at the edge with `TryFrom`, then the model code moves through semantic newtypes and checked operations.
+
+The public training-step boundary keeps update evidence separate from release
+permission: a `TrainingStep` explains the learning move, while a
+`PublicTrainingStep` proves that evidence was reviewed for learner-facing use.

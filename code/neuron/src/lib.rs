@@ -8,7 +8,17 @@
 //!
 //! Raw learner literals enter through explicit `TryFrom` adapters. Public
 //! teaching APIs then use semantic values such as [`InputValue`], [`Weight`],
-//! [`Target`], [`LearningRate`], [`FeatureCount`], and [`Loss`].
+//! [`Target`], [`LearningRate`], [`FeatureCount`], [`Loss`], and
+//! [`PublicTrainingStep`].
+//!
+//! ```text
+//! FeatureVector * WeightVector -> WeightedSum
+//! WeightedSum + Bias -> PreActivation
+//! PreActivation -> Prediction
+//! Prediction - Target -> PredictionError
+//! PredictionError -> Gradient -> Adjustment
+//! ReviewedTrainingStep -> PublicTrainingStep
+//! ```
 
 pub mod error;
 
@@ -604,6 +614,123 @@ impl TrainingStep {
     }
 }
 
+/// Publication class attached to a neuron training step before public release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrainingStepVisibility {
+    /// Safe to include in learner-facing public neuron material.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for TrainingStepVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the neuron training-step publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicTrainingDecision {
+    /// The training step can appear in public learner-facing material.
+    Publishable,
+    /// The training step must stay out of public learner-facing material.
+    Blocked,
+}
+
+/// Neuron training step plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedTrainingStep {
+    step: TrainingStep,
+    visibility: TrainingStepVisibility,
+}
+
+impl ReviewedTrainingStep {
+    /// Creates a reviewed neuron training step.
+    pub fn new(step: TrainingStep, visibility: TrainingStepVisibility) -> Self {
+        Self { step, visibility }
+    }
+
+    /// Returns the reviewed training step.
+    pub fn step(&self) -> &TrainingStep {
+        &self.step
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> TrainingStepVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this step can enter public learner-facing material.
+    pub fn release_decision(&self) -> PublicTrainingDecision {
+        match self.visibility {
+            TrainingStepVisibility::Public => PublicTrainingDecision::Publishable,
+            TrainingStepVisibility::ResearchRestricted | TrainingStepVisibility::Private => {
+                PublicTrainingDecision::Blocked
+            }
+        }
+    }
+
+    fn into_step(self) -> TrainingStep {
+        self.step
+    }
+}
+
+/// Neuron training step checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicTrainingStep(TrainingStep);
+
+impl PublicTrainingStep {
+    /// Builds a public training step only from a reviewed public step.
+    pub fn from_reviewed_step(reviewed: ReviewedTrainingStep) -> Result<Self, NeuronError> {
+        if reviewed.release_decision() == PublicTrainingDecision::Blocked {
+            return Err(NeuronError::invalid_public_trace(
+                "PublicTrainingStep::from_reviewed_step",
+                "public neuron training steps cannot include restricted or private update evidence",
+            ));
+        }
+
+        Ok(Self(reviewed.into_step()))
+    }
+
+    /// Returns the checked training step.
+    pub fn step(&self) -> &TrainingStep {
+        &self.0
+    }
+
+    /// Returns prediction before the public update.
+    pub fn prediction_before(&self) -> Prediction {
+        self.0.prediction_before()
+    }
+
+    /// Returns loss before the public update.
+    pub fn loss_before(&self) -> Loss {
+        self.0.loss_before()
+    }
+
+    /// Returns public gradients used for the update.
+    pub fn gradients(&self) -> &ParameterGradients {
+        self.0.gradients()
+    }
+
+    /// Returns prediction after the public update.
+    pub fn prediction_after(&self) -> Prediction {
+        self.0.prediction_after()
+    }
+
+    /// Returns loss after the public update.
+    pub fn loss_after(&self) -> Loss {
+        self.0.loss_after()
+    }
+}
+
 /// A single sigmoid neuron.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TinyNeuron {
@@ -790,8 +917,8 @@ pub fn squared_error(prediction: Prediction, target: Target) -> Result<Loss, Neu
 mod tests {
     use super::{
         Bias, Dataset, FeatureVector, InputValue, LearningRate, NeuronError, PreActivation,
-        Prediction, Target, TinyNeuron, TrainingExample, Weight, WeightVector, WeightedSum,
-        weighted_sum,
+        Prediction, PublicTrainingStep, ReviewedTrainingStep, Target, TinyNeuron, TrainingExample,
+        TrainingStepVisibility, Weight, WeightVector, WeightedSum, weighted_sum,
     };
 
     fn features(left: InputValue, right: InputValue) -> FeatureVector {
@@ -808,6 +935,16 @@ mod tests {
     ) -> Result<(), NeuronError> {
         assert!(left.is_close_to(right, WeightedSum::try_from(1e-12)?));
         Ok(())
+    }
+
+    fn training_step() -> Result<super::TrainingStep, NeuronError> {
+        let mut neuron = TinyNeuron::lesson_seed()?;
+        let example = TrainingExample::new(
+            features(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?),
+            Target::try_from(1.0)?,
+        );
+
+        neuron.train_one_step(&example, LearningRate::try_from(0.5)?)
     }
 
     #[test]
@@ -924,6 +1061,40 @@ mod tests {
             final_loss < initial_loss,
             "expected final loss {final_loss} to be lower than initial loss {initial_loss}"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn public_training_step_accepts_public_reviewed_step() -> Result<(), NeuronError> {
+        let public_step = PublicTrainingStep::from_reviewed_step(ReviewedTrainingStep::new(
+            training_step()?,
+            TrainingStepVisibility::Public,
+        ))?;
+
+        assert!(public_step.loss_after() < public_step.loss_before());
+        assert_eq!(public_step.gradients().weights().len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn public_training_step_blocks_restricted_and_private_steps() -> Result<(), NeuronError> {
+        let restricted = PublicTrainingStep::from_reviewed_step(ReviewedTrainingStep::new(
+            training_step()?,
+            TrainingStepVisibility::ResearchRestricted,
+        ));
+        let private = PublicTrainingStep::from_reviewed_step(ReviewedTrainingStep::new(
+            training_step()?,
+            TrainingStepVisibility::Private,
+        ));
+
+        assert!(matches!(
+            restricted.err(),
+            Some(NeuronError::InvalidPublicTrace { .. })
+        ));
+        assert!(matches!(
+            private.err(),
+            Some(NeuronError::InvalidPublicTrace { .. })
+        ));
         Ok(())
     }
 }

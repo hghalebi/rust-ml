@@ -45,6 +45,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighte
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 05_public_training_step
 ```
 
 Run the MLP bridge examples:
@@ -173,7 +174,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encod
 | Topic | Status | Purpose |
 | --- | --- | --- |
 | [category_lens](category_lens/README.md) | Active crate | The executable object/map/composition lens used across the course. |
-| [neuron](neuron/README.md) | Active crate | The first typed trainable model companion crate. |
+| [neuron](neuron/README.md) | Active crate | The first typed trainable model companion crate with public training-step review. |
 | [mlp](mlp/README.md) | Active crate | Tiny typed hidden-layer companion crate for shape flow, representation flow, and public trace review. |
 | [attention](attention/README.md) | Active crate | Beginner scaled dot-product attention companion crate with typed Q/K/V roles, ops-based newtype arithmetic, and public trace review. |
 | [transformer](transformer/README.md) | Active crate | Real tested encoder-path teaching crate with typed architecture configuration, expert routing, and ops-based positional/residual arithmetic. |

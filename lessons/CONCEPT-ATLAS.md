@@ -27,7 +27,7 @@ name for the object.
 | Stage | Objects | Invariants | Starts in |
 | --- | --- | --- | --- |
 | Category lens | `TypedObject`, `TypedMap`, `CompositionTrace` | adjacent maps compose only when the middle object matches | [`code/category_lens`](../code/category_lens/README.md) |
-| Scalar meaning | `InputValue`, `Weight`, `Bias`, `Target` | finite values, probability ranges where needed | [`code/neuron`](../code/neuron/README.md) |
+| Scalar meaning | `InputValue`, `Weight`, `Bias`, `Target`, `PublicTrainingStep` | finite values, probability ranges, and public update review | [`code/neuron`](../code/neuron/README.md) |
 | Vector meaning | `FeatureVector`, `WeightVector`, `InputVector` | matching widths, non-empty vectors | [`lessons/02-vectors`](02-vectors/README.md) |
 | Prediction path | `WeightedSum`, `PreActivation`, `Prediction`, `Loss` | finite arithmetic, valid prediction range | [`code/neuron`](../code/neuron/README.md) |
 | Learning path | `PredictionError`, `Gradient`, `Adjustment`, `LearningRate` | positive learning rate, checked update arithmetic | [`lessons/04-learning`](04-learning/README.md) |
@@ -56,6 +56,7 @@ The course repeatedly asks you to name the map before trusting the code.
 | `FeatureVector * WeightVector -> WeightedSum` | mix input evidence with learned importance | `rust_ml_neuron --example 01_weighted_sum` |
 | `WeightedSum + Bias -> PreActivation -> Prediction` | shift the score, then squash it into a prediction | `rust_ml_neuron --example 02_forward_pass` |
 | `Prediction - Target -> PredictionError -> Adjustment` | compare, blame, and update one parameter path | `rust_ml_neuron --example 03_one_step_training` |
+| `ReviewedTrainingStep -> PublicTrainingStep` | keep restricted or private update evidence out of learner-facing training traces | `rust_ml_neuron --example 05_public_training_step` |
 | `InputVector -> HiddenActivation -> Prediction` | build a representation before the final judgment | `rust_ml_mlp --example 03_forward_trace` |
 | `ReviewedForwardTrace -> PublicForwardTrace` | keep restricted or private hidden-representation evidence out of learner-facing traces | `rust_ml_mlp --example 05_public_trace` |
 | `Query * Key -> AttentionScore -> AttentionWeight` | decide which token should influence this token | `rust_ml_attention --example 02_softmax_focus` |

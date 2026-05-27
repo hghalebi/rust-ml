@@ -163,6 +163,15 @@ pub enum NeuronError {
         /// Human-readable explanation of the numerical problem.
         details: ErrorDetails,
     },
+
+    /// Restricted or private neuron evidence tried to enter a learner-facing public trace.
+    #[error("invalid public trace in {operation}: {details}")]
+    InvalidPublicTrace {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable explanation.
+        details: ErrorDetails,
+    },
 }
 
 impl NeuronError {
@@ -212,6 +221,13 @@ impl NeuronError {
 
     pub(crate) fn numerical_issue(operation: &'static str, details: &'static str) -> Self {
         Self::NumericalIssue {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_trace(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicTrace {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

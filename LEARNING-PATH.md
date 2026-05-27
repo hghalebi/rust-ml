@@ -123,9 +123,13 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighte
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 05_public_training_step
 ```
 
 Goal: understand a trainable model as `mix -> squash -> judge`, then `blame -> trace -> adjust`.
+
+Also learn where the public boundary lives: `TrainingStep` is update evidence,
+while `PublicTrainingStep` is reviewed learner-facing evidence.
 
 ### Step 4: Learning Loop
 
@@ -134,6 +138,7 @@ Read [lessons/04-learning](lessons/04-learning/README.md), then run:
 ```bash
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 05_public_training_step
 ```
 
 Goal: understand learning as repeated feedback over examples and epochs.

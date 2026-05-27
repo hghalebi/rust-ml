@@ -204,17 +204,19 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighte
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 05_public_training_step
 ```
 
 The neuron crate covers:
 
-- semantic scalar types such as `InputValue`, `Weight`, `Bias`, `Target`, and `LearningRate`
+- semantic scalar types such as `InputValue`, `Weight`, `Bias`, `Target`, `LearningRate`, and `PublicTrainingStep`
 - explicit `TryFrom` adapters for raw learner numbers
 - readable typed arithmetic through `std::ops` implementations
 - feature and weight vectors with shape checks
 - one forward pass from weighted sum to sigmoid prediction
 - one training step with visible gradients and loss before/after
 - a tiny AND-gate training loop for intuition
+- public training-step review boundaries that keep restricted or private update evidence out of public material
 
 Run the MLP bridge ladder:
 

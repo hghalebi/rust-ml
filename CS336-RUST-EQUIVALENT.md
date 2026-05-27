@@ -76,7 +76,7 @@ The Rust sequence mirrors the public assignment themes while staying original:
 
 The current repo already provides the first conceptual bridge:
 
-- [03 Neuron](lessons/03-neuron/README.md): typed prediction and update roles
+- [03 Neuron](lessons/03-neuron/README.md): typed prediction, update roles, and public training-step review
 - [04 Learning](lessons/04-learning/README.md): feedback loops and epochs
 - [05 MLP](lessons/05-mlp/README.md): hidden representations, shape flow, and public trace review
 - [06 Attention](lessons/06-attention/README.md): query/key/value roles, scores, weights, value mixing, and public trace review
