@@ -33,6 +33,7 @@ For the object/map progression across lessons, code, and assignments, see [Conce
 9. Continue with [06 Attention](lessons/06-attention/README.md).
 10. Continue with [07 Transformer](lessons/07-transformer/README.md).
 11. Continue with [08 Language Modeling](lessons/08-language-modeling/README.md).
+12. Continue with [09 Systems](lessons/09-systems/README.md).
 
 The repo uses sequential folder numbers even though the curriculum starts at Module 0:
 
@@ -44,6 +45,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - Course Module 5 -> Repo folder `lessons/06-attention`
 - Course Module 6 -> Repo folder `lessons/07-transformer`
 - Course Module 7 -> Repo folder `lessons/08-language-modeling`
+- Course Module 8 -> Repo folder `lessons/09-systems`
 
 The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) comes before Module 0 and explains the shared newtype/category-theory lens.
 
@@ -63,6 +65,7 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [06 Attention](lessons/06-attention/README.md)
 - [07 Transformer](lessons/07-transformer/README.md)
 - [08 Language Modeling](lessons/08-language-modeling/README.md)
+- [09 Systems](lessons/09-systems/README.md)
 
 ### Neuron track now included
 
@@ -103,6 +106,15 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [The Public Text Boundary](lessons/08-language-modeling/03-public-text-boundary.md)
 - [Language-modeling exercises](lessons/08-language-modeling/exercises.md)
 - [Language-modeling solutions](lessons/08-language-modeling/solutions.md)
+
+### Systems bridge
+
+- [09 Systems](lessons/09-systems/README.md)
+- [Shapes, Elements, Bytes, And FLOPs](lessons/09-systems/01-shapes-elements-bytes-and-flops.md)
+- [Timing, Arithmetic Intensity, And Memory Hierarchy](lessons/09-systems/02-timing-intensity-and-memory-hierarchy.md)
+- [The Public Systems Report Boundary](lessons/09-systems/03-public-systems-report-boundary.md)
+- [Systems exercises](lessons/09-systems/exercises.md)
+- [Systems solutions](lessons/09-systems/solutions.md)
 
 ### Executable companion code
 
@@ -173,6 +185,7 @@ The current repo intentionally has two learning depths:
 
 - a coherent path through Modules 0, 1, 2, 3, 4, 5, and 6
 - a language-modeling bridge in Module 7
+- a systems bridge in Module 8
 
 Module 6 applies the translation rule in two complementary ways:
 
@@ -184,6 +197,9 @@ That repetition is intentional. Repetition is how the translation dictionary bec
 Module 7 starts the CS336 Rust equivalent path without jumping straight into a
 large project. It uses a tiny bigram model so the learner can inspect text,
 tokens, IDs, batches, loss, one update, and public text review in one sitting.
+
+Module 8 continues the bridge into systems thinking. It keeps bytes, FLOPs,
+elapsed time, bandwidth, and public report eligibility as separate typed objects.
 
 ## Suggested Study Flow
 
@@ -206,6 +222,7 @@ Current recommended sequence:
 9. [06 Attention](lessons/06-attention/README.md)
 10. [07 Transformer](lessons/07-transformer/README.md)
 11. [08 Language Modeling](lessons/08-language-modeling/README.md)
+12. [09 Systems](lessons/09-systems/README.md)
 
 ## Running The Code
 

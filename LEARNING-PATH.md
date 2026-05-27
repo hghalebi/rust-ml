@@ -219,7 +219,24 @@ Goal: understand the first language-modeling loop as public text, checked
 tokens, vocabulary-bound IDs, next-token pairs, loss, one update, and a public
 text boundary before tokenization.
 
-### Step 9: CS336 Rust Equivalent
+### Step 9: Systems
+
+Read [lessons/09-systems](lessons/09-systems/README.md), then run:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 01_memory_accounting
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 02_attention_flops
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 03_median_timing
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithmetic_intensity
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 05_memory_hierarchy
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 06_public_report
+```
+
+Goal: understand model systems as typed evidence: shapes become bytes, attention
+becomes FLOPs, repeated measurements become medians, FLOPs and bytes become
+arithmetic intensity, and reviewed measurements become public reports.
+
+### Step 10: CS336 Rust Equivalent
 
 Read [CS336 Rust Equivalent](CS336-RUST-EQUIVALENT.md) when you want the full language-modeling systems path.
 

@@ -105,6 +105,7 @@ This is the recommended order for most learners right now:
 6. `06-attention` -> course Module 5
 7. `07-transformer` -> course Module 6
 8. `08-language-modeling` -> course Module 7
+9. `09-systems` -> course Module 8
 
 ### CS336 Bridge Path
 
@@ -113,7 +114,8 @@ into the CS336 Rust equivalent assignments:
 
 1. `07-transformer` -> course Module 6
 2. `08-language-modeling` -> course Module 7
-3. `assignments/cs336-rust` -> R1 through R5 project ladder
+3. `09-systems` -> course Module 8
+4. `assignments/cs336-rust` -> R1 through R5 project ladder
 
 ## Naming Rules
 
@@ -129,6 +131,7 @@ Examples:
 - `03-neuron` -> course Module 2
 - `07-transformer` -> course Module 6
 - `08-language-modeling` -> course Module 7
+- `09-systems` -> course Module 8
 
 ### Lesson files
 
