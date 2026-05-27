@@ -34,6 +34,7 @@ For the object/map progression across lessons, code, and assignments, see [Conce
 10. Continue with [07 Transformer](lessons/07-transformer/README.md).
 11. Continue with [08 Language Modeling](lessons/08-language-modeling/README.md).
 12. Continue with [09 Systems](lessons/09-systems/README.md).
+13. Continue with [10 Kernels](lessons/10-kernels/README.md).
 
 The repo uses sequential folder numbers even though the curriculum starts at Module 0:
 
@@ -46,6 +47,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - Course Module 6 -> Repo folder `lessons/07-transformer`
 - Course Module 7 -> Repo folder `lessons/08-language-modeling`
 - Course Module 8 -> Repo folder `lessons/09-systems`
+- Course Module 9 -> Repo folder `lessons/10-kernels`
 
 The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) comes before Module 0 and explains the shared newtype/category-theory lens.
 
@@ -66,6 +68,7 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [07 Transformer](lessons/07-transformer/README.md)
 - [08 Language Modeling](lessons/08-language-modeling/README.md)
 - [09 Systems](lessons/09-systems/README.md)
+- [10 Kernels](lessons/10-kernels/README.md)
 
 ### Neuron track now included
 
@@ -115,6 +118,15 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [The Public Systems Report Boundary](lessons/09-systems/03-public-systems-report-boundary.md)
 - [Systems exercises](lessons/09-systems/exercises.md)
 - [Systems solutions](lessons/09-systems/solutions.md)
+
+### Kernels bridge
+
+- [10 Kernels](lessons/10-kernels/README.md)
+- [Elementwise Maps And Reductions](lessons/10-kernels/01-elementwise-maps-and-reductions.md)
+- [Tiling A Matrix-Vector Kernel](lessons/10-kernels/02-tiling-a-matrix-vector-kernel.md)
+- [The Public Kernel Report Boundary](lessons/10-kernels/03-public-kernel-report-boundary.md)
+- [Kernel exercises](lessons/10-kernels/exercises.md)
+- [Kernel solutions](lessons/10-kernels/solutions.md)
 
 ### Executable companion code
 
@@ -186,6 +198,7 @@ The current repo intentionally has two learning depths:
 - a coherent path through Modules 0, 1, 2, 3, 4, 5, and 6
 - a language-modeling bridge in Module 7
 - a systems bridge in Module 8
+- a kernels bridge in Module 9
 
 Module 6 applies the translation rule in two complementary ways:
 
@@ -200,6 +213,10 @@ tokens, IDs, batches, loss, one update, and public text review in one sitting.
 
 Module 8 continues the bridge into systems thinking. It keeps bytes, FLOPs,
 elapsed time, bandwidth, and public report eligibility as separate typed objects.
+
+Module 9 makes kernel work inspectable. It teaches elementwise maps, reductions,
+tiling, FLOP counts, HBM bytes, and public kernel reports as typed objects
+instead of loose benchmark folklore.
 
 ## Suggested Study Flow
 
@@ -223,6 +240,7 @@ Current recommended sequence:
 10. [07 Transformer](lessons/07-transformer/README.md)
 11. [08 Language Modeling](lessons/08-language-modeling/README.md)
 12. [09 Systems](lessons/09-systems/README.md)
+13. [10 Kernels](lessons/10-kernels/README.md)
 
 ## Running The Code
 

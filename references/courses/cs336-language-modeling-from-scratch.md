@@ -24,6 +24,21 @@ The current public offering is Spring 2026.
 | [Assignment 4: Data](https://github.com/stanford-cs336/assignment4-data/tree/main) | raw web data conversion, filtering, deduplication | [R4 Data](../../assignments/cs336-rust/04-data.md) |
 | [Assignment 5: Alignment and Reasoning RL](https://github.com/stanford-cs336/assignment5-alignment/tree/main) | supervised finetuning, reinforcement learning for reasoning, optional safety alignment | [R5 Alignment](../../assignments/cs336-rust/05-alignment.md) |
 
+## Public Assignment Handout Pointers
+
+These public handout links are reference pointers only. They should help
+maintainers verify topic coverage, not provide prose, code, tests, or
+assignment wording to copy into this repo.
+
+| Public CS336 handout | Rust equivalent boundary |
+| --- | --- |
+| [Assignment 1 Basics PDF](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf) | R1 remains an original Rust text-to-loss lab with typed public text review. |
+| [Assignment 2 Systems PDF](https://github.com/stanford-cs336/assignment2-systems/blob/main/cs336_assignment2_systems.pdf) | R2 remains original Rust systems/resource accounting with typed public report review. |
+| [Assignment 3 Scaling PDF](https://github.com/stanford-cs336/assignment3-scaling/blob/main/cs336_assignment3_scaling.pdf) | R3 remains original Rust scaling evidence, fit, forecast, and public report review. |
+| [Assignment 4 Data PDF](https://github.com/stanford-cs336/assignment4-data/blob/main/cs336_assignment4_data.pdf) | R4 remains original Rust corpus preparation with provenance and public manifest boundaries. |
+| [Assignment 5 Alignment PDF](https://github.com/stanford-cs336/assignment5-alignment/blob/main/cs336_spring2026_assignment5_alignment.pdf) | R5 remains original Rust post-training signal, audit, workflow, and public release review. |
+| [Assignment 5 Safety/RLHF Supplement PDF](https://github.com/stanford-cs336/assignment5-alignment/blob/main/cs336_spring2025_assignment5_supplement_safety_rlhf.pdf) | Safety and RLHF ideas stay optional inspiration until this repo has original typed lessons for them. |
+
 ## Public Lecture Map
 
 | Meeting | Public topic | Rust equivalent direction |

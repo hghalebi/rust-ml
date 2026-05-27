@@ -1621,6 +1621,82 @@ def compile_systems_crate_snippets(temp_dir: Path) -> int:
     return 0
 
 
+def compile_kernels_crate_snippets(temp_dir: Path) -> int:
+    kernels_paths = [
+        Path("lessons/10-kernels/01-elementwise-maps-and-reductions.md"),
+        Path("lessons/10-kernels/02-tiling-a-matrix-vector-kernel.md"),
+        Path("lessons/10-kernels/03-public-kernel-report-boundary.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "kernels-snippet-target"
+    crate_path = (ROOT / "code/kernels").resolve()
+
+    for rel_path in kernels_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "Kernels",
+                )
+            )
+
+            snippet_dir = temp_dir / f"kernels_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "kernels_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_kernels = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the Kernels module against the local crate.")
+    return 0
+
+
 def compile_chunked_transformer_snippets(temp_dir: Path) -> int:
     transformer_paths = [
         Path("lessons/07-transformer/01-tiny-transformer-from-first-principles.md"),
@@ -1708,6 +1784,7 @@ def main() -> int:
         attention = compile_attention_crate_snippets(temp_dir)
         lm_basics = compile_lm_basics_crate_snippets(temp_dir)
         systems = compile_systems_crate_snippets(temp_dir)
+        kernels = compile_kernels_crate_snippets(temp_dir)
         chunked = compile_chunked_transformer_snippets(temp_dir)
         if (
             general
@@ -1718,6 +1795,7 @@ def main() -> int:
             or attention
             or lm_basics
             or systems
+            or kernels
             or chunked
         ):
             return 1

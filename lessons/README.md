@@ -23,6 +23,7 @@ Keep [Concept Atlas](CONCEPT-ATLAS.md) nearby as the cross-module object/map gui
 | [07-transformer](07-transformer/README.md) | Module 6 | Authored | Learn the encoder path through semantic Rust types, expressive errors, and an English/Algebra/Rust chunk ladder. |
 | [08-language-modeling](08-language-modeling/README.md) | Module 7 | Authored | Turn public text into token IDs, next-token batches, loss, and one tiny update. |
 | [09-systems](09-systems/README.md) | Module 8 | Authored | Measure bytes, FLOPs, timing, intensity, memory hierarchy, and public systems reports. |
+| [10-kernels](10-kernels/README.md) | Module 9 | Authored | Teach elementwise kernels, reductions, tiling, resource estimates, and public kernel reports. |
 
 ## Current Recommended Paths
 
@@ -41,6 +42,7 @@ Start here if you want the current coherent beginner sequence:
 9. [07 Transformer](07-transformer/README.md)
 10. [08 Language Modeling](08-language-modeling/README.md)
 11. [09 Systems](09-systems/README.md)
+12. [10 Kernels](10-kernels/README.md)
 
 ## How To Use These Lessons
 

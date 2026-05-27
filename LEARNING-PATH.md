@@ -236,7 +236,24 @@ Goal: understand model systems as typed evidence: shapes become bytes, attention
 becomes FLOPs, repeated measurements become medians, FLOPs and bytes become
 arithmetic intensity, and reviewed measurements become public reports.
 
-### Step 10: CS336 Rust Equivalent
+### Step 10: Kernels
+
+Read [lessons/10-kernels](lessons/10-kernels/README.md), then run:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 01_elementwise_gelu
+cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 02_row_sum_reduction
+cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 03_tiled_matvec
+cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 04_kernel_estimate
+cargo run --manifest-path code/Cargo.toml -p rust_ml_kernels --example 05_public_report
+```
+
+Goal: understand kernels as typed maps and schedules: elementwise maps stay
+independent, reductions accumulate through `Accumulator`, matrix-vector work is
+scheduled through `TilePlan`, resources stay in `FlopCount` and `Bytes`, and
+learner-facing kernel reports require a public review boundary.
+
+### Step 11: CS336 Rust Equivalent
 
 Read [CS336 Rust Equivalent](CS336-RUST-EQUIVALENT.md) when you want the full language-modeling systems path.
 
