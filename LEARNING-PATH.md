@@ -203,7 +203,23 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example publi
 Goal: see the same type-and-map discipline at Transformer scale, including the
 public trace review boundary for learner-facing encoder evidence.
 
-### Step 8: CS336 Rust Equivalent
+### Step 8: Language Modeling
+
+Read [lessons/08-language-modeling](lessons/08-language-modeling/README.md), then run:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 01_tokenize_and_encode
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 02_next_token_batch
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 03_uniform_loss
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 04_training_step
+cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 05_public_training_example
+```
+
+Goal: understand the first language-modeling loop as public text, checked
+tokens, vocabulary-bound IDs, next-token pairs, loss, one update, and a public
+text boundary before tokenization.
+
+### Step 9: CS336 Rust Equivalent
 
 Read [CS336 Rust Equivalent](CS336-RUST-EQUIVALENT.md) when you want the full language-modeling systems path.
 

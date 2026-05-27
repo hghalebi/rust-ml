@@ -17,6 +17,7 @@ AUTHORED_MODULES = (
     ROOT / "lessons" / "05-mlp",
     ROOT / "lessons" / "06-attention",
     ROOT / "lessons" / "07-transformer",
+    ROOT / "lessons" / "08-language-modeling",
 )
 PLANNED_MODULES = ()
 CS336_ASSIGNMENTS_DIR = ROOT / "assignments" / "cs336-rust"
@@ -547,13 +548,11 @@ def check_lessons_index_contract() -> list[str]:
         "## Course Map",
         "## Current Recommended Paths",
         "Module 6 | Authored",
+        "Module 7 | Authored",
     )
     for phrase in required_phrases:
         if phrase not in text:
             errors.append(f"lessons/README.md is missing section marker: {phrase}")
-
-    if "Module 7" in text:
-        errors.append("lessons/README.md should not reference a duplicate Module 7 entry")
 
     return errors
 

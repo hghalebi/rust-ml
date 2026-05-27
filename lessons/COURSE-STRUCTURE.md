@@ -104,12 +104,16 @@ This is the recommended order for most learners right now:
 5. `05-mlp` -> course Module 4
 6. `06-attention` -> course Module 5
 7. `07-transformer` -> course Module 6
+8. `08-language-modeling` -> course Module 7
 
-### Capstone Path
+### CS336 Bridge Path
 
-The Transformer module is the current capstone after the attention bridge:
+The language-modeling module is the first repo-native bridge from the core path
+into the CS336 Rust equivalent assignments:
 
 1. `07-transformer` -> course Module 6
+2. `08-language-modeling` -> course Module 7
+3. `assignments/cs336-rust` -> R1 through R5 project ladder
 
 ## Naming Rules
 
@@ -124,6 +128,7 @@ Examples:
 - `01-foundations` -> course Module 0
 - `03-neuron` -> course Module 2
 - `07-transformer` -> course Module 6
+- `08-language-modeling` -> course Module 7
 
 ### Lesson files
 

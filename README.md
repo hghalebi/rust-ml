@@ -32,6 +32,7 @@ For the object/map progression across lessons, code, and assignments, see [Conce
 8. Continue with [05 MLP](lessons/05-mlp/README.md).
 9. Continue with [06 Attention](lessons/06-attention/README.md).
 10. Continue with [07 Transformer](lessons/07-transformer/README.md).
+11. Continue with [08 Language Modeling](lessons/08-language-modeling/README.md).
 
 The repo uses sequential folder numbers even though the curriculum starts at Module 0:
 
@@ -42,6 +43,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - Course Module 4 -> Repo folder `lessons/05-mlp`
 - Course Module 5 -> Repo folder `lessons/06-attention`
 - Course Module 6 -> Repo folder `lessons/07-transformer`
+- Course Module 7 -> Repo folder `lessons/08-language-modeling`
 
 The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) comes before Module 0 and explains the shared newtype/category-theory lens.
 
@@ -59,6 +61,8 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [04 Learning](lessons/04-learning/README.md)
 - [05 MLP](lessons/05-mlp/README.md)
 - [06 Attention](lessons/06-attention/README.md)
+- [07 Transformer](lessons/07-transformer/README.md)
+- [08 Language Modeling](lessons/08-language-modeling/README.md)
 
 ### Neuron track now included
 
@@ -90,6 +94,15 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [Transformer Encoder in Small Chunks](lessons/07-transformer/03-transformer-encoder-in-small-chunks.md)
 - [Transformer exercises](lessons/07-transformer/exercises.md)
 - [Transformer solutions](lessons/07-transformer/solutions.md)
+
+### Language-modeling bridge
+
+- [08 Language Modeling](lessons/08-language-modeling/README.md)
+- [From Text To Token IDs](lessons/08-language-modeling/01-text-to-token-ids.md)
+- [Next-Token Batches, Loss, And Updates](lessons/08-language-modeling/02-next-token-batches-loss-and-update.md)
+- [The Public Text Boundary](lessons/08-language-modeling/03-public-text-boundary.md)
+- [Language-modeling exercises](lessons/08-language-modeling/exercises.md)
+- [Language-modeling solutions](lessons/08-language-modeling/solutions.md)
 
 ### Executable companion code
 
@@ -158,8 +171,8 @@ The course keeps the same translation goal everywhere:
 
 The current repo intentionally has two learning depths:
 
-- a coherent path through Modules 0, 1, 2, 3, 4, and 5
-- a Transformer capstone in Module 6
+- a coherent path through Modules 0, 1, 2, 3, 4, 5, and 6
+- a language-modeling bridge in Module 7
 
 Module 6 applies the translation rule in two complementary ways:
 
@@ -167,6 +180,10 @@ Module 6 applies the translation rule in two complementary ways:
 - a chunked encoder lesson where every concept is written as `English -> Algebra -> Rust`
 
 That repetition is intentional. Repetition is how the translation dictionary becomes automatic.
+
+Module 7 starts the CS336 Rust equivalent path without jumping straight into a
+large project. It uses a tiny bigram model so the learner can inspect text,
+tokens, IDs, batches, loss, one update, and public text review in one sitting.
 
 ## Suggested Study Flow
 
@@ -188,6 +205,7 @@ Current recommended sequence:
 8. [05 MLP](lessons/05-mlp/README.md)
 9. [06 Attention](lessons/06-attention/README.md)
 10. [07 Transformer](lessons/07-transformer/README.md)
+11. [08 Language Modeling](lessons/08-language-modeling/README.md)
 
 ## Running The Code
 
