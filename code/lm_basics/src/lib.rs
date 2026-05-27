@@ -475,10 +475,6 @@ impl TokenIdSequence {
         self.vocab_size
     }
 
-    fn as_slice(&self) -> &[TokenId] {
-        &self.ids
-    }
-
     fn len_value(&self) -> usize {
         self.ids.len()
     }
@@ -538,16 +534,13 @@ impl NextTokenBatch {
             ));
         }
 
+        let sequence_len = sequence.len_value();
         let inputs = TokenIdSequence::from_ids(
-            sequence.as_slice()[..sequence.len_value() - 1]
-                .iter()
-                .copied(),
+            sequence.ids().copied().take(sequence_len - 1),
             sequence.vocab_size(),
         )?;
-        let targets = TokenIdSequence::from_ids(
-            sequence.as_slice()[1..].iter().copied(),
-            sequence.vocab_size(),
-        )?;
+        let targets =
+            TokenIdSequence::from_ids(sequence.ids().copied().skip(1), sequence.vocab_size())?;
 
         Self::new(inputs, targets)
     }

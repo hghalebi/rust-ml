@@ -43,22 +43,22 @@ impl PositionalEncodingTable {
     /// Computes the positional encoding for one position.
     pub fn encoding_for(&self, pos: TokenIndex) -> Result<PositionEncoding, ModelError> {
         let d_model = self.d_model.as_usize();
-        let mut values = vec![0.0; d_model];
 
-        for (index, slot) in values.iter_mut().enumerate() {
-            let exponent = (2 * (index / 2)) as f32 / d_model as f32;
-            let angle = pos.as_usize() as f32 / 10000_f32.powf(exponent);
-            *slot = if index % 2 == 0 {
-                angle.sin()
-            } else {
-                angle.cos()
-            };
-        }
+        let values = (0..d_model)
+            .map(|index| {
+                let exponent = (2 * (index / 2)) as f32 / d_model as f32;
+                let angle = pos.as_usize() as f32 / 10000_f32.powf(exponent);
+                let value = if index % 2 == 0 {
+                    angle.sin()
+                } else {
+                    angle.cos()
+                };
 
-        Ok(PositionEncoding::from_vector(DenseVector::from_raw_values(
-            "PositionalEncodingTable::encoding_for",
-            values,
-        )?))
+                ModelScalar::try_from(value)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(PositionEncoding::from_vector(DenseVector::new(values)?))
     }
 
     /// Adds positional encodings to a whole token sequence.

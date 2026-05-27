@@ -25,9 +25,9 @@ macro_rules! vector_role {
                 self.0.len()
             }
 
-            /// Returns a printable checked scalar view.
-            pub fn as_slice(&self) -> ScalarValues<'_> {
-                self.0.as_slice()
+            /// Returns a printable view of checked scalar values.
+            pub fn scalar_values(&self) -> ScalarValues<'_> {
+                self.0.scalar_values()
             }
 
             /// Iterates over scalar values.

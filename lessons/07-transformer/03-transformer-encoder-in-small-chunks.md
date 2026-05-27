@@ -52,7 +52,7 @@ use rust_ml_transformer::{ModelScalar, DenseVector, ModelError};
 
 fn main() -> Result<(), ModelError> {
     let input = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
-    println!("{:?}", input.as_slice());
+    println!("{:?}", input.scalar_values());
     Ok(())
 }
 ```
@@ -79,7 +79,7 @@ use rust_ml_transformer::{ModelScalar, DenseVector, ModelError};
 fn main() -> Result<(), ModelError> {
     let x = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
     println!("len = {}", x.len());
-    println!("{:?}", x.as_slice());
+    println!("{:?}", x.scalar_values());
     Ok(())
 }
 ```
@@ -203,7 +203,7 @@ fn main() -> Result<(), ModelError> {
     let vector = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
 
     let output = (&matrix * &vector)?;
-    println!("{:?}", output.as_slice());
+    println!("{:?}", output.scalar_values());
     Ok(())
 }
 ```
@@ -278,7 +278,7 @@ fn main() -> Result<(), ModelError> {
 
     let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?);
     let query = layer.forward(&token)?;
-    println!("{:?}", query.as_slice());
+    println!("{:?}", query.scalar_values());
     Ok(())
 }
 ```
@@ -379,7 +379,7 @@ fn main() -> Result<(), ModelError> {
     ])?;
 
     let output = (&weights * &values)?;
-    println!("{:?}", output.as_slice());
+    println!("{:?}", output.scalar_values());
     Ok(())
 }
 ```
@@ -435,7 +435,7 @@ fn main() -> Result<(), ModelError> {
     ])?;
 
     let outputs = head.forward(&seq)?;
-    println!("{:?}", outputs.output(TokenIndex::try_from(0)?)?.as_slice());
+    println!("{:?}", outputs.output(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -505,7 +505,7 @@ fn main() -> Result<(), ModelError> {
     ])?;
 
     let output = mha.forward(&seq)?;
-    println!("{:?}", output.token(TokenIndex::try_from(0)?)?.as_slice());
+    println!("{:?}", output.token(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -540,7 +540,7 @@ fn main() -> Result<(), ModelError> {
     let positions = PositionalEncodingTable::new(rust_ml_transformer::VectorLength::try_from(4)?);
 
     let with_position = positions.add_to_sequence(&seq)?;
-    println!("{:?}", with_position.token(TokenIndex::try_from(0)?)?.as_slice());
+    println!("{:?}", with_position.token(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -571,7 +571,7 @@ fn main() -> Result<(), ModelError> {
     let right = TokenSequence::new(vec![TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.5)?, ModelScalar::try_from(-1.0)?])?)])?;
 
     let sum = (&left + &right)?;
-    println!("{:?}", sum.token(TokenIndex::try_from(0)?)?.as_slice());
+    println!("{:?}", sum.token(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -601,7 +601,7 @@ fn main() -> Result<(), ModelError> {
     let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?);
 
     let normalized = norm.forward_token(&token)?;
-    println!("{:?}", normalized.as_slice());
+    println!("{:?}", normalized.scalar_values());
     Ok(())
 }
 ```
@@ -652,7 +652,7 @@ fn main() -> Result<(), ModelError> {
 
     let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(-2.0)?])?);
     let output = feed_forward.forward_token(&token)?;
-    println!("{:?}", output.as_slice());
+    println!("{:?}", output.scalar_values());
     Ok(())
 }
 ```
@@ -743,7 +743,7 @@ fn main() -> Result<(), ModelError> {
     ])?;
 
     let output = block.forward(&seq)?;
-    println!("{:?}", output.token(TokenIndex::try_from(0)?)?.as_slice());
+    println!("{:?}", output.token(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -815,7 +815,7 @@ fn main() -> Result<(), ModelError> {
     ])?;
 
     let outputs = head.forward(&seq)?;
-    println!("{:?}", outputs.output(TokenIndex::try_from(0)?)?.as_slice());
+    println!("{:?}", outputs.output(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```

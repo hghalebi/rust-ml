@@ -56,6 +56,22 @@ REQUIRED_ASSIGNMENT_HEADINGS = (
     "## Failure Signals",
     "## Suggested Repo Integration",
 )
+RAW_DEFAULT_LANGUAGE = (
+    "raw math layer",
+    "raw storage",
+    "raw vector layer",
+    "raw tensor layer",
+)
+RUST_SNIPPET_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("unwrap", re.compile(r"\.unwrap\s*\(")),
+    ("expect", re.compile(r"\.expect\s*\(")),
+    ("expect_err", re.compile(r"\.expect_err\s*\(")),
+    ("panic macro", re.compile(r"\bpanic!\s*\(")),
+    ("todo macro", re.compile(r"\btodo!\s*\(")),
+    ("unimplemented macro", re.compile(r"\bunimplemented!\s*\(")),
+    ("unreachable macro", re.compile(r"\bunreachable!\s*\(")),
+    ("Result<_, String>", re.compile(r"Result\s*<[^>\n]+,\s*String\s*>")),
+)
 MARKDOWN_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 HTML_SRC_RE = re.compile(r"""<img[^>]+src=["']([^"']+)["']""")
 PACKAGE_NAME_RE = re.compile(r'^\s*name\s*=\s*"([^"]+)"\s*$', re.MULTILINE)
@@ -448,6 +464,52 @@ def check_lesson_sections() -> list[str]:
     return errors
 
 
+def check_no_raw_default_language() -> list[str]:
+    errors: list[str] = []
+
+    for markdown_file in iter_public_markdown_files():
+        text = markdown_file.read_text(encoding="utf-8")
+        lowered = text.lower()
+        for phrase in RAW_DEFAULT_LANGUAGE:
+            start = lowered.find(phrase)
+            if start != -1:
+                errors.append(
+                    f"{relative(markdown_file)}:{line_number_for_match(text, start)} "
+                    f"uses raw-default wording `{phrase}`; describe checked dense values or boundary literals instead"
+                )
+
+    return errors
+
+
+def check_rust_snippet_contract() -> list[str]:
+    errors: list[str] = []
+
+    for markdown_file in iter_public_markdown_files():
+        lines = markdown_file.read_text(encoding="utf-8").splitlines()
+        in_rust_block = False
+
+        for line_number, line in enumerate(lines, start=1):
+            stripped = line.strip()
+            if stripped.startswith("```"):
+                if in_rust_block:
+                    in_rust_block = False
+                elif stripped.startswith("```rust"):
+                    in_rust_block = True
+                continue
+
+            if not in_rust_block:
+                continue
+
+            for label, pattern in RUST_SNIPPET_FORBIDDEN_PATTERNS:
+                if pattern.search(line):
+                    errors.append(
+                        f"{relative(markdown_file)}:{line_number} Rust snippet uses {label}; "
+                        "public examples should return typed errors instead"
+                    )
+
+    return errors
+
+
 def check_structure_guide() -> list[str]:
     guide = ROOT / "lessons" / "COURSE-STRUCTURE.md"
     if not guide.exists():
@@ -762,6 +824,8 @@ def main() -> int:
         check_practice_contract,
         check_module_readmes,
         check_lesson_sections,
+        check_no_raw_default_language,
+        check_rust_snippet_contract,
         check_structure_guide,
         check_lessons_index_contract,
         check_root_readme_contract,

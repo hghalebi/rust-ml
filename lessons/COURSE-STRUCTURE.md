@@ -78,6 +78,8 @@ Rust teaching code must also follow these rules:
 - public enum variants carry semantic payload types, not raw primitives or raw containers
 - associated type assignments use semantic types, not raw primitives or raw containers
 - public `TryFrom` adapters should validate one raw semantic value at a time, not hide raw `Vec<_>` or slice containers behind a domain type
+- public accessor names should teach semantic meaning, so avoid raw-style names such as `as_slice()` on learner-facing APIs
+- public Rust snippets follow the same rule: typed errors instead of `unwrap`, `expect`, panic-style macros, or `Result<_, String>`
 - diagnostic errors may report the rejected raw value, but the domain path should still use semantic types
 
 Run the guard with:

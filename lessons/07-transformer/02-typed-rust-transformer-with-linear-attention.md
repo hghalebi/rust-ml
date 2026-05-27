@@ -17,13 +17,13 @@ Now that the encoder shape is on the table, this lesson focuses on the engineeri
 - explain where `LinearAttentionHead` fits relative to standard multi-head attention
 - understand the crate layout that backs the written lessons
 
-## 1. One raw math layer, many semantic model roles
+## 1. One checked math layer, many semantic model roles
 
 ### English
 
-At the bottom, the model is still made of numbers.
+At the bottom, the model is still made of scalar values.
 
-So the crate keeps one raw math layer:
+So the crate keeps one checked dense-math layer:
 
 - `DenseVector`
 - `DenseMatrix`
@@ -37,10 +37,12 @@ Then it wraps important model roles in newtypes:
 - `AttentionOutput`
 
 That way Rust can tell the difference between concepts that happen to share the same storage.
+Raw learner literals still enter at the edge through `ModelScalar::try_from(...)`.
+After that boundary, the lesson names the object, the invariant, and the map.
 
 ### Algebra
 
-The raw storage might all live in:
+The checked dense values might all live in:
 
 ```math
 \mathbb{R}^n
@@ -68,10 +70,10 @@ fn main() -> Result<(), ModelError> {
     let key = Key::from_vector(DenseVector::new([ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.4)?])?);
     let value = Value::from_vector(DenseVector::new([ModelScalar::try_from(2.0)?, ModelScalar::try_from(-1.0)?])?);
 
-    println!("{:?}", token.as_slice());
-    println!("{:?}", query.as_slice());
-    println!("{:?}", key.as_slice());
-    println!("{:?}", value.as_slice());
+    println!("{:?}", token.scalar_values());
+    println!("{:?}", query.scalar_values());
+    println!("{:?}", key.scalar_values());
+    println!("{:?}", value.scalar_values());
     Ok(())
 }
 ```
@@ -216,7 +218,7 @@ fn main() -> Result<(), ModelError> {
     let projected = (&projection * &token)?;
     let query = (&projected + &bias)?;
 
-    println!("{:?}", query.as_slice());
+    println!("{:?}", query.scalar_values());
     Ok(())
 }
 ```
@@ -278,7 +280,7 @@ fn main() -> Result<(), ModelError> {
     ])?;
 
     let outputs = head.forward(&sequence)?;
-    println!("{:?}", outputs.output(rust_ml_transformer::TokenIndex::try_from(0)?)?.as_slice());
+    println!("{:?}", outputs.output(rust_ml_transformer::TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -344,7 +346,7 @@ fn main() -> Result<(), ModelError> {
     ])?;
 
     let outputs = head.forward(&sequence)?;
-    println!("{:?}", outputs.output(rust_ml_transformer::TokenIndex::try_from(0)?)?.as_slice());
+    println!("{:?}", outputs.output(rust_ml_transformer::TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -409,9 +411,9 @@ That separation is deliberate:
 
 ## Concept Trace
 
-- **Object/newtype:** `DenseVector` is the raw math layer, while `Query`, `Key`, `Value`, and `AttentionOutput` are semantic model roles.
+- **Object/newtype:** `DenseVector` is the checked dense-math object, while `Query`, `Key`, `Value`, and `AttentionOutput` are semantic model roles.
 - **Invariant:** shared storage does not imply shared meaning; role wrappers prevent architectural swaps.
-- **Map:** raw checked vector -> semantic projection role -> attention output.
+- **Map:** checked vector -> semantic projection role -> attention output.
 - **Runnable proof:** `cargo test --manifest-path code/Cargo.toml -p rust_ml_transformer --all-targets`.
 - **Failure signal:** you treat `Query`, `Key`, and `Value` as interchangeable because they all contain vectors.
 

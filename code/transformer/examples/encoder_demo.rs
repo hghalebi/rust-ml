@@ -281,7 +281,7 @@ fn main() -> Result<(), ModelError> {
     let output = block.forward(&with_position)?;
 
     for (index, token) in output.tokens().enumerate() {
-        println!("token {index}: {:?}", token.as_slice());
+        println!("token {index}: {:?}", token.scalar_values());
     }
 
     Ok(())

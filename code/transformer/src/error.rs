@@ -248,7 +248,7 @@ pub enum ModelError {
         details: ErrorDetails,
     },
 
-    /// A matrix was built from incompatible dimensions and raw storage.
+    /// A matrix was built from incompatible dimensions and scalar data length.
     #[error(
         "invalid matrix data in {operation}: rows={rows}, cols={cols}, data_len={data_len}. \
          hint: rows * cols must equal data_len"

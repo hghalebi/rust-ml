@@ -130,7 +130,7 @@ def prelude_vector() -> str:
                 Vector::new(self.data.iter().copied().map(f).collect())
             }
 
-            pub fn as_slice(&self) -> &[f32] {
+            pub fn components(&self) -> &[f32] {
                 &self.data
             }
         }
@@ -176,7 +176,7 @@ def prelude_vector_matrix() -> str:
                 for (r, slot) in out.iter_mut().enumerate() {
                     let mut sum = 0.0;
                     for c in 0..self.cols {
-                        sum += self.get(r, c) * x.as_slice()[c];
+                        sum += self.get(r, c) * x.components()[c];
                     }
                     *slot = sum;
                 }
@@ -292,9 +292,9 @@ def prelude_transformer() -> str:
 
         pub fn layer_norm(x: &Vector) -> Vector {
             let n = x.len() as f32;
-            let mean: f32 = x.as_slice().iter().sum::<f32>() / n;
+            let mean: f32 = x.components().iter().sum::<f32>() / n;
             let var: f32 = x
-                .as_slice()
+                .components()
                 .iter()
                 .map(|v| {
                     let d = v - mean;
@@ -305,7 +305,7 @@ def prelude_transformer() -> str:
 
             let eps = 1e-5;
             Vector::new(
-                x.as_slice()
+                x.components()
                     .iter()
                     .map(|v| (v - mean) / (var + eps).sqrt())
                     .collect(),
@@ -1018,7 +1018,7 @@ def wrap_known_block(path: str, idx: int, block: str) -> str:
             + "\nfn main() { let block = TransformerBlock { attention: SelfAttention, ff: FeedForward { w1: vec![], w2: vec![] } }; let x = vec![vec![1.0, 2.0], vec![3.0, 4.0]]; let _ = block.forward(&x); }\n"
         )
     if key == "lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md:1":
-        return block + "\nfn main() { let v = Vector::new(vec![1.0, 2.0]); let u = Vector::new(vec![3.0, 4.0]); let mut m = Matrix::new(2, 2, vec![1.0, 2.0, 3.0, 4.0]); let _ = (v.len(), v.dot(&u), v.add(&u), v.map(|x| x), v.as_slice(), m.get(0, 0), m.mul_vec(&u)); m.set(0, 1, 5.0); }\n"
+        return block + "\nfn main() { let v = Vector::new(vec![1.0, 2.0]); let u = Vector::new(vec![3.0, 4.0]); let mut m = Matrix::new(2, 2, vec![1.0, 2.0, 3.0, 4.0]); let _ = (v.len(), v.dot(&u), v.add(&u), v.map(|x| x), v.components(), m.get(0, 0), m.mul_vec(&u)); m.set(0, 1, 5.0); }\n"
     if key == "lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md:2":
         return prelude_vector_matrix() + block + "\nfn main() { let layer = Linear { weight: Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), bias: Vector::new(vec![0.5, 0.5]) }; let x = Vector::new(vec![2.0, -3.0]); let _ = (layer.forward(&x), relu(&x)); }\n"
     if key == "lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md:3":

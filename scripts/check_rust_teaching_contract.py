@@ -103,6 +103,12 @@ RAW_CONTAINER_TRY_FROM_IMPL_RE = re.compile(
     r"^\s*impl\s+TryFrom\s*<\s*(?:Vec\s*<|&\s*\[|\[)"
 )
 RAW_ACCESSOR_RE = re.compile(r"\.as_(?:usize|u64|u128|f64|f32|raw_slice)\s*\(")
+PUBLIC_RAW_ACCESSOR_NAME_RE = re.compile(
+    r"^\s*pub\s+fn\s+as_(?:slice|raw|usize|u64|u128|f64|f32)\s*\("
+)
+RAW_COLLECTION_ACCESSOR_NAME_RE = re.compile(
+    r"^\s*(?:pub(?:\(crate\))?\s+)?fn\s+as_(?:slice|raw)\s*\("
+)
 RAW_PUBLIC_TYPE_RE = re.compile(
     r"("
     r"\bVec\s*<"
@@ -462,6 +468,14 @@ def check_strict_public_api() -> list[str]:
                 errors.append(
                     f"{relative(path)}:{line_number} exposes a raw public field: {line.strip()}"
                 )
+            if PUBLIC_RAW_ACCESSOR_NAME_RE.search(line):
+                errors.append(
+                    f"{relative(path)}:{line_number} exposes a raw-style public accessor name; use semantic names such as values(), components(), or scalar_values()"
+                )
+            if RAW_COLLECTION_ACCESSOR_NAME_RE.search(line):
+                errors.append(
+                    f"{relative(path)}:{line_number} defines a raw collection accessor name; use a semantic iterator or role-specific view instead"
+                )
 
     return errors
 
@@ -539,6 +553,8 @@ def main() -> int:
         "no raw associated type assignments, "
         "no raw primitive public adapter impls, "
         "no raw public container TryFrom adapters, "
+        "no raw-style public accessor names, "
+        "no raw collection accessor helpers, "
         "typed helper signatures in migrated test modules, "
         "no raw scalar accessors in strict migrated test bodies, "
         f"strict public API paths: {strict_paths}."

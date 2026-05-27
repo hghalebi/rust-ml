@@ -438,7 +438,7 @@ The repo now includes two GitHub Actions workflows for quality control:
 
 - `CI` runs deterministic checks for lesson structure, local Markdown links, and authored-section contracts.
 - `CI` scans public learner-facing files for common private-content and secret-shaped leaks.
-- `CI` checks Rust teaching contracts: no `.unwrap()`, no `.expect()`, no panic-style macros such as `panic!()`, `todo!()`, `unimplemented!()`, or `unreachable!()`, no `Result<_, String>`, no raw public enum payloads, no raw associated type assignments, no public raw-container `TryFrom` adapters, and strict public newtype boundaries for the migrated teaching crates.
+- `CI` checks Rust teaching contracts: no `.unwrap()`, no `.expect()`, no panic-style macros such as `panic!()`, `todo!()`, `unimplemented!()`, or `unreachable!()`, no `Result<_, String>`, no raw public enum payloads, no raw associated type assignments, no public raw-container `TryFrom` adapters, no raw-style public accessor names, no raw collection accessor helpers, and strict public newtype boundaries for the migrated teaching crates and Markdown Rust snippets.
 - `CI` checks active teaching-crate consistency: package names, README structure, examples, tests, typed error modules, and strict path coverage.
 - `CI` also compile-checks Rust snippets embedded in lessons, runs `cargo fmt`, `cargo clippy`, `cargo test`, and executes every active teaching example once.
 - `Gemini Writing Review` reviews Markdown content on pull requests for English clarity, technical-teaching quality, structural discipline, and beginner friendliness.

@@ -110,7 +110,7 @@ ideas are also implemented with Rust operation traits:
 &TokenEmbedding + &ProjectionBias -> TokenEmbedding
 &DenseMatrix * &DenseVector -> DenseVector
 &DenseVector * &DenseVector -> ModelScalar
-&DenseVector * ModelScalar -> DenseVector
+&DenseVector * ModelScalar -> Result<DenseVector, ModelError>
 ```
 
 This makes the Transformer path read closer to the algebra while preserving the
