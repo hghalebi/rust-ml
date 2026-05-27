@@ -36,6 +36,15 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 03_build_sha
 cargo run --manifest-path code/Cargo.toml -p rust_ml_data --example 04_source_mixture
 ```
 
+## Object/Map Preflight
+
+Before implementation, write this preflight in your assignment notes:
+
+- **Objects:** `SourceName`, `RawDocument`, `NormalizedDocument`, `DedupKey`, `FilterDecision`, `CorpusShard`, `MixtureWeight`.
+- **Maps:** ingest document, normalize text, derive dedup key, filter with reason, insert into shard, sample source mixture.
+- **Composition path:** `RawDocument -> NormalizedDocument -> DedupKey -> FilterDecision -> CorpusShard -> SourceMixture`.
+- **Invariant to protect with newtypes:** public sample text, source identity, dedup keys, and filter reasons must remain separately named.
+
 ## Expected Deliverables
 
 - a tiny public-safe sample corpus

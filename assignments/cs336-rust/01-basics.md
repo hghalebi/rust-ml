@@ -40,6 +40,15 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 03_unif
 cargo run --manifest-path code/Cargo.toml -p rust_ml_lm_basics --example 04_training_step
 ```
 
+## Object/Map Preflight
+
+Before implementation, write this preflight in your assignment notes:
+
+- **Objects:** `RawText`, `TokenTextSequence`, `Vocabulary`, `TokenIdSequence`, `NextTokenBatch`, `Logits`, `Loss`.
+- **Maps:** tokenize text, build vocabulary, encode tokens, build next-token pairs, score logits, compute loss, apply update.
+- **Composition path:** `RawText -> TokenTextSequence -> Vocabulary -> TokenIdSequence -> NextTokenBatch -> Logits -> Loss -> Update`.
+- **Invariant to protect with newtypes:** a token ID is valid only inside the vocabulary that produced it.
+
 ## Expected Deliverables
 
 - a short note explaining the typed path from `RawText` to `Loss`

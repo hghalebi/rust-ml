@@ -2,7 +2,7 @@
 
 use crate::attention::MultiHeadAttention;
 use crate::error::ModelError;
-use crate::math::{DenseMatrix, DenseVector, ModelScalar, VectorLength};
+use crate::math::{DenseMatrix, DenseVector, ModelScalar, VectorIndex, VectorLength};
 use crate::types::{
     FeedForwardProjection1, FeedForwardProjection2, HiddenActivation, NormScale, NormShift,
     PositionEncoding, ProjectionBias, TokenEmbedding, TokenIndex, TokenSequence,
@@ -128,9 +128,9 @@ impl LayerNorm {
             ));
         }
 
-        let mean = token.vector().mean_raw();
-        let variance = token.vector().variance_raw();
-        let denom = (variance + self.eps.as_f32()).sqrt();
+        let mean = token.vector().mean();
+        let variance = token.vector().variance();
+        let denom = (variance.as_f32() + self.eps.as_f32()).sqrt();
 
         if !denom.is_finite() || denom == 0.0 {
             return Err(ModelError::numerical_issue(
@@ -139,12 +139,16 @@ impl LayerNorm {
             ));
         }
 
-        let normalized = DenseVector::from_raw_values(
-            "LayerNorm::forward_token",
-            (0..token.len().as_usize()).map(|index| {
-                let z = (token.vector().raw_at(index) - mean) / denom;
-                self.gamma.vector().raw_at(index) * z + self.beta.vector().raw_at(index)
-            }),
+        let normalized = DenseVector::new(
+            (0..token.len().as_usize())
+                .map(|index| {
+                    let index = VectorIndex::try_from(index)?;
+                    let z = (token.vector().component(index)?.as_f32() - mean.as_f32()) / denom;
+                    let scaled = self.gamma.vector().component(index)?.as_f32() * z
+                        + self.beta.vector().component(index)?.as_f32();
+                    ModelScalar::try_from(scaled)
+                })
+                .collect::<Result<Vec<_>, _>>()?,
         )?;
 
         Ok(TokenEmbedding::from_vector(normalized))
@@ -184,7 +188,7 @@ impl FeedForwardLayer1 {
     pub fn forward(&self, x: &TokenEmbedding) -> Result<HiddenActivation, ModelError> {
         let projected = (&self.weight * x)?;
         let shifted = (&projected + &self.bias)?;
-        Ok(shifted.relu())
+        shifted.relu()
     }
 }
 

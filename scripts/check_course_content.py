@@ -48,6 +48,7 @@ REQUIRED_ASSIGNMENT_HEADINGS = (
     "## Goal",
     "## What You Build",
     "## Active Starter Crate",
+    "## Object/Map Preflight",
     "## Expected Deliverables",
     "## Newtype And Category-Theory Lens",
     "## Required Checks",
@@ -582,6 +583,8 @@ def check_cs336_assignment_contract() -> list[str]:
         for phrase in (
             "# CS336 Rust Assignments",
             "not copied from Stanford's handouts or repositories",
+            "code/category_lens",
+            "rust_ml_category_lens",
             "## Sequence",
             "## Shared Rules",
             "## Completion Standard",
@@ -603,6 +606,15 @@ def check_cs336_assignment_contract() -> list[str]:
             if phrase not in text:
                 errors.append(f"{relative(assignment)} is missing pedagogy marker: {phrase}")
 
+        for phrase in (
+            "**Objects:**",
+            "**Maps:**",
+            "**Composition path:**",
+            "**Invariant to protect with newtypes:**",
+        ):
+            if phrase not in text:
+                errors.append(f"{relative(assignment)} is missing object/map preflight marker: {phrase}")
+
         if "TODO" in text:
             errors.append(f"{relative(assignment)} contains TODO and should be finished")
 
@@ -620,6 +632,8 @@ def check_cs336_rust_track_contract() -> list[str]:
         ROOT / "assignments" / "cs336-rust" / "03-scaling.md",
         ROOT / "assignments" / "cs336-rust" / "04-data.md",
         ROOT / "assignments" / "cs336-rust" / "05-alignment.md",
+        ROOT / "code" / "category_lens" / "README.md",
+        ROOT / "code" / "category_lens" / "src" / "lib.rs",
         ROOT / "code" / "alignment" / "README.md",
         ROOT / "code" / "alignment" / "src" / "lib.rs",
         ROOT / "code" / "data" / "README.md",
@@ -653,6 +667,8 @@ def check_cs336_rust_track_contract() -> list[str]:
             "Assignment Sequence",
             "Concept Atlas",
             "newtype-protected meaning",
+            "code/category_lens",
+            "rust_ml_category_lens",
             "code/alignment",
             "code/data",
             "code/evaluation",

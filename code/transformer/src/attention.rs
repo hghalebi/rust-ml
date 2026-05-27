@@ -1,7 +1,10 @@
 //! Attention-specific building blocks.
 
 use crate::error::ModelError;
-use crate::math::{DenseMatrix, DenseVector, VectorLength};
+use crate::math::{
+    ColumnIndex, DenseMatrix, DenseVector, MatrixShape, ModelScalar, RowIndex, VectorIndex,
+    VectorLength,
+};
 use crate::types::{
     AttentionOutput, AttentionOutputSequence, AttentionScore, AttentionScores, AttentionWeights,
     ConcatenatedHeadOutput, Key, KeyProjection, OutputProjection, ProjectionBias, Query,
@@ -202,12 +205,10 @@ pub fn concat_attention_outputs(
 
     let mut data = Vec::new();
     for output in &outputs {
-        data.extend_from_slice(output.vector().as_raw_slice());
+        data.extend(output.vector().values());
     }
 
-    Ok(ConcatenatedHeadOutput::from_vector(
-        DenseVector::from_raw_values("concat_attention_outputs", data)?,
-    ))
+    Ok(ConcatenatedHeadOutput::from_vector(DenseVector::new(data)?))
 }
 
 /// One scaled dot-product attention head.
@@ -281,7 +282,7 @@ impl AttentionHead {
             .collect::<Result<_, _>>()?;
         let values = ValueSequence::from_values(values)?;
 
-        let mut outputs = Vec::with_capacity(seq.len_usize());
+        let mut outputs = Vec::with_capacity(seq.len().as_usize());
 
         for query in &queries {
             let scores = AttentionScores::from_scores(
@@ -322,8 +323,8 @@ impl LinearAttentionHead {
         })
     }
 
-    fn phi(vector: &DenseVector) -> DenseVector {
-        vector.map_raw(|value| value.max(0.0) + 1e-6)
+    fn phi(vector: &DenseVector) -> Result<DenseVector, ModelError> {
+        vector.map_components(|value| ModelScalar::try_from(value.as_f32().max(0.0) + 1e-6))
     }
 
     /// Runs the simplified linear-attention forward pass across the whole sequence.
@@ -333,7 +334,7 @@ impl LinearAttentionHead {
             .map(|token| {
                 self.query_layer
                     .forward(token)
-                    .map(|query| Query::from_vector(Self::phi(query.vector())))
+                    .and_then(|query| Ok(Query::from_vector(Self::phi(query.vector())?)))
             })
             .collect::<Result<_, _>>()?;
 
@@ -342,7 +343,7 @@ impl LinearAttentionHead {
             .map(|token| {
                 self.key_layer
                     .forward(token)
-                    .map(|key| Key::from_vector(Self::phi(key.vector())))
+                    .and_then(|key| Ok(Key::from_vector(Self::phi(key.vector())?)))
             })
             .collect::<Result<_, _>>()?;
 
@@ -351,40 +352,51 @@ impl LinearAttentionHead {
             .map(|token| self.value_layer.forward(token))
             .collect::<Result<_, _>>()?;
 
-        let key_dim = keys[0].len().as_usize();
-        let value_dim = values[0].len().as_usize();
+        let key_dim = keys[0].len();
+        let value_dim = values[0].len();
 
-        let mut summary = DenseMatrix::zeros_raw(key_dim, value_dim)?;
-        let mut normalizer = DenseVector::zeros_raw(key_dim)?;
+        let mut summary = DenseMatrix::zeros(MatrixShape::new(key_dim, value_dim))?;
+        let mut normalizer = DenseVector::zeros(key_dim)?;
 
         for (key, value) in keys.iter().zip(values.iter()) {
-            for row in 0..key_dim {
-                normalizer.set_raw(row, normalizer.raw_at(row) + key.vector().raw_at(row))?;
+            for row in 0..key_dim.as_usize() {
+                let vector_row = VectorIndex::try_from(row)?;
+                let matrix_row = RowIndex::try_from(row)?;
+                let key_component = key.vector().component(vector_row)?;
+                let updated_normalizer = (normalizer.component(vector_row)? + key_component)?;
+                normalizer.set_component(vector_row, updated_normalizer)?;
 
-                for col in 0..value_dim {
-                    let updated = summary.raw_at(row, col)
-                        + key.vector().raw_at(row) * value.vector().raw_at(col);
-                    summary.set_raw(row, col, updated)?;
+                for col in 0..value_dim.as_usize() {
+                    let vector_col = VectorIndex::try_from(col)?;
+                    let matrix_col = ColumnIndex::try_from(col)?;
+                    let product = (key_component * value.vector().component(vector_col)?)?;
+                    let updated = (summary.component(matrix_row, matrix_col)? + product)?;
+                    summary.set_component(matrix_row, matrix_col, updated)?;
                 }
             }
         }
 
-        let mut outputs = Vec::with_capacity(seq.len_usize());
+        let mut outputs = Vec::with_capacity(seq.len().as_usize());
 
         for query in &queries {
-            let mut numerator = vec![0.0; value_dim];
+            let mut numerator = Vec::with_capacity(value_dim.as_usize());
 
-            for (col, slot) in numerator.iter_mut().enumerate() {
-                let mut sum = 0.0;
-                for row in 0..key_dim {
-                    sum += query.vector().raw_at(row) * summary.raw_at(row, col);
+            for col in 0..value_dim.as_usize() {
+                let matrix_col = ColumnIndex::try_from(col)?;
+                let mut sum = ModelScalar::try_from(0.0)?;
+                for row in 0..key_dim.as_usize() {
+                    let vector_row = VectorIndex::try_from(row)?;
+                    let matrix_row = RowIndex::try_from(row)?;
+                    let product = (query.vector().component(vector_row)?
+                        * summary.component(matrix_row, matrix_col)?)?;
+                    sum = (sum + product)?;
                 }
-                *slot = sum;
+                numerator.push(sum);
             }
 
-            let denominator = query.vector().dot_raw(&normalizer)?.max(1e-6);
-            let output = DenseVector::from_raw_values("LinearAttentionHead::forward", numerator)?
-                .scale_raw(1.0 / denominator);
+            let denominator = query.vector().dot(&normalizer)?.as_f32().max(1e-6);
+            let output =
+                DenseVector::new(numerator)?.scale(ModelScalar::try_from(1.0 / denominator)?)?;
             outputs.push(AttentionOutput::from_vector(output));
         }
 
@@ -453,9 +465,9 @@ impl MultiHeadAttention {
             .map(|head| head.forward(seq))
             .collect::<Result<_, _>>()?;
 
-        let mut tokens = Vec::with_capacity(seq.len_usize());
+        let mut tokens = Vec::with_capacity(seq.len().as_usize());
 
-        for token_index in 0..seq.len_usize() {
+        for token_index in 0..seq.len().as_usize() {
             let token_index = TokenIndex::try_from(token_index)?;
             let outputs_for_token: Vec<AttentionOutput> = per_head_outputs
                 .iter()
@@ -603,7 +615,7 @@ mod tests {
             return Err(ModelError::dimension_mismatch(
                 "ensure_vector_values_close",
                 "actual vector",
-                vec![vector.len_usize()],
+                vec![vector.values().len()],
                 "expected vector",
                 vec![expected.len()],
                 "close vector comparison requires equal lengths",

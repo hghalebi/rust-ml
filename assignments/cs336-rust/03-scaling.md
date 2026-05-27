@@ -34,6 +34,15 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 03_foreca
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 04_report_limitations
 ```
 
+## Object/Map Preflight
+
+Before implementation, write this preflight in your assignment notes:
+
+- **Objects:** `ExperimentConfig`, `TrainingRun`, `MetricRecord`, `ComputeBudgetFlops`, `ValidationLoss`, `ScalingFit`.
+- **Maps:** configure a run, record metrics, fit a curve, forecast loss, attach limitation notes.
+- **Composition path:** `ExperimentConfig -> TrainingRun -> MetricRecord -> ScalingFit -> Forecast`.
+- **Invariant to protect with newtypes:** validation loss, parameter count, token count, and compute budget carry different evidence and cannot be swapped.
+
 ## Expected Deliverables
 
 - at least three typed metric records from distinct tiny configurations

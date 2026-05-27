@@ -135,6 +135,30 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 02_
 
 You should see the neuron forward pass collapsed into one composed typed map.
 
+The same idea in Rust is deliberately small:
+
+```rust
+use rust_ml_category_lens::{MapName, ObjectName, TypedMap, TypedObject};
+
+fn main() -> Result<(), rust_ml_category_lens::Error> {
+    let feature_vector = TypedObject::new(ObjectName::try_from("FeatureVector")?);
+    let pre_activation = TypedObject::new(ObjectName::try_from("PreActivation")?);
+    let prediction = TypedObject::new(ObjectName::try_from("Prediction")?);
+
+    let raw_score = TypedMap::new(
+        MapName::try_from("raw_score")?,
+        feature_vector,
+        pre_activation.clone(),
+    );
+    let sigmoid = TypedMap::new(MapName::try_from("sigmoid")?, pre_activation, prediction);
+
+    let forward = (&raw_score >> &sigmoid)?;
+    println!("{forward}");
+
+    Ok(())
+}
+```
+
 Then run the first concrete ML crate:
 
 Run:

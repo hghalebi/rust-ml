@@ -1083,6 +1083,79 @@ def compile_general_snippets(temp_dir: Path) -> int:
     return 0
 
 
+def compile_learning_lens_snippets(temp_dir: Path) -> int:
+    rel_path = Path("lessons/00-learning-lens.md")
+    full_path = ROOT / rel_path
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "learning-lens-snippet-target"
+    crate_path = (ROOT / "code/category_lens").resolve()
+
+    for idx, (block, block_start_line) in enumerate(
+        extract_blocks_with_lines(full_path), start=1
+    ):
+        failures.extend(
+            check_typed_crate_helper_signatures(
+                rel_path,
+                idx,
+                block_start_line,
+                block,
+                "Learning lens",
+            )
+        )
+
+        snippet_dir = temp_dir / f"learning_lens_{count:03d}"
+        src_dir = snippet_dir / "src"
+        src_dir.mkdir(parents=True, exist_ok=True)
+        (snippet_dir / "Cargo.toml").write_text(
+            textwrap.dedent(
+                f"""
+                [package]
+                name = "learning_lens_snippet_{count:03d}"
+                version = "0.1.0"
+                edition = "2024"
+
+                [dependencies]
+                rust_ml_category_lens = {{ path = "{crate_path}" }}
+                """
+            ).strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        source = block + "\n"
+        if "fn main" not in block:
+            source += "fn main() {}\n"
+        (src_dir / "main.rs").write_text(source, encoding="utf-8")
+
+        env = dict(os.environ)
+        env["CARGO_TARGET_DIR"] = str(target_dir)
+        env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+        result = subprocess.run(
+            [
+                "cargo",
+                "check",
+                "--quiet",
+                "--manifest-path",
+                str(snippet_dir / "Cargo.toml"),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+        )
+        if result.returncode != 0:
+            failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+        count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the Learning Lens against the local crate.")
+    return 0
+
+
 def compile_neuron_crate_snippets(temp_dir: Path) -> int:
     neuron_paths = [
         Path("lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md"),
@@ -1474,12 +1547,13 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="rust-ml-snippets-") as temp_dir_name:
         temp_dir = Path(temp_dir_name)
         general = compile_general_snippets(temp_dir)
+        learning_lens = compile_learning_lens_snippets(temp_dir)
         neuron = compile_neuron_crate_snippets(temp_dir)
         intro = compile_intro_crate_snippets(temp_dir)
         mlp = compile_mlp_crate_snippets(temp_dir)
         attention = compile_attention_crate_snippets(temp_dir)
         chunked = compile_chunked_transformer_snippets(temp_dir)
-        if general or neuron or intro or mlp or attention or chunked:
+        if general or learning_lens or neuron or intro or mlp or attention or chunked:
             return 1
     print("All authored Rust lesson snippets compiled successfully.")
     return 0

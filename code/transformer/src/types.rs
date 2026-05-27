@@ -97,19 +97,18 @@ fn add_dense_vectors(
         return Err(ModelError::dimension_mismatch(
             operation,
             left_label,
-            vec![left.len_usize()],
+            vec![left.len().as_usize()],
             right_label,
-            vec![right.len_usize()],
+            vec![right.len().as_usize()],
             hint,
         ));
     }
 
-    DenseVector::from_raw_values(
-        operation,
-        left.as_raw_slice()
-            .iter()
-            .zip(right.as_raw_slice().iter())
-            .map(|(left, right)| left + right),
+    DenseVector::new(
+        left.values()
+            .zip(right.values())
+            .map(|(left, right)| left + right)
+            .collect::<Result<Vec<_>, _>>()?,
     )
 }
 
@@ -125,7 +124,7 @@ fn project_vector(
             "projection",
             vec![projection.rows().as_usize(), projection.cols().as_usize()],
             input_label,
-            vec![input.len_usize()],
+            vec![input.len().as_usize()],
             "projection input width must match vector width",
         ));
     }
@@ -325,8 +324,11 @@ impl_projection_bias_add!(
 
 impl HiddenPreActivation {
     /// Applies ReLU and returns the semantic hidden activation.
-    pub fn relu(&self) -> HiddenActivation {
-        HiddenActivation::from_vector(self.vector().map_raw(|value| value.max(0.0)))
+    pub fn relu(&self) -> Result<HiddenActivation, ModelError> {
+        Ok(HiddenActivation::from_vector(
+            self.vector()
+                .map_components(|value| ModelScalar::try_from(value.as_f32().max(0.0)))?,
+        ))
     }
 }
 
@@ -614,18 +616,16 @@ impl<'b> Mul<&'b ValueSequence> for &AttentionWeights {
             ));
         }
 
-        let mut out = vec![0.0; right.value_width().as_usize()];
+        let mut out = vec![ModelScalar::try_from(0.0)?; right.value_width().as_usize()];
 
         for (weight, value) in self.values().zip(right.values()) {
-            for (slot, component) in out.iter_mut().zip(value.vector().as_raw_slice().iter()) {
-                *slot += weight.as_f32() * component;
+            let weight = ModelScalar::try_from(weight.as_f32())?;
+            for (slot, component) in out.iter_mut().zip(value.values()) {
+                *slot = (*slot + (weight * component)?)?;
             }
         }
 
-        Ok(AttentionOutput::from_vector(DenseVector::from_raw_values(
-            "AttentionWeights::mul_value_sequence",
-            out,
-        )?))
+        Ok(AttentionOutput::from_vector(DenseVector::new(out)?))
     }
 }
 
@@ -713,10 +713,6 @@ impl TokenSequence {
     /// Returns the token count.
     pub fn len(&self) -> TokenCount {
         TokenCount::from_known_nonzero(self.tokens.len())
-    }
-
-    pub(crate) fn len_usize(&self) -> usize {
-        self.tokens.len()
     }
 
     /// Returns the shared token width.
@@ -921,7 +917,7 @@ mod tests {
 
         let pre_activation = (&projection * &token)?;
         let shifted = (&pre_activation + &bias)?;
-        let activation = shifted.relu();
+        let activation = shifted.relu()?;
 
         assert_scalars_eq(
             activation.values(),

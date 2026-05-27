@@ -30,6 +30,7 @@ STRICT_PUBLIC_API_PATHS = (
 STRICT_TYPED_ERROR_PATHS = (
     CODE_ROOT / "alignment" / "src" / "error.rs",
     CODE_ROOT / "attention" / "src" / "error.rs",
+    CODE_ROOT / "category_lens" / "src" / "error.rs",
     CODE_ROOT / "data" / "src" / "error.rs",
     CODE_ROOT / "evaluation" / "src" / "error.rs",
     CODE_ROOT / "inference" / "src" / "error.rs",
@@ -76,6 +77,10 @@ PANIC_PATTERNS = (
 
 STRING_ERROR_RE = re.compile(r"Result\s*<[^>\n]+,\s*String\s*>")
 RAW_STRING_RESULT_RE = re.compile(r"Result\s*<\s*String\s*,")
+THISERROR_DERIVE_RE = re.compile(
+    r"#\[derive\([^\)]*\bError\b[^\)]*\)\]\s*pub\s+enum\s+\w+Error",
+    re.S,
+)
 PUBLIC_FUNCTION_RE = re.compile(r"^\s*pub\s+fn\s+")
 PUBLIC_TRAIT_RE = re.compile(r"^\s*pub\s+trait\s+")
 TRAIT_METHOD_RE = re.compile(r"^\s*fn\s+\w+\s*")
@@ -320,6 +325,23 @@ def check_no_raw_string_results() -> list[str]:
     return errors
 
 
+def check_error_modules_use_thiserror() -> list[str]:
+    errors: list[str] = []
+
+    for path in STRICT_TYPED_ERROR_PATHS:
+        text = path.read_text(encoding="utf-8")
+        if "use thiserror::Error;" not in text:
+            errors.append(
+                f"{relative(path)} does not import thiserror::Error for its public error enum"
+            )
+        if not THISERROR_DERIVE_RE.search(text):
+            errors.append(
+                f"{relative(path)} does not derive thiserror::Error on a public error enum"
+            )
+
+    return errors
+
+
 def check_typed_error_fields() -> list[str]:
     errors: list[str] = []
 
@@ -494,6 +516,7 @@ def main() -> int:
         check_no_panic_shortcuts()
         + check_no_string_error_types()
         + check_no_raw_string_results()
+        + check_error_modules_use_thiserror()
         + check_typed_error_fields()
         + check_public_enum_variants()
         + check_strict_public_api()
@@ -510,6 +533,7 @@ def main() -> int:
     print(
         "Rust teaching contract checks passed: no unwrap/expect/panic/todo/unimplemented/unreachable, "
         "no String errors, no Result<String, _> validation leaks, "
+        "thiserror-backed public error modules, "
         "typed public error fields for active teaching error modules, "
         "no raw primitive public enum payloads, "
         "no raw associated type assignments, "

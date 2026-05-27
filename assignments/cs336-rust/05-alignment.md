@@ -39,6 +39,15 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 03_veri
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 04_audit_record
 ```
 
+## Object/Map Preflight
+
+Before implementation, write this preflight in your assignment notes:
+
+- **Objects:** `Instruction`, `Response`, `PreferencePair`, `RewardScore`, `VerifierResult`, `UpdateSignal`, `AuditRecord`.
+- **Maps:** form prompted response, compare preference pair, score reward, preserve verifier feedback, create update signal, write audit record.
+- **Composition path:** `PromptedResponse -> PreferenceSignal -> VerifierFeedback -> UpdateSignal -> AuditRecord`.
+- **Invariant to protect with newtypes:** feedback must keep its source, role, run identity, and failure state visible.
+
 ## Expected Deliverables
 
 - one instruction-response example for supervised learning

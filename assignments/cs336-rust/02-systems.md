@@ -42,6 +42,15 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 03_median
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithmetic_intensity
 ```
 
+## Object/Map Preflight
+
+Before implementation, write this preflight in your assignment notes:
+
+- **Objects:** `ActivationShape`, `ElementCount`, `Bytes`, `AttentionEstimate`, `Flops`, `StageMeasurements`, `ArithmeticIntensity`.
+- **Maps:** count elements, estimate bytes, estimate attention FLOPs, collect repeated timings, summarize median time, compute arithmetic intensity.
+- **Composition path:** `ActivationShape -> ElementCount -> Bytes` and `StageMeasurements -> MedianElapsed -> ArithmeticIntensity`.
+- **Invariant to protect with newtypes:** bytes, FLOPs, elapsed time, and intensity are different units and must not be interchangeable numbers.
+
 ## Expected Deliverables
 
 - a table or note that reports bytes, FLOPs, elapsed time, and arithmetic intensity with units

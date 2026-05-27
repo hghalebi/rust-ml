@@ -286,7 +286,7 @@ impl DenseVector {
         Self::zeros_raw(len.as_usize())
     }
 
-    pub(crate) fn zeros_raw(len: usize) -> Result<Self, ModelError> {
+    fn zeros_raw(len: usize) -> Result<Self, ModelError> {
         Self::from_raw_values("DenseVector::zeros", vec![0.0; len])
     }
 
@@ -300,7 +300,7 @@ impl DenseVector {
         VectorLength::from_known_nonzero(self.0.len())
     }
 
-    pub(crate) fn len_usize(&self) -> usize {
+    fn len_usize(&self) -> usize {
         self.0.len()
     }
 
@@ -312,10 +312,6 @@ impl DenseVector {
     /// Iterates over checked scalar values.
     pub fn values(&self) -> impl ExactSizeIterator<Item = ModelScalar> + '_ {
         self.0.iter().copied().map(ModelScalar)
-    }
-
-    pub(crate) fn as_raw_slice(&self) -> &[f32] {
-        &self.0
     }
 
     /// Reads a single element.
@@ -331,7 +327,7 @@ impl DenseVector {
             ))
     }
 
-    pub(crate) fn raw_at(&self, index: usize) -> f32 {
+    fn raw_at(&self, index: usize) -> f32 {
         self.0[index]
     }
 
@@ -354,10 +350,6 @@ impl DenseVector {
         Ok(())
     }
 
-    pub(crate) fn set_raw(&mut self, index: usize, value: f32) -> Result<(), ModelError> {
-        self.set_component(VectorIndex(index), ModelScalar::from_raw(value)?)
-    }
-
     /// Computes the dot product between two vectors.
     pub fn dot(&self, other: &DenseVector) -> Result<ModelScalar, ModelError> {
         if self.len() != other.len() {
@@ -374,7 +366,7 @@ impl DenseVector {
         ModelScalar::from_raw(self.dot_raw(other)?)
     }
 
-    pub(crate) fn dot_raw(&self, other: &DenseVector) -> Result<f32, ModelError> {
+    fn dot_raw(&self, other: &DenseVector) -> Result<f32, ModelError> {
         if self.len_usize() != other.len_usize() {
             return Err(ModelError::dimension_mismatch(
                 "DenseVector::dot",
@@ -407,20 +399,17 @@ impl DenseVector {
         )
     }
 
-    /// Scales a vector by a checked scalar.
-    pub fn scale(&self, scalar: ModelScalar) -> DenseVector {
-        self.scale_raw(scalar.as_f32())
-    }
-
-    pub(crate) fn scale_raw(&self, scalar: f32) -> DenseVector {
-        DenseVector(self.0.iter().map(|value| value * scalar).collect())
-    }
-
-    pub(crate) fn map_raw<F>(&self, f: F) -> DenseVector
+    /// Applies a checked scalar transformation to each vector component.
+    pub fn map_components<F>(&self, f: F) -> Result<DenseVector, ModelError>
     where
-        F: Fn(f32) -> f32,
+        F: Fn(ModelScalar) -> Result<ModelScalar, ModelError>,
     {
-        DenseVector(self.0.iter().copied().map(f).collect())
+        DenseVector::new(self.values().map(f).collect::<Result<Vec<_>, _>>()?)
+    }
+
+    /// Scales a vector by a checked scalar.
+    pub fn scale(&self, scalar: ModelScalar) -> Result<DenseVector, ModelError> {
+        self.map_components(|value| value * scalar)
     }
 
     /// Computes the mean of the vector.
@@ -428,7 +417,7 @@ impl DenseVector {
         ModelScalar(self.mean_raw())
     }
 
-    pub(crate) fn mean_raw(&self) -> f32 {
+    fn mean_raw(&self) -> f32 {
         self.0.iter().sum::<f32>() / self.len_usize() as f32
     }
 
@@ -437,7 +426,7 @@ impl DenseVector {
         ModelScalar(self.variance_raw())
     }
 
-    pub(crate) fn variance_raw(&self) -> f32 {
+    fn variance_raw(&self) -> f32 {
         let mean = self.mean_raw();
 
         self.0
@@ -468,7 +457,7 @@ impl<'b> Mul<&'b DenseVector> for &DenseVector {
 }
 
 impl Mul<ModelScalar> for &DenseVector {
-    type Output = DenseVector;
+    type Output = Result<DenseVector, ModelError>;
 
     fn mul(self, right: ModelScalar) -> Self::Output {
         self.scale(right)
@@ -542,7 +531,7 @@ impl DenseMatrix {
         Self::from_raw_parts("DenseMatrix::identity", size, size, data)
     }
 
-    pub(crate) fn zeros_raw(rows: usize, cols: usize) -> Result<Self, ModelError> {
+    fn zeros_raw(rows: usize, cols: usize) -> Result<Self, ModelError> {
         Self::from_raw_parts("DenseMatrix::zeros", rows, cols, vec![0.0; rows * cols])
     }
 
@@ -626,7 +615,7 @@ impl DenseMatrix {
         Ok(ModelScalar(self.raw_at(row.as_usize(), col.as_usize())))
     }
 
-    pub(crate) fn raw_at(&self, row: usize, col: usize) -> f32 {
+    fn raw_at(&self, row: usize, col: usize) -> f32 {
         self.data[row * self.cols + col]
     }
 
@@ -649,14 +638,6 @@ impl DenseMatrix {
 
         self.data[row.as_usize() * self.cols + col.as_usize()] = value.as_f32();
         Ok(())
-    }
-
-    pub(crate) fn set_raw(&mut self, row: usize, col: usize, value: f32) -> Result<(), ModelError> {
-        self.set_component(
-            RowIndex(row),
-            ColumnIndex(col),
-            ModelScalar::from_raw(value)?,
-        )
     }
 
     /// Multiplies the matrix by a vector.

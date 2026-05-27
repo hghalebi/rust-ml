@@ -8,6 +8,16 @@ They are not copied from Stanford's handouts or repositories. They use the publi
 
 ## Sequence
 
+Before R1, run the orientation primer in [`code/category_lens`](../../code/category_lens/README.md).
+It gives the whole track a shared vocabulary:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_category_lens --example 02_compose_neuron_forward
+```
+
+After that command, a learner should be able to point to the objects, maps, and
+legal composition in each assignment before writing the larger implementation.
+
 | Assignment | Focus | Main artifact |
 | --- | --- | --- |
 | [R1 Basics](01-basics.md) | tokenizer, tiny model pieces, optimizer, minimal training loop | [`code/lm_basics`](../../code/lm_basics/README.md) |
@@ -20,6 +30,7 @@ They are not copied from Stanford's handouts or repositories. They use the publi
 
 - Every domain value with meaning should have a type name.
 - Every boundary should validate input before downstream logic uses it.
+- Every assignment should name its main objects, maps, and composition path before implementation.
 - Every assignment should include at least one runnable example and one test.
 - Every metric should say what it measures and what it does not measure.
 - Every shortcut should be marked as a teaching simplification.
