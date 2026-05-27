@@ -253,7 +253,22 @@ independent, reductions accumulate through `Accumulator`, matrix-vector work is
 scheduled through `TilePlan`, resources stay in `FlopCount` and `Bytes`, and
 learner-facing kernel reports require a public review boundary.
 
-### Step 11: CS336 Rust Equivalent
+### Step 11: Inference
+
+Read [lessons/11-inference](lessons/11-inference/README.md), then run:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 01_greedy_decode
+cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 02_sampling_controls
+cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 03_kv_cache_trace
+cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 04_latency_budget
+cargo run --manifest-path code/Cargo.toml -p rust_ml_inference --example 05_public_trace
+```
+
+Goal: understand typed decoding as repeated state updates where context,
+generated tokens, cache entries, and publication review rules remain aligned.
+
+### Step 12: CS336 Rust Equivalent
 
 Read [CS336 Rust Equivalent](CS336-RUST-EQUIVALENT.md) when you want the full language-modeling systems path.
 

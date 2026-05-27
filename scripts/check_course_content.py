@@ -20,6 +20,7 @@ AUTHORED_MODULES = (
     ROOT / "lessons" / "08-language-modeling",
     ROOT / "lessons" / "09-systems",
     ROOT / "lessons" / "10-kernels",
+    ROOT / "lessons" / "11-inference",
 )
 PLANNED_MODULES = ()
 CS336_ASSIGNMENTS_DIR = ROOT / "assignments" / "cs336-rust"
@@ -553,6 +554,7 @@ def check_lessons_index_contract() -> list[str]:
         "Module 7 | Authored",
         "Module 8 | Authored",
         "Module 9 | Authored",
+        "Module 10 | Authored",
     )
     for phrase in required_phrases:
         if phrase not in text:

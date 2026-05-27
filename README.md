@@ -35,6 +35,7 @@ For the object/map progression across lessons, code, and assignments, see [Conce
 11. Continue with [08 Language Modeling](lessons/08-language-modeling/README.md).
 12. Continue with [09 Systems](lessons/09-systems/README.md).
 13. Continue with [10 Kernels](lessons/10-kernels/README.md).
+14. Continue with [11 Inference](lessons/11-inference/README.md).
 
 The repo uses sequential folder numbers even though the curriculum starts at Module 0:
 
@@ -48,6 +49,7 @@ The repo uses sequential folder numbers even though the curriculum starts at Mod
 - Course Module 7 -> Repo folder `lessons/08-language-modeling`
 - Course Module 8 -> Repo folder `lessons/09-systems`
 - Course Module 9 -> Repo folder `lessons/10-kernels`
+- Course Module 10 -> Repo folder `lessons/11-inference`
 
 The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) comes before Module 0 and explains the shared newtype/category-theory lens.
 
@@ -69,6 +71,7 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [08 Language Modeling](lessons/08-language-modeling/README.md)
 - [09 Systems](lessons/09-systems/README.md)
 - [10 Kernels](lessons/10-kernels/README.md)
+- [11 Inference](lessons/11-inference/README.md)
 
 ### Neuron track now included
 
@@ -127,6 +130,14 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [The Public Kernel Report Boundary](lessons/10-kernels/03-public-kernel-report-boundary.md)
 - [Kernel exercises](lessons/10-kernels/exercises.md)
 - [Kernel solutions](lessons/10-kernels/solutions.md)
+
+### Inference bridge
+
+- [11 Inference](lessons/11-inference/README.md)
+- [Autoregressive Decoding As A Typed State Trace](lessons/11-inference/01-autoregressive-decoding-state-trace.md)
+- [The Public Decode Boundary And Typed Latency](lessons/11-inference/02-public-decode-boundary-and-latency.md)
+- [Inference exercises](lessons/11-inference/exercises.md)
+- [Inference solutions](lessons/11-inference/solutions.md)
 
 ### Executable companion code
 
@@ -199,6 +210,7 @@ The current repo intentionally has two learning depths:
 - a language-modeling bridge in Module 7
 - a systems bridge in Module 8
 - a kernels bridge in Module 9
+- an inference bridge in Module 10
 
 Module 6 applies the translation rule in two complementary ways:
 
@@ -241,6 +253,7 @@ Current recommended sequence:
 11. [08 Language Modeling](lessons/08-language-modeling/README.md)
 12. [09 Systems](lessons/09-systems/README.md)
 13. [10 Kernels](lessons/10-kernels/README.md)
+14. [11 Inference](lessons/11-inference/README.md)
 
 ## Running The Code
 

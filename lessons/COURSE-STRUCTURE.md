@@ -107,17 +107,19 @@ This is the recommended order for most learners right now:
 8. `08-language-modeling` -> course Module 7
 9. `09-systems` -> course Module 8
 10. `10-kernels` -> course Module 9
+11. `11-inference` -> course Module 10
 
 ### CS336 Bridge Path
 
-The language-modeling, systems, and kernels modules are the first repo-native
-bridge from the core path into the CS336 Rust equivalent assignments:
+The language-modeling, systems, kernels, and inference modules are the first
+repo-native bridge from the core path into the CS336 Rust equivalent assignments:
 
 1. `07-transformer` -> course Module 6
 2. `08-language-modeling` -> course Module 7
 3. `09-systems` -> course Module 8
 4. `10-kernels` -> course Module 9
-5. `assignments/cs336-rust` -> R1 through R5 project ladder
+5. `11-inference` -> course Module 10
+6. `assignments/cs336-rust` -> R1 through R5 project ladder
 
 ## Naming Rules
 
@@ -135,6 +137,7 @@ Examples:
 - `08-language-modeling` -> course Module 7
 - `09-systems` -> course Module 8
 - `10-kernels` -> course Module 9
+- `11-inference` -> course Module 10
 
 ### Lesson files
 
