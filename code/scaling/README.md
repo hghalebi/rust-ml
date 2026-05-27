@@ -8,6 +8,7 @@ It teaches scaling as typed evidence:
 
 ```text
 ExperimentConfig -> TrainingRun -> MetricRecord -> ScalingFit
+ScalingFit + TrainingRun -> ScalingCandidate -> ScalingTradeoff
 ```
 
 ## Owns
@@ -23,6 +24,7 @@ ExperimentConfig -> TrainingRun -> MetricRecord -> ScalingFit
 - metric records that keep loss attached to the run that produced it
 - log-log power-law fitting over compute and validation loss
 - forecast errors and learner-facing limitation reports
+- typed tradeoff decisions between candidate runs
 
 ## Layout
 
@@ -35,6 +37,7 @@ examples/
   02_fit_power_law.rs
   03_forecast_loss.rs
   04_report_limitations.rs
+  05_tradeoff_decision.rs
 ```
 
 ## Learning Ladder
@@ -43,6 +46,7 @@ examples/
 2. `02_fit_power_law` fits a tiny synthetic power law in log-log space.
 3. `03_forecast_loss` uses the fitted curve to forecast a larger run.
 4. `04_report_limitations` packages the result with an explicit limitation.
+5. `05_tradeoff_decision` compares a baseline and candidate run with typed loss and compute tradeoffs.
 
 ## Category Lens
 
@@ -54,6 +58,7 @@ TrainingRun + ValidationLoss -> MetricRecord
 MetricRecords -> ScalingFit
 ScalingFit + ComputeBudgetFlops -> ForecastLoss
 ForecastLoss + ValidationLoss -> LossDelta
+ScalingCandidate + ScalingCandidate -> ScalingTradeoff
 ```
 
 The composition rule is accountability. A fitted curve is meaningful only when
@@ -71,6 +76,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 01_record
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 02_fit_power_law
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 03_forecast_loss
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 04_report_limitations
+cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 05_tradeoff_decision
 ```
 
 ## Scope

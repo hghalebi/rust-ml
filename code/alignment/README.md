@@ -8,6 +8,7 @@ It teaches post-training as typed, auditable signal flow:
 
 ```text
 PromptedResponse -> PreferenceSignal -> UpdateSignal -> AuditRecord
+AuditRecord -> AlignmentWorkflow -> AlignmentTransition
 ```
 
 ## Owns
@@ -25,6 +26,7 @@ PromptedResponse -> PreferenceSignal -> UpdateSignal -> AuditRecord
 - reward margins with checked finite score arithmetic
 - verifier feedback that keeps failures visible
 - update signals and audit records that preserve source and meaning
+- workflow stages and transitions that reject out-of-order updates
 
 ## Layout
 
@@ -37,6 +39,7 @@ examples/
   02_preference_signal.rs
   03_verifier_feedback.rs
   04_audit_record.rs
+  05_alignment_workflow.rs
 ```
 
 ## Learning Ladder
@@ -45,6 +48,7 @@ examples/
 2. `02_preference_signal` compares chosen and rejected responses with reward scores.
 3. `03_verifier_feedback` keeps a failed reasoning verifier result visible.
 4. `04_audit_record` wraps a post-training signal in an auditable record.
+5. `05_alignment_workflow` moves an audit record through collect, audit, ready, and applied stages.
 
 ## Category Lens
 
@@ -55,6 +59,7 @@ Instruction + Response -> PromptedResponse
 ChosenResponse + RejectedResponse -> PreferencePair
 PreferencePair + PreferenceRewards -> PreferenceSignal
 PreferenceSignal | VerifierFeedback -> UpdateSignal -> AuditRecord
+AuditRecord -> AlignmentWorkflow -> AlignmentTransition
 ```
 
 The composition rule is provenance. A learning signal is not complete until it
@@ -67,6 +72,15 @@ RewardScore - RewardScore -> Result<RewardMargin, AlignmentError>
 PreferencePair + PreferenceRewards -> Result<PreferenceSignal, AlignmentError>
 ```
 
+Workflow movement is also typed:
+
+```rust
+AlignmentWorkflow -> Result<AlignmentWorkflow, AlignmentError>
+```
+
+The workflow rejects illegal orderings, such as applying an update before audit
+approval.
+
 ## Run
 
 ```bash
@@ -78,10 +92,13 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 01_inst
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 02_preference_signal
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 03_verifier_feedback
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 04_audit_record
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 05_alignment_workflow
 ```
 
 ## Scope
 
 This crate is not a production alignment system.
 
-The goal is to make signal provenance visible: every instruction, preference, reward, verifier result, and update signal keeps its role and source.
+The goal is to make signal provenance visible: every instruction, preference,
+reward, verifier result, update signal, and workflow transition keeps its role
+and source.

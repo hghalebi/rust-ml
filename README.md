@@ -279,17 +279,19 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 01_memory
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 02_attention_flops
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 03_median_timing
 cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 04_arithmetic_intensity
+cargo run --manifest-path code/Cargo.toml -p rust_ml_systems --example 05_memory_hierarchy
 ```
 
 The systems crate covers:
 
-- `BatchSize`, `SequenceLength`, `ModelWidth`, `Bytes`, `Flops`, `ElapsedNanos`, and `ArithmeticIntensity`
+- `BatchSize`, `SequenceLength`, `ModelWidth`, `Bytes`, `BytesPerSecond`, `MemoryLevel`, `Flops`, `ElapsedNanos`, and `ArithmeticIntensity`
 - explicit `TryFrom` adapters for raw learner literals
 - activation memory estimates
 - matrix-vector FLOP and byte estimates
 - dense self-attention score/value FLOP estimates
 - median timing over repeated stage measurements
 - arithmetic intensity as the bridge between math and memory traffic
+- accelerator memory hierarchy as typed byte movement and bandwidth
 
 Run the first CS336 Rust kernels artifact:
 
@@ -317,16 +319,18 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 01_record
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 02_fit_power_law
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 03_forecast_loss
 cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 04_report_limitations
+cargo run --manifest-path code/Cargo.toml -p rust_ml_scaling --example 05_tradeoff_decision
 ```
 
 The scaling crate covers:
 
-- `RunId`, `ParameterCount`, `TokenCount`, `TrainingStep`, `ComputeBudgetFlops`, `ValidationLoss`, and `ScalingExponent`
+- `RunId`, `ParameterCount`, `TokenCount`, `TrainingStep`, `ComputeBudgetFlops`, `ValidationLoss`, `ScalingExponent`, and `ScalingTradeoff`
 - explicit `TryFrom` adapters for raw learner literals
 - typed experiment configs and run records
 - checked parameter-token compute estimates
 - log-log power-law fitting over validation loss
 - forecast errors and limitation notes for tiny evidence
+- typed baseline-versus-candidate tradeoff decisions
 
 Run the first CS336 Rust data artifact:
 
@@ -404,17 +408,19 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 01_inst
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 02_preference_signal
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 03_verifier_feedback
 cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 04_audit_record
+cargo run --manifest-path code/Cargo.toml -p rust_ml_alignment --example 05_alignment_workflow
 ```
 
 The alignment crate covers:
 
-- `Instruction`, `Response`, `ChosenResponse`, `RejectedResponse`, `RewardScore`, `VerifierResult`, `AlignmentRunId`, and `AuditRecord`
+- `Instruction`, `Response`, `ChosenResponse`, `RejectedResponse`, `RewardScore`, `VerifierResult`, `AlignmentRunId`, `AuditRecord`, `AlignmentWorkflow`, and `AlignmentStage`
 - explicit `TryFrom` adapters for raw learner literals
 - supervised instruction-response examples
 - preference pairs with distinct chosen and rejected responses
 - finite reward-score margins
 - verifier feedback that keeps failures visible
 - audit records that preserve source and update kind
+- workflow transitions that reject out-of-order alignment updates
 
 Run the advanced Transformer encoder demo:
 

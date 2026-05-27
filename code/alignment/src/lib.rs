@@ -4,12 +4,13 @@
 //!
 //! ```text
 //! PromptedResponse -> PreferenceSignal -> UpdateSignal -> AuditRecord
+//! AuditRecord -> AlignmentWorkflow -> AlignmentTransition
 //! ```
 //!
 //! Raw learner strings and scores enter through `TryFrom` adapters. Once inside
 //! the crate, public APIs use semantic values such as [`Instruction`],
 //! [`ChosenResponse`], [`RejectedResponse`], [`RewardScore`],
-//! [`VerifierFeedback`], and [`AlignmentRunId`].
+//! [`VerifierFeedback`], [`AlignmentRunId`], and [`AlignmentWorkflow`].
 
 pub mod error;
 
@@ -568,13 +569,204 @@ impl fmt::Display for AuditRecord {
     }
 }
 
+/// Lifecycle stage for a toy alignment workflow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlignmentStage {
+    /// The workflow is still collecting typed signals.
+    CollectingSignals,
+    /// A signal has been recorded and is awaiting audit approval.
+    AuditingSignal,
+    /// The audited signal is ready to drive an update.
+    ReadyForUpdate,
+    /// The update has been applied.
+    UpdateApplied,
+}
+
+impl fmt::Display for AlignmentStage {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CollectingSignals => formatter.write_str("collecting_signals"),
+            Self::AuditingSignal => formatter.write_str("auditing_signal"),
+            Self::ReadyForUpdate => formatter.write_str("ready_for_update"),
+            Self::UpdateApplied => formatter.write_str("update_applied"),
+        }
+    }
+}
+
+/// Semantic event that moves the alignment workflow forward.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlignmentEvent {
+    /// A typed update signal was recorded.
+    SignalRecorded(UpdateKind),
+    /// The recorded signal passed the audit gate.
+    AuditApproved,
+    /// The approved update was applied.
+    UpdateApplied,
+}
+
+impl fmt::Display for AlignmentEvent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SignalRecorded(kind) => write!(formatter, "signal_recorded:{kind}"),
+            Self::AuditApproved => formatter.write_str("audit_approved"),
+            Self::UpdateApplied => formatter.write_str("update_applied"),
+        }
+    }
+}
+
+/// One audited lifecycle movement in an alignment workflow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AlignmentTransition {
+    from: AlignmentStage,
+    event: AlignmentEvent,
+    to: AlignmentStage,
+}
+
+impl AlignmentTransition {
+    fn new(from: AlignmentStage, event: AlignmentEvent, to: AlignmentStage) -> Self {
+        Self { from, event, to }
+    }
+
+    /// Returns the stage before the event.
+    pub fn from(&self) -> AlignmentStage {
+        self.from
+    }
+
+    /// Returns the event that moved the workflow.
+    pub fn event(&self) -> AlignmentEvent {
+        self.event
+    }
+
+    /// Returns the stage after the event.
+    pub fn to(&self) -> AlignmentStage {
+        self.to
+    }
+}
+
+impl fmt::Display for AlignmentTransition {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{} --{}--> {}", self.from, self.event, self.to)
+    }
+}
+
+/// A tiny auditable alignment workflow.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AlignmentWorkflow {
+    run_id: AlignmentRunId,
+    stage: AlignmentStage,
+    latest_record: Option<AuditRecord>,
+    latest_transition: Option<AlignmentTransition>,
+}
+
+impl AlignmentWorkflow {
+    /// Starts a workflow for one alignment run.
+    pub fn new(run_id: AlignmentRunId) -> Self {
+        Self {
+            run_id,
+            stage: AlignmentStage::CollectingSignals,
+            latest_record: None,
+            latest_transition: None,
+        }
+    }
+
+    /// Returns the run identity.
+    pub fn run_id(&self) -> &AlignmentRunId {
+        &self.run_id
+    }
+
+    /// Returns the current lifecycle stage.
+    pub fn stage(&self) -> AlignmentStage {
+        self.stage
+    }
+
+    /// Returns the latest recorded audit record.
+    pub fn latest_record(&self) -> Option<&AuditRecord> {
+        self.latest_record.as_ref()
+    }
+
+    /// Returns the latest lifecycle transition.
+    pub fn latest_transition(&self) -> Option<&AlignmentTransition> {
+        self.latest_transition.as_ref()
+    }
+
+    /// Records one audited signal and moves into the audit stage.
+    pub fn record_signal(mut self, record: AuditRecord) -> Result<Self, AlignmentError> {
+        self.require_stage(
+            AlignmentStage::CollectingSignals,
+            "AlignmentWorkflow::record_signal",
+            "signals can only be recorded while collecting signals",
+        )?;
+        if record.run_id() != &self.run_id {
+            return Err(AlignmentError::invalid_transition(
+                "AlignmentWorkflow::record_signal",
+                "audit record run id must match workflow run id",
+            ));
+        }
+
+        let event = AlignmentEvent::SignalRecorded(record.signal().kind());
+        self.latest_record = Some(record);
+        Ok(self.transition(event, AlignmentStage::AuditingSignal))
+    }
+
+    /// Approves the recorded signal and marks the workflow ready for update.
+    pub fn approve_audit(self) -> Result<Self, AlignmentError> {
+        self.require_stage(
+            AlignmentStage::AuditingSignal,
+            "AlignmentWorkflow::approve_audit",
+            "audit can only be approved after a signal is recorded",
+        )?;
+
+        Ok(self.transition(
+            AlignmentEvent::AuditApproved,
+            AlignmentStage::ReadyForUpdate,
+        ))
+    }
+
+    /// Applies the approved update.
+    pub fn apply_update(self) -> Result<Self, AlignmentError> {
+        self.require_stage(
+            AlignmentStage::ReadyForUpdate,
+            "AlignmentWorkflow::apply_update",
+            "update can only be applied after audit approval",
+        )?;
+
+        Ok(self.transition(AlignmentEvent::UpdateApplied, AlignmentStage::UpdateApplied))
+    }
+
+    fn require_stage(
+        &self,
+        expected: AlignmentStage,
+        operation: &'static str,
+        details: &'static str,
+    ) -> Result<(), AlignmentError> {
+        if self.stage != expected {
+            return Err(AlignmentError::invalid_transition(operation, details));
+        }
+
+        Ok(())
+    }
+
+    fn transition(mut self, event: AlignmentEvent, to: AlignmentStage) -> Self {
+        let from = self.stage;
+        self.stage = to;
+        self.latest_transition = Some(AlignmentTransition::new(from, event, to));
+        self
+    }
+}
+
+impl fmt::Display for AlignmentWorkflow {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{} | {}", self.run_id, self.stage)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        AlignmentError, AlignmentRunId, AuditNote, AuditRecord, ChosenResponse, Instruction,
-        InstructionExample, PreferencePair, PreferenceRewards, PreferenceSignal, ReasoningTrace,
-        RejectedResponse, Response, RewardScore, SignalSource, UpdateKind, UpdateSignal,
-        VerifierFeedback, VerifierResult,
+        AlignmentError, AlignmentRunId, AlignmentStage, AlignmentWorkflow, AuditNote, AuditRecord,
+        ChosenResponse, Instruction, InstructionExample, PreferencePair, PreferenceRewards,
+        PreferenceSignal, ReasoningTrace, RejectedResponse, Response, RewardScore, SignalSource,
+        UpdateKind, UpdateSignal, VerifierFeedback, VerifierResult,
     };
 
     fn instruction() -> Result<Instruction, AlignmentError> {
@@ -670,5 +862,66 @@ mod tests {
     fn reward_score_rejects_out_of_range_values() {
         let error = RewardScore::try_from(2.0).err();
         assert!(matches!(error, Some(AlignmentError::OutOfRange { .. })));
+    }
+
+    #[test]
+    fn workflow_records_audits_and_applies_update() -> Result<(), AlignmentError> {
+        let run_id = AlignmentRunId::try_from("align-run-1")?;
+        let example =
+            InstructionExample::new(instruction()?, Response::try_from("2 + 2 = 4")?, source()?);
+        let record = AuditRecord::new(
+            run_id.clone(),
+            UpdateSignal::Supervised(example),
+            AuditNote::try_from("approved public toy signal")?,
+        );
+
+        let workflow = AlignmentWorkflow::new(run_id)
+            .record_signal(record)?
+            .approve_audit()?
+            .apply_update()?;
+
+        assert_eq!(workflow.stage(), AlignmentStage::UpdateApplied);
+        assert_eq!(
+            workflow.latest_transition().map(ToString::to_string),
+            Some("ready_for_update --update_applied--> update_applied".to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn workflow_rejects_update_before_audit() -> Result<(), AlignmentError> {
+        let workflow = AlignmentWorkflow::new(AlignmentRunId::try_from("align-run-1")?);
+        let error = workflow.apply_update().err();
+
+        assert!(matches!(
+            error,
+            Some(AlignmentError::InvalidTransition { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn workflow_rejects_record_from_different_run() -> Result<(), AlignmentError> {
+        let record = AuditRecord::new(
+            AlignmentRunId::try_from("other-run")?,
+            UpdateSignal::Verifier(VerifierFeedback::new(
+                instruction()?,
+                Response::try_from("2 + 2 = 5")?,
+                ReasoningTrace::try_from("the answer adds one extra unit")?,
+                VerifierResult::Failed,
+                source()?,
+            )),
+            AuditNote::try_from("kept failed verifier result visible")?,
+        );
+
+        let error = AlignmentWorkflow::new(AlignmentRunId::try_from("align-run-1")?)
+            .record_signal(record)
+            .err();
+
+        assert!(matches!(
+            error,
+            Some(AlignmentError::InvalidTransition { .. })
+        ));
+        Ok(())
     }
 }

@@ -46,19 +46,19 @@ After this track, the learner should be able to:
 | 2 | Resource accounting | count FLOPs, bytes moved, and arithmetic intensity for tiny layers |
 | 3 | Architectures, hyperparameters | model `TransformerConfig` with validated dimensions, head-width checks, and parameter budgets in [`code/transformer`](code/transformer/README.md) |
 | 4 | Attention alternatives, mixture of experts | compare attention maps and route tokens through typed experts in [`code/transformer`](code/transformer/README.md) |
-| 5 | GPUs, TPUs | explain accelerator memory hierarchy with CPU-first Rust measurements |
+| 5 | GPUs, TPUs | model accelerator memory hierarchy as typed byte, bandwidth, memory-tier, and transfer-time maps in [`code/systems`](code/systems/README.md) |
 | 6 | Kernels and compilation | write tiled CPU kernels and typed resource traces in [`code/kernels`](code/kernels/README.md) before discussing GPU lowering |
 | 7 | Parallelism I | split batches and parameters while preserving ownership and shape contracts in [`code/parallelism`](code/parallelism/README.md) |
 | 8 | Parallelism II | reason about communication, synchronization, and failure boundaries in [`code/parallelism`](code/parallelism/README.md) |
 | 9 | Scaling laws I | log small experiments and fit a simple power-law curve |
 | 10 | Inference | implement decoding, typed sampling controls, KV-cache traces, and latency budgets in [`code/inference`](code/inference/README.md) |
-| 11 | Scaling laws II | use fitted curves to compare data, model, and compute tradeoffs |
+| 11 | Scaling laws II | use fitted curves to compare data, model, and compute tradeoffs in [`code/scaling`](code/scaling/README.md) |
 | 12 | Evaluation | build metric newtypes and deterministic evaluation records in [`code/evaluation`](code/evaluation/README.md) |
 | 13 | Data sources | stream documents through `DocumentId`, `Source`, and `CorpusShard` types |
 | 14 | Data filtering | implement filters, dedup keys, mixture weights, and provenance checks |
 | 15 | SFT and RLHF | represent instruction examples and preference pairs with explicit roles |
 | 16 | RLVR | model verifier feedback and rollout traces as typed learning signals |
-| 17 | Alignment systems | design auditable alignment pipelines with state transitions |
+| 17 | Alignment systems | design auditable alignment pipelines with checked state transitions in [`code/alignment`](code/alignment/README.md) |
 | 18 | Guest systems synthesis | write a design review of the full Rust language-modeling stack |
 | 19 | Final synthesis | present a tested Rust artifact and explain the invariants it protects |
 

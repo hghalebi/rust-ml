@@ -32,19 +32,19 @@ The current public offering is Spring 2026.
 | 2 | PyTorch and resource accounting | Rust tensor loops, FLOPs, memory traffic, and arithmetic intensity |
 | 3 | Architectures and hyperparameters | typed Transformer configuration and parameter budgets in [`code/transformer`](../../code/transformer/README.md) |
 | 4 | Attention alternatives and mixture of experts | attention variants and typed expert routing in [`code/transformer`](../../code/transformer/README.md) |
-| 5 | GPUs and TPUs | accelerator mental models, memory hierarchy, and kernel boundaries |
+| 5 | GPUs and TPUs | accelerator memory hierarchy as typed byte, bandwidth, memory-tier, and transfer-time maps in [`code/systems`](../../code/systems/README.md) |
 | 6 | Kernels, Triton | Rust kernel interfaces, tiling intuition, and typed lowering boundaries in [`code/kernels`](../../code/kernels/README.md) |
 | 7 | Parallelism | data, tensor, and pipeline parallelism as ownership and partitioning problems in [`code/parallelism`](../../code/parallelism/README.md) |
 | 8 | Parallelism | communication cost, synchronization, and distributed shape flow in [`code/parallelism`](../../code/parallelism/README.md) |
 | 9 | Scaling laws | typed experiment logs and power-law fitting from small runs |
 | 10 | Inference | decoding, KV cache roles, batching, and latency budgets in [`code/inference`](../../code/inference/README.md) |
-| 11 | Scaling laws | using fitted laws to reason about model, data, and compute choices |
+| 11 | Scaling laws | using fitted laws to reason about model, data, and compute choices in [`code/scaling`](../../code/scaling/README.md) |
 | 12 | Evaluation | deterministic eval harnesses and metric newtypes in [`code/evaluation`](../../code/evaluation/README.md) |
 | 13 | Data sources and datasets | streaming corpora, document IDs, and dataset manifests |
 | 14 | Data filtering, deduplication, mixing, synthetic data | typed filters, dedup keys, sampling mixtures, and provenance |
 | 15 | Mid/post-training and SFT/RLHF | instruction examples, preference data, and policy updates |
 | 16 | Post-training and RLVR | reward signals, verifiers, rollouts, and reasoning traces |
-| 17 | Alignment - multimodality and RL systems | alignment pipelines as auditable state machines |
+| 17 | Alignment - multimodality and RL systems | alignment pipelines as auditable state machines in [`code/alignment`](../../code/alignment/README.md) |
 | 18 | Guest lecture | external systems perspective and synthesis notes |
 | 19 | Guest lecture | final synthesis and project presentation standard |
 

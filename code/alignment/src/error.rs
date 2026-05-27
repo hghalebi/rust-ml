@@ -124,6 +124,15 @@ pub enum AlignmentError {
         /// Human-readable details.
         details: ErrorDetails,
     },
+
+    /// A workflow transition violated the alignment lifecycle.
+    #[error("invalid transition in {operation}: {details}")]
+    InvalidTransition {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable details.
+        details: ErrorDetails,
+    },
 }
 
 impl AlignmentError {
@@ -151,6 +160,13 @@ impl AlignmentError {
 
     pub(crate) fn invalid_pair(operation: &'static str, details: &'static str) -> Self {
         Self::InvalidPair {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_transition(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidTransition {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

@@ -4,11 +4,13 @@
 //!
 //! ```text
 //! ExperimentConfig -> TrainingRun -> MetricRecord -> ScalingFit
+//! ScalingFit + TrainingRun -> ScalingCandidate -> ScalingTradeoff
 //! ```
 //!
 //! Raw learner literals enter through `TryFrom` adapters. The public teaching
 //! path then uses semantic values such as [`ParameterCount`], [`TokenCount`],
-//! [`ComputeBudgetFlops`], [`ValidationLoss`], and [`ScalingExponent`].
+//! [`ComputeBudgetFlops`], [`ValidationLoss`], [`ScalingExponent`], and
+//! [`ScalingTradeoff`].
 
 pub mod error;
 
@@ -273,6 +275,10 @@ impl ComputeBudgetFlops {
     fn as_f64(self) -> f64 {
         self.0 as f64
     }
+
+    fn as_u128(self) -> u128 {
+        self.0
+    }
 }
 
 impl TryFrom<u128> for ComputeBudgetFlops {
@@ -313,6 +319,22 @@ impl Mul<ComputeMultiplier> for ParameterTokenProduct {
                 "compute budget exceeded u128",
             ))?;
         ComputeBudgetFlops::from_raw("ParameterTokenProduct::mul", flops)
+    }
+}
+
+/// Absolute difference between two compute budgets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ComputeDelta(u128);
+
+impl ComputeDelta {
+    fn between(left: ComputeBudgetFlops, right: ComputeBudgetFlops) -> Self {
+        Self(left.as_u128().abs_diff(right.as_u128()))
+    }
+}
+
+impl fmt::Display for ComputeDelta {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{} FLOPs", self.0)
     }
 }
 
@@ -683,12 +705,218 @@ impl ScalingFit {
         observed_loss - self.predict_loss(compute_budget)?
     }
 
+    /// Scores a planned run with this fit.
+    pub fn score_candidate(&self, run: TrainingRun) -> Result<ScalingCandidate, ScalingError> {
+        ScalingCandidate::from_fit(*self, run)
+    }
+
     /// Packages the fit with a human limitation note.
     pub fn report_with(&self, limitation: LimitationNote) -> ScalingReport {
         ScalingReport {
             fit: *self,
             limitation,
         }
+    }
+}
+
+/// A planned run with a predicted validation loss.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScalingCandidate {
+    run: TrainingRun,
+    predicted_loss: ValidationLoss,
+}
+
+impl ScalingCandidate {
+    fn from_fit(fit: ScalingFit, run: TrainingRun) -> Result<Self, ScalingError> {
+        let predicted_loss = fit.predict_loss(run.compute_budget())?;
+        Ok(Self {
+            run,
+            predicted_loss,
+        })
+    }
+
+    /// Returns the planned run.
+    pub fn run(&self) -> &TrainingRun {
+        &self.run
+    }
+
+    /// Returns the predicted validation loss.
+    pub fn predicted_loss(&self) -> ValidationLoss {
+        self.predicted_loss
+    }
+
+    /// Compares this candidate with a baseline candidate.
+    pub fn compare_with_baseline(
+        &self,
+        baseline: &ScalingCandidate,
+    ) -> Result<ScalingTradeoff, ScalingError> {
+        ScalingTradeoff::between(baseline.clone(), self.clone())
+    }
+}
+
+/// Direction of predicted-loss change for a candidate.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PredictedLossTradeoff {
+    /// Candidate predicts lower loss than the baseline.
+    CandidateLower(LossDelta),
+    /// Candidate predicts higher loss than the baseline.
+    CandidateHigher(LossDelta),
+    /// Candidate and baseline predict the same loss.
+    SameLoss,
+}
+
+impl fmt::Display for PredictedLossTradeoff {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CandidateLower(delta) => write!(formatter, "candidate lower loss ({delta})"),
+            Self::CandidateHigher(delta) => write!(formatter, "candidate higher loss ({delta})"),
+            Self::SameLoss => formatter.write_str("same predicted loss"),
+        }
+    }
+}
+
+/// Direction of compute-budget change for a candidate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComputeTradeoff {
+    /// Candidate uses less compute than the baseline.
+    CandidateUsesLess(ComputeDelta),
+    /// Candidate uses more compute than the baseline.
+    CandidateUsesMore(ComputeDelta),
+    /// Candidate and baseline use the same compute budget.
+    SameCompute,
+}
+
+impl fmt::Display for ComputeTradeoff {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CandidateUsesLess(delta) => {
+                write!(formatter, "candidate uses less compute ({delta})")
+            }
+            Self::CandidateUsesMore(delta) => {
+                write!(formatter, "candidate uses more compute ({delta})")
+            }
+            Self::SameCompute => formatter.write_str("same compute budget"),
+        }
+    }
+}
+
+/// Loss-first recommendation for a toy scaling decision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScalingRecommendation {
+    /// Prefer the candidate under a loss-first rule.
+    PreferCandidate,
+    /// Prefer the baseline under a loss-first rule.
+    PreferBaseline,
+    /// The fitted evidence cannot separate the two candidates.
+    Inconclusive,
+}
+
+impl fmt::Display for ScalingRecommendation {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PreferCandidate => formatter.write_str("prefer candidate"),
+            Self::PreferBaseline => formatter.write_str("prefer baseline"),
+            Self::Inconclusive => formatter.write_str("inconclusive"),
+        }
+    }
+}
+
+/// Typed comparison between two scaling choices.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScalingTradeoff {
+    baseline: ScalingCandidate,
+    candidate: ScalingCandidate,
+    loss_tradeoff: PredictedLossTradeoff,
+    compute_tradeoff: ComputeTradeoff,
+    recommendation: ScalingRecommendation,
+}
+
+impl ScalingTradeoff {
+    fn between(
+        baseline: ScalingCandidate,
+        candidate: ScalingCandidate,
+    ) -> Result<Self, ScalingError> {
+        let loss_delta = (candidate.predicted_loss() - baseline.predicted_loss())?;
+        let loss_tradeoff =
+            if candidate.predicted_loss().as_f64() < baseline.predicted_loss().as_f64() {
+                PredictedLossTradeoff::CandidateLower(loss_delta)
+            } else if candidate.predicted_loss().as_f64() > baseline.predicted_loss().as_f64() {
+                PredictedLossTradeoff::CandidateHigher(loss_delta)
+            } else {
+                PredictedLossTradeoff::SameLoss
+            };
+        let compute_delta = ComputeDelta::between(
+            candidate.run().compute_budget(),
+            baseline.run().compute_budget(),
+        );
+        let compute_tradeoff = if candidate.run().compute_budget() < baseline.run().compute_budget()
+        {
+            ComputeTradeoff::CandidateUsesLess(compute_delta)
+        } else if candidate.run().compute_budget() > baseline.run().compute_budget() {
+            ComputeTradeoff::CandidateUsesMore(compute_delta)
+        } else {
+            ComputeTradeoff::SameCompute
+        };
+        let recommendation = match (loss_tradeoff, compute_tradeoff) {
+            (PredictedLossTradeoff::CandidateLower(_), _) => ScalingRecommendation::PreferCandidate,
+            (PredictedLossTradeoff::CandidateHigher(_), _) => ScalingRecommendation::PreferBaseline,
+            (PredictedLossTradeoff::SameLoss, ComputeTradeoff::CandidateUsesLess(_)) => {
+                ScalingRecommendation::PreferCandidate
+            }
+            (PredictedLossTradeoff::SameLoss, ComputeTradeoff::CandidateUsesMore(_)) => {
+                ScalingRecommendation::PreferBaseline
+            }
+            (PredictedLossTradeoff::SameLoss, ComputeTradeoff::SameCompute) => {
+                ScalingRecommendation::Inconclusive
+            }
+        };
+
+        Ok(Self {
+            baseline,
+            candidate,
+            loss_tradeoff,
+            compute_tradeoff,
+            recommendation,
+        })
+    }
+
+    /// Returns the baseline candidate.
+    pub fn baseline(&self) -> &ScalingCandidate {
+        &self.baseline
+    }
+
+    /// Returns the compared candidate.
+    pub fn candidate(&self) -> &ScalingCandidate {
+        &self.candidate
+    }
+
+    /// Returns the predicted-loss direction.
+    pub fn loss_tradeoff(&self) -> PredictedLossTradeoff {
+        self.loss_tradeoff
+    }
+
+    /// Returns the compute-budget direction.
+    pub fn compute_tradeoff(&self) -> ComputeTradeoff {
+        self.compute_tradeoff
+    }
+
+    /// Returns the loss-first recommendation.
+    pub fn recommendation(&self) -> ScalingRecommendation {
+        self.recommendation
+    }
+}
+
+impl fmt::Display for ScalingTradeoff {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "{} vs {} | {} | {} | {}",
+            self.candidate.run().run_id(),
+            self.baseline.run().run_id(),
+            self.loss_tradeoff,
+            self.compute_tradeoff,
+            self.recommendation
+        )
     }
 }
 
@@ -769,7 +997,8 @@ impl fmt::Display for ScalingReport {
 mod tests {
     use super::{
         ExperimentConfig, LayerCount, LimitationNote, MetricRecord, MetricRecords, ModelWidth,
-        RunId, ScalingError, TokenCount, TrainingStep, ValidationLoss,
+        PredictedLossTradeoff, RunId, ScalingError, ScalingRecommendation, TokenCount,
+        TrainingStep, ValidationLoss,
     };
 
     fn planned_record(
@@ -901,6 +1130,58 @@ mod tests {
         )?);
 
         assert!(report.to_string().contains("limitation:"));
+        Ok(())
+    }
+
+    #[test]
+    fn tradeoff_prefers_lower_predicted_loss() -> Result<(), ScalingError> {
+        let records = MetricRecords::from_records([
+            planned_record(
+                RunId::try_from("w1")?,
+                ModelWidth::try_from(1)?,
+                ValidationLoss::try_from(10.0 / 72.0_f64.sqrt())?,
+            )?,
+            planned_record(
+                RunId::try_from("w2")?,
+                ModelWidth::try_from(2)?,
+                ValidationLoss::try_from(10.0 / 288.0_f64.sqrt())?,
+            )?,
+            planned_record(
+                RunId::try_from("w4")?,
+                ModelWidth::try_from(4)?,
+                ValidationLoss::try_from(10.0 / 1152.0_f64.sqrt())?,
+            )?,
+        ])?;
+        let fit = records.fit_power_law()?;
+        let baseline = fit.score_candidate(
+            ExperimentConfig::new(
+                RunId::try_from("baseline")?,
+                ModelWidth::try_from(4)?,
+                LayerCount::try_from(1)?,
+                TokenCount::try_from(1_u64)?,
+            )
+            .plan_run(TrainingStep::try_from(1_u64)?)?,
+        )?;
+        let candidate = fit.score_candidate(
+            ExperimentConfig::new(
+                RunId::try_from("candidate")?,
+                ModelWidth::try_from(8)?,
+                LayerCount::try_from(1)?,
+                TokenCount::try_from(1_u64)?,
+            )
+            .plan_run(TrainingStep::try_from(1_u64)?)?,
+        )?;
+        let tradeoff = candidate.compare_with_baseline(&baseline)?;
+
+        assert_eq!(
+            tradeoff.recommendation(),
+            ScalingRecommendation::PreferCandidate
+        );
+        assert!(matches!(
+            tradeoff.loss_tradeoff(),
+            PredictedLossTradeoff::CandidateLower(_)
+        ));
+        assert!(tradeoff.to_string().contains("candidate"));
         Ok(())
     }
 }

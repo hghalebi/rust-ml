@@ -8,11 +8,13 @@
 //! shape -> operations -> FLOPs
 //! repeated timings -> median timing
 //! FLOPs / bytes -> arithmetic intensity
+//! bytes / bandwidth -> transfer time
 //! ```
 //!
 //! Raw learner literals enter through `TryFrom` adapters. Public teaching APIs
 //! then move through semantic values such as [`BatchSize`], [`SequenceLength`],
-//! [`ModelWidth`], [`Bytes`], [`Flops`], and [`ElapsedNanos`].
+//! [`ModelWidth`], [`Bytes`], [`BytesPerSecond`], [`Flops`], and
+//! [`ElapsedNanos`].
 
 pub mod error;
 
@@ -24,6 +26,8 @@ use std::{
 use error::SystemsError;
 
 pub use error::SystemsError as Error;
+
+const NANOS_PER_SECOND: u128 = 1_000_000_000;
 
 fn nonzero_usize(
     role: &'static str,
@@ -202,6 +206,64 @@ impl Add for Bytes {
     }
 }
 
+impl Div<BytesPerSecond> for Bytes {
+    type Output = Result<ElapsedNanos, SystemsError>;
+
+    fn div(self, bandwidth: BytesPerSecond) -> Self::Output {
+        let numerator = u128::from(self.as_u64())
+            .checked_mul(NANOS_PER_SECOND)
+            .ok_or(SystemsError::overflow(
+                "Bytes::div<BytesPerSecond>",
+                "byte-nanosecond product exceeded u128",
+            ))?;
+        let denominator = bandwidth.as_u128();
+        let quotient = numerator / denominator;
+        let remainder = numerator % denominator;
+        let elapsed = if remainder == 0 {
+            quotient
+        } else {
+            quotient.checked_add(1).ok_or(SystemsError::overflow(
+                "Bytes::div<BytesPerSecond>",
+                "rounded transfer-time exceeded u128",
+            ))?
+        };
+
+        ElapsedNanos::from_raw("Bytes::div<BytesPerSecond>", elapsed)
+    }
+}
+
+/// Sustained memory bandwidth in bytes per second.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BytesPerSecond(u128);
+
+impl BytesPerSecond {
+    fn from_raw(operation: &'static str, value: u128) -> Result<Self, SystemsError> {
+        Ok(Self(nonzero_u128(
+            "bandwidth must be greater than zero",
+            operation,
+            value,
+        )?))
+    }
+
+    fn as_u128(self) -> u128 {
+        self.0
+    }
+}
+
+impl TryFrom<u128> for BytesPerSecond {
+    type Error = SystemsError;
+
+    fn try_from(value: u128) -> Result<Self, Self::Error> {
+        Self::from_raw("BytesPerSecond::try_from", value)
+    }
+}
+
+impl fmt::Display for BytesPerSecond {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{} bytes/s", self.0)
+    }
+}
+
 /// Number of bytes used by one scalar element.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ElementSize(Bytes);
@@ -358,6 +420,70 @@ impl ArithmeticIntensity {
 impl fmt::Display for ArithmeticIntensity {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "{:.4} FLOPs/byte", self.0)
+    }
+}
+
+/// A named memory tier used for accelerator mental models.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MemoryLevel {
+    /// Registers closest to the arithmetic units.
+    RegisterFile,
+    /// Shared or local memory visible to a small group of execution lanes.
+    SharedMemory,
+    /// Device memory with high bandwidth but longer access paths than local memory.
+    HighBandwidthMemory,
+    /// Host memory reached across a slower device boundary.
+    HostMemory,
+}
+
+impl fmt::Display for MemoryLevel {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Self::RegisterFile => "register file",
+            Self::SharedMemory => "shared memory",
+            Self::HighBandwidthMemory => "high-bandwidth memory",
+            Self::HostMemory => "host memory",
+        };
+        formatter.write_str(name)
+    }
+}
+
+/// Estimated movement of bytes through one memory tier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MemoryTransfer {
+    level: MemoryLevel,
+    bytes_moved: Bytes,
+    bandwidth: BytesPerSecond,
+}
+
+impl MemoryTransfer {
+    /// Creates a typed memory-transfer estimate.
+    pub fn new(level: MemoryLevel, bytes_moved: Bytes, bandwidth: BytesPerSecond) -> Self {
+        Self {
+            level,
+            bytes_moved,
+            bandwidth,
+        }
+    }
+
+    /// Returns the memory tier.
+    pub fn level(&self) -> MemoryLevel {
+        self.level
+    }
+
+    /// Returns the transferred bytes.
+    pub fn bytes_moved(&self) -> Bytes {
+        self.bytes_moved
+    }
+
+    /// Returns the assumed sustained bandwidth.
+    pub fn bandwidth(&self) -> BytesPerSecond {
+        self.bandwidth
+    }
+
+    /// Estimates transfer time from bytes and sustained bandwidth.
+    pub fn estimated_elapsed(&self) -> Result<ElapsedNanos, SystemsError> {
+        self.bytes_moved / self.bandwidth
     }
 }
 
@@ -638,9 +764,9 @@ impl StageMeasurements {
 #[cfg(test)]
 mod tests {
     use super::{
-        ActivationShape, AttentionEstimate, BatchSize, Bytes, ColumnCount, ElapsedNanos,
-        ElementSize, Flops, MatrixVectorShape, ModelWidth, RowCount, SequenceLength,
-        StageMeasurement, StageMeasurements, StageName,
+        ActivationShape, AttentionEstimate, BatchSize, Bytes, BytesPerSecond, ColumnCount,
+        ElapsedNanos, ElementSize, Flops, MatrixVectorShape, MemoryLevel, MemoryTransfer,
+        ModelWidth, RowCount, SequenceLength, StageMeasurement, StageMeasurements, StageName,
     };
     use crate::error::SystemsError;
 
@@ -721,6 +847,37 @@ mod tests {
     }
 
     #[test]
+    fn memory_transfer_estimates_time_from_bandwidth() -> Result<(), SystemsError> {
+        let transfer = MemoryTransfer::new(
+            MemoryLevel::HighBandwidthMemory,
+            Bytes::try_from(1_024_u64)?,
+            BytesPerSecond::try_from(512_u128)?,
+        );
+
+        assert_eq!(transfer.level().to_string(), "high-bandwidth memory");
+        assert_eq!(transfer.bytes_moved().to_string(), "1024 bytes");
+        assert_eq!(transfer.bandwidth().to_string(), "512 bytes/s");
+        assert_eq!(transfer.estimated_elapsed()?.to_string(), "2000000000 ns");
+        Ok(())
+    }
+
+    #[test]
+    fn bandwidth_rounds_nonzero_transfer_up_to_one_nanosecond() -> Result<(), SystemsError> {
+        let elapsed = Bytes::try_from(1_u64)? / BytesPerSecond::try_from(2_000_000_000_u128)?;
+
+        assert_eq!(elapsed?.to_string(), "1 ns");
+        Ok(())
+    }
+
+    #[test]
+    fn bandwidth_rounding_does_not_overflow_for_large_denominators() -> Result<(), SystemsError> {
+        let elapsed = Bytes::try_from(1_u64)? / BytesPerSecond::try_from(u128::MAX)?;
+
+        assert_eq!(elapsed?.to_string(), "1 ns");
+        Ok(())
+    }
+
+    #[test]
     fn repeated_measurements_report_median_elapsed() -> Result<(), SystemsError> {
         let measurements = StageMeasurements::from_measurements([
             StageMeasurement::new(
@@ -750,6 +907,12 @@ mod tests {
     #[test]
     fn semantic_counts_reject_zero() {
         let error = BatchSize::try_from(0).err();
+        assert!(matches!(error, Some(SystemsError::EmptyInput { .. })));
+    }
+
+    #[test]
+    fn bandwidth_rejects_zero() {
+        let error = BytesPerSecond::try_from(0_u128).err();
         assert!(matches!(error, Some(SystemsError::EmptyInput { .. })));
     }
 }
