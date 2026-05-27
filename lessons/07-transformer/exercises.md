@@ -90,12 +90,27 @@ Questions:
 - what math changed?
 - why is that an efficiency discussion rather than a definition of the 2017 paper?
 
+## Exercise 8: Review an encoder trace for public release
+
+Run:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example public_encoder_trace
+```
+
+Questions:
+
+- what does the encoder trace prove about block count, token count, and model width?
+- why does the private trace fail at `PublicEncoderTrace::from_reviewed_trace`?
+- what would be unsafe about treating every valid `EncoderTrace` as learner-facing public material?
+
 ## Failure Signals
 
 - You can build a type but cannot explain the invariant its constructor checks.
 - You ignore shape errors instead of reading the operation, shapes, and hint.
 - You add positional encodings but cannot say which dimensions stay unchanged.
 - You describe linear attention as "the Transformer" instead of a comparison point in the same architectural slot.
+- You treat a valid trace as automatically public instead of checking its review boundary.
 
 ## Debugging Hints
 
@@ -103,3 +118,4 @@ Questions:
 - When a constructor fails, read the error as teaching material before changing the code.
 - Use typed addition for residual and positional maps so the code mirrors the algebra.
 - Keep the 2017 architecture separate from later efficiency variants when explaining attention.
+- When working with traces, ask two questions separately: "did the maps compose?" and "is this evidence allowed in public learner material?"

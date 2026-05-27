@@ -29,6 +29,7 @@ After this module, you should be able to:
 - explain where linear attention fits without confusing it with the 2017 paper
 - validate core architecture hyperparameters before they become model code
 - describe top-1 expert routing as a typed token-to-expert map
+- explain why `EncoderTrace` and `PublicEncoderTrace` are different objects
 
 ## Code Artifact
 
@@ -66,7 +67,9 @@ The current authored material covers:
 - a semantic-newtype Rust crate with expressive shape errors
 - a typed `TransformerConfig` that checks head width and estimates encoder parameters
 - a typed `TopExpertRouter` that routes token scores to expert choices
+- a public encoder-trace boundary that keeps restricted or private encoder evidence out of learner-facing material
 - a runnable encoder demo
+- a runnable public encoder-trace demo
 - a chunked study path for low-cognitive-load review
 
 ## Before You Move On
@@ -79,3 +82,4 @@ You are ready to leave this preview module when you can:
 - explain why positional encodings are required once recurrence is removed
 - explain why `d_model / head_count` must be validated before multi-head attention is built
 - explain why a router must receive one score for every available expert
+- explain why a valid encoder trace still needs review before it becomes public learner-facing evidence

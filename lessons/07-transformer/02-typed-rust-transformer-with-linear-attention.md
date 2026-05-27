@@ -409,16 +409,118 @@ That separation is deliberate:
 - `attention.rs` owns attention-specific logic
 - `transformer.rs` owns encoder-side assembly
 
+## 9. Public encoder traces separate evidence from publication
+
+### English
+
+An encoder output tells you what the model computed.
+
+An encoder trace tells you more: it records the input sequence and the output
+after each encoder block. That is useful teaching evidence because a learner can
+see that the stack preserves token count and `d_model` while changing the token
+representations.
+
+But valid evidence is not automatically public evidence. A trace might come from
+a private prompt, a restricted experiment, or an internal benchmark. The public
+resource needs one more checked map:
+
+```text
+EncoderTrace -> ReviewedEncoderTrace -> PublicEncoderTrace
+```
+
+That extra step is not bureaucracy. It is the same invariant the repo uses for
+language-modeling text, attention traces, evaluation examples, systems reports,
+and alignment workflows: learner-facing material must cross an explicit public
+review boundary.
+
+### Algebra
+
+The encoder stack preserves the object shape:
+
+```math
+X_0 \in \mathbb{R}^{n \times d_{model}}
+```
+
+```math
+X_i = \mathrm{EncoderBlock}_i(X_{i-1})
+```
+
+```math
+X_i \in \mathbb{R}^{n \times d_{model}}
+```
+
+The publication boundary is not another matrix operation. It is a typed
+permission map:
+
+```text
+valid trace + public visibility -> public trace
+```
+
+Restricted or private visibility has no arrow into `PublicEncoderTrace`.
+
+### Rust
+
+Run the checked proof:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example public_encoder_trace
+```
+
+Expected shape:
+
+```text
+public encoder blocks = 1
+public token count    = 2
+public model width    = 2
+blocked from public Transformer trace: invalid public trace in PublicEncoderTrace::from_reviewed_trace: public Transformer traces cannot include restricted or private encoder evidence
+```
+
+Read the output as a type story:
+
+- `EncoderTrace` proves the encoder path preserved token count and model width.
+- `ReviewedEncoderTrace` attaches the release classification.
+- `PublicEncoderTrace` exists only for reviewed public traces.
+
+### Category-Theory Lens
+
+The computation map is:
+
+```text
+TokenSequence -> EncoderTrace
+```
+
+The public-release map is:
+
+```text
+ReviewedEncoderTrace -> PublicEncoderTrace
+```
+
+Those maps answer different questions. The first asks, "Did the Transformer
+path compose correctly?" The second asks, "May this evidence appear in the
+public learning surface?"
+
+### Checkpoint
+
+If you can explain why `EncoderTrace` is not enough for publication, you have
+understood the repo's public-content boundary at Transformer scale.
+
 ## Concept Trace
 
 - **Object/newtype:** `DenseVector` is the checked dense-math object, while `Query`, `Key`, `Value`, and `AttentionOutput` are semantic model roles.
-- **Invariant:** shared storage does not imply shared meaning; role wrappers prevent architectural swaps.
-- **Map:** checked vector -> semantic projection role -> attention output.
-- **Runnable proof:** `cargo test --manifest-path code/Cargo.toml -p rust_ml_transformer --all-targets`.
-- **Failure signal:** you treat `Query`, `Key`, and `Value` as interchangeable because they all contain vectors.
+- **Invariant:** shared storage does not imply shared meaning; role wrappers prevent architectural swaps, and public trace wrappers prevent private evidence from entering learner-facing material.
+- **Map:** checked vector -> semantic projection role -> attention output -> encoder trace -> public encoder trace.
+- **Runnable proof:** `cargo test --manifest-path code/Cargo.toml -p rust_ml_transformer --all-targets` and `cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example public_encoder_trace`.
+- **Failure signal:** you treat `Query`, `Key`, and `Value` as interchangeable because they all contain vectors, or you treat a valid internal trace as automatically publishable.
 
 ## Short Practice
 
 1. Why is `Query` a different type from `Value` even though both wrap a `DenseVector`?
 2. What kind of bug becomes easier to diagnose once the crate returns `ModelError` instead of panicking everywhere?
 3. Why is `LinearAttentionHead` a different concept from the original paper even if it occupies the same architectural slot?
+4. Why does `PublicEncoderTrace::from_reviewed_trace` reject restricted and private traces even when the encoder computation itself was valid?
+
+## Retrieval Practice
+
+- **Recall:** name the three objects in `EncoderTrace -> ReviewedEncoderTrace -> PublicEncoderTrace`.
+- **Explain:** why does public release need its own type instead of a comment in the README?
+- **Apply:** when adding a new trace to another crate, decide which invariant belongs to the trace and which invariant belongs to the public wrapper.
