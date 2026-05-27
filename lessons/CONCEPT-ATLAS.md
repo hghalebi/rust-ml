@@ -35,7 +35,7 @@ name for the object.
 | Sequence attention | `TokenEmbedding`, `Query`, `Key`, `Value`, `PublicAttentionTrace` | shared model width, role-specific vectors, and public trace review | [`code/attention`](../code/attention/README.md) |
 | Architecture choices | `TransformerConfig`, `LayerCount`, `HeadCount`, `FeedForwardWidth` | model width divides evenly into attention heads | [`code/transformer`](../code/transformer/README.md) |
 | Expert routing | `ExpertScores`, `ExpertChoice`, `ExpertRoute`, `ExpertBank` | one score per expert, then an existing expert applies the token map | [`code/transformer`](../code/transformer/README.md) |
-| Transformer encoder | `PositionEncoding`, `TokenSequence`, `AttentionOutputSequence` | same sequence length and `d_model` for residual maps | [`code/transformer`](../code/transformer/README.md) |
+| Transformer encoder | `PositionEncoding`, `TokenSequence`, `AttentionOutputSequence`, `PublicEncoderTrace` | same sequence length, `d_model`, and public trace review for residual maps | [`code/transformer`](../code/transformer/README.md) |
 | Language modeling | `RawText`, `ReviewedRawText`, `Token`, `TokenId`, `NextTokenBatch`, `PublicLanguageModelingExample` | known vocabulary, aligned input and target lengths, and public text review | [`code/lm_basics`](../code/lm_basics/README.md) |
 | Systems evidence | `Bytes`, `BytesPerSecond`, `MemoryLevel`, `Flops`, `ElapsedNanos`, `ArithmeticIntensity`, `PublicSystemsReport` | units, memory tiers, and public-report class stay separate during arithmetic | [`code/systems`](../code/systems/README.md) |
 | Kernel tiling | `MatrixShape`, `TileShape`, `TilePlan`, `FlopCount`, `PublicKernelReport` | tile windows, resource units, and public-report class stay explicit | [`code/kernels`](../code/kernels/README.md) |
@@ -66,6 +66,7 @@ The course repeatedly asks you to name the map before trusting the code.
 | `VectorLength / HeadCount -> VectorLength` | make each attention head's width a checked value | `rust_ml_transformer --example architecture_config` |
 | `ExpertScores -> ExpertChoice -> ExpertRoute -> TokenEmbedding` | route one token to one selected expert, then apply that expert map | `rust_ml_transformer --example expert_routing` |
 | `TokenEmbedding + PositionEncoding -> TokenEmbedding` | add position without changing token width | `rust_ml_transformer --example encoder_demo` |
+| `ReviewedEncoderTrace -> PublicEncoderTrace` | keep restricted or private Transformer encoder evidence out of learner-facing traces | `rust_ml_transformer --example public_encoder_trace` |
 | `RawText -> TokenTextSequence -> TokenIdSequence` | turn text into checked language-model input | `rust_ml_lm_basics --example 01_tokenize_and_encode` |
 | `NextTokenBatch -> Logits -> Loss -> Update` | make the smallest complete language-model training loop | `rust_ml_lm_basics --example 04_training_step` |
 | `ReviewedRawText -> PublicLanguageModelingExample` | keep restricted or private text out of learner-facing language-model examples | `rust_ml_lm_basics --example 05_public_training_example` |

@@ -1,11 +1,14 @@
 //! Encoder-side Transformer building blocks.
 
+use std::fmt;
+
+use crate::architecture::LayerCount;
 use crate::attention::MultiHeadAttention;
 use crate::error::ModelError;
 use crate::math::{DenseMatrix, DenseVector, ModelScalar, VectorIndex, VectorLength};
 use crate::types::{
     FeedForwardProjection1, FeedForwardProjection2, HiddenActivation, NormScale, NormShift,
-    PositionEncoding, ProjectionBias, TokenEmbedding, TokenIndex, TokenSequence,
+    PositionEncoding, ProjectionBias, TokenCount, TokenEmbedding, TokenIndex, TokenSequence,
 };
 
 fn validate_projection(
@@ -327,6 +330,207 @@ impl TransformerEncoderBlock {
     }
 }
 
+/// Checked evidence from running an encoder stack over one token sequence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EncoderTrace {
+    input: TokenSequence,
+    block_outputs: Vec<TokenSequence>,
+    output: TokenSequence,
+    block_count: LayerCount,
+}
+
+impl EncoderTrace {
+    fn new(input: TokenSequence, block_outputs: Vec<TokenSequence>) -> Result<Self, ModelError> {
+        if block_outputs.is_empty() {
+            return Err(ModelError::empty_input(
+                "EncoderTrace::new",
+                "encoder trace must include at least one block output",
+            ));
+        }
+
+        for output in &block_outputs {
+            if output.len() != input.len() || output.d_model() != input.d_model() {
+                return Err(ModelError::dimension_mismatch(
+                    "EncoderTrace::new",
+                    "input sequence",
+                    vec![input.len().as_usize(), input.d_model().as_usize()],
+                    "block output sequence",
+                    vec![output.len().as_usize(), output.d_model().as_usize()],
+                    "encoder traces must preserve token count and model width",
+                ));
+            }
+        }
+
+        let output = block_outputs
+            .iter()
+            .last()
+            .ok_or(ModelError::empty_input(
+                "EncoderTrace::new",
+                "encoder trace must include at least one block output",
+            ))?
+            .clone();
+        let block_count = LayerCount::try_from(block_outputs.len())?;
+
+        Ok(Self {
+            input,
+            block_outputs,
+            output,
+            block_count,
+        })
+    }
+
+    /// Returns the sequence that entered the encoder.
+    pub fn input(&self) -> &TokenSequence {
+        &self.input
+    }
+
+    /// Iterates over the output after each encoder block.
+    pub fn block_outputs(&self) -> impl ExactSizeIterator<Item = &TokenSequence> + '_ {
+        self.block_outputs.iter()
+    }
+
+    /// Returns the number of encoder blocks recorded in the trace.
+    pub fn block_count(&self) -> LayerCount {
+        self.block_count
+    }
+
+    /// Returns the final encoder output.
+    pub fn output(&self) -> &TokenSequence {
+        &self.output
+    }
+
+    /// Returns the token count preserved by the encoder path.
+    pub fn token_count(&self) -> TokenCount {
+        self.output.len()
+    }
+
+    /// Returns the shared model width preserved by the encoder path.
+    pub fn d_model(&self) -> VectorLength {
+        self.output.d_model()
+    }
+
+    fn into_output(self) -> TokenSequence {
+        self.output
+    }
+}
+
+/// Publication class attached to an encoder trace before public release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EncoderTraceVisibility {
+    /// Safe to include in learner-facing public Transformer material.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for EncoderTraceVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the encoder-trace publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicEncoderDecision {
+    /// The trace can appear in public learner-facing material.
+    Publishable,
+    /// The trace must stay out of public learner-facing material.
+    Blocked,
+}
+
+/// Encoder trace plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedEncoderTrace {
+    trace: EncoderTrace,
+    visibility: EncoderTraceVisibility,
+}
+
+impl ReviewedEncoderTrace {
+    /// Creates a reviewed encoder trace.
+    pub fn new(trace: EncoderTrace, visibility: EncoderTraceVisibility) -> Self {
+        Self { trace, visibility }
+    }
+
+    /// Returns the reviewed encoder trace.
+    pub fn trace(&self) -> &EncoderTrace {
+        &self.trace
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> EncoderTraceVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this trace can enter public learner-facing material.
+    pub fn release_decision(&self) -> PublicEncoderDecision {
+        match self.visibility {
+            EncoderTraceVisibility::Public => PublicEncoderDecision::Publishable,
+            EncoderTraceVisibility::ResearchRestricted | EncoderTraceVisibility::Private => {
+                PublicEncoderDecision::Blocked
+            }
+        }
+    }
+
+    fn into_trace(self) -> EncoderTrace {
+        self.trace
+    }
+}
+
+/// Encoder trace checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicEncoderTrace(EncoderTrace);
+
+impl PublicEncoderTrace {
+    /// Builds a public encoder trace only from a reviewed public trace.
+    pub fn from_reviewed_trace(reviewed: ReviewedEncoderTrace) -> Result<Self, ModelError> {
+        if reviewed.release_decision() == PublicEncoderDecision::Blocked {
+            return Err(ModelError::invalid_public_trace(
+                "PublicEncoderTrace::from_reviewed_trace",
+                "public Transformer traces cannot include restricted or private encoder evidence",
+            ));
+        }
+
+        Ok(Self(reviewed.into_trace()))
+    }
+
+    /// Returns the checked encoder trace.
+    pub fn trace(&self) -> &EncoderTrace {
+        &self.0
+    }
+
+    /// Iterates over the output after each encoder block.
+    pub fn block_outputs(&self) -> impl ExactSizeIterator<Item = &TokenSequence> + '_ {
+        self.0.block_outputs()
+    }
+
+    /// Returns the number of encoder blocks recorded in the trace.
+    pub fn block_count(&self) -> LayerCount {
+        self.0.block_count()
+    }
+
+    /// Returns the final public encoder output.
+    pub fn output(&self) -> &TokenSequence {
+        self.0.output()
+    }
+
+    /// Returns the token count preserved by the encoder path.
+    pub fn token_count(&self) -> TokenCount {
+        self.0.token_count()
+    }
+
+    /// Returns the shared model width preserved by the encoder path.
+    pub fn d_model(&self) -> VectorLength {
+        self.0.d_model()
+    }
+}
+
 /// A stack of encoder blocks.
 #[derive(Debug, Clone)]
 pub struct Encoder {
@@ -359,19 +563,28 @@ impl Encoder {
 
     /// Runs the sequence through every encoder block in order.
     pub fn forward(&self, x: &TokenSequence) -> Result<TokenSequence, ModelError> {
+        Ok(self.trace_forward(x)?.into_output())
+    }
+
+    /// Runs the sequence through every encoder block and records block outputs.
+    pub fn trace_forward(&self, x: &TokenSequence) -> Result<EncoderTrace, ModelError> {
         let mut current = x.clone();
+        let mut block_outputs = Vec::new();
         for block in &self.blocks {
             current = block.forward(&current)?;
+            block_outputs.push(current.clone());
         }
-        Ok(current)
+
+        EncoderTrace::new(x.clone(), block_outputs)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        Encoder, FeedForward, FeedForwardLayer1, FeedForwardLayer2, LayerNorm,
-        PositionalEncodingTable, TransformerEncoderBlock, add_sequences, add_token_embeddings,
+        Encoder, EncoderTraceVisibility, FeedForward, FeedForwardLayer1, FeedForwardLayer2,
+        LayerNorm, PositionalEncodingTable, PublicEncoderTrace, ReviewedEncoderTrace,
+        TransformerEncoderBlock, add_sequences, add_token_embeddings,
     };
     use crate::attention::{
         AttentionHead, KeyLayer, MultiHeadAttention, OutputLayer, QueryLayer, ValueLayer,
@@ -647,6 +860,97 @@ mod tests {
         let output = encoder.forward(&sequence)?;
         assert_eq!(output.len(), TokenCount::try_from(2)?);
         assert_eq!(output.d_model(), VectorLength::try_from(2)?);
+        Ok(())
+    }
+
+    #[test]
+    fn encoder_trace_records_each_block_output() -> Result<(), ModelError> {
+        let dim = VectorLength::try_from(2)?;
+        let block = TransformerEncoderBlock::new(
+            identity_mha(dim)?,
+            LayerNorm::new(dim)?,
+            simple_feed_forward(dim)?,
+            LayerNorm::new(dim)?,
+        )?;
+        let encoder = Encoder::new(vec![block.clone(), block])?;
+        let sequence = TokenSequence::new(vec![
+            token([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?,
+            token([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?,
+        ])?;
+
+        let trace = encoder.trace_forward(&sequence)?;
+
+        assert_eq!(
+            trace.block_count(),
+            crate::architecture::LayerCount::try_from(2)?
+        );
+        assert_eq!(trace.block_outputs().len().to_string(), "2");
+        assert_eq!(trace.input().len(), TokenCount::try_from(2)?);
+        assert_eq!(trace.output().d_model(), dim);
+        Ok(())
+    }
+
+    #[test]
+    fn public_encoder_trace_accepts_public_reviewed_trace() -> Result<(), ModelError> {
+        let dim = VectorLength::try_from(2)?;
+        let block = TransformerEncoderBlock::new(
+            identity_mha(dim)?,
+            LayerNorm::new(dim)?,
+            simple_feed_forward(dim)?,
+            LayerNorm::new(dim)?,
+        )?;
+        let encoder = Encoder::new(vec![block])?;
+        let sequence = TokenSequence::new(vec![
+            token([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?,
+            token([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?,
+        ])?;
+
+        let public_trace = PublicEncoderTrace::from_reviewed_trace(ReviewedEncoderTrace::new(
+            encoder.trace_forward(&sequence)?,
+            EncoderTraceVisibility::Public,
+        ))?;
+
+        assert_eq!(
+            public_trace.block_count(),
+            crate::architecture::LayerCount::try_from(1)?
+        );
+        assert_eq!(public_trace.token_count(), TokenCount::try_from(2)?);
+        assert_eq!(public_trace.d_model(), dim);
+        Ok(())
+    }
+
+    #[test]
+    fn public_encoder_trace_blocks_restricted_and_private_traces() -> Result<(), ModelError> {
+        let dim = VectorLength::try_from(2)?;
+        let block = TransformerEncoderBlock::new(
+            identity_mha(dim)?,
+            LayerNorm::new(dim)?,
+            simple_feed_forward(dim)?,
+            LayerNorm::new(dim)?,
+        )?;
+        let encoder = Encoder::new(vec![block])?;
+        let sequence = TokenSequence::new(vec![
+            token([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?,
+            token([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?,
+        ])?;
+
+        let restricted = PublicEncoderTrace::from_reviewed_trace(ReviewedEncoderTrace::new(
+            encoder.trace_forward(&sequence)?,
+            EncoderTraceVisibility::ResearchRestricted,
+        ));
+        let private = PublicEncoderTrace::from_reviewed_trace(ReviewedEncoderTrace::new(
+            encoder.trace_forward(&sequence)?,
+            EncoderTraceVisibility::Private,
+        ));
+
+        assert!(matches!(
+            restricted,
+            Err(ModelError::InvalidPublicTrace { .. })
+        ));
+        assert!(matches!(
+            private,
+            Err(ModelError::InvalidPublicTrace { .. })
+        ));
         Ok(())
     }
 }

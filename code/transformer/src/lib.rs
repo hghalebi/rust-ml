@@ -6,6 +6,7 @@
 //! - architecture choices use checked types such as [`TransformerConfig`] and [`HeadCount`]
 //! - fallible operations return [`ModelError`] with shape-aware diagnostics
 //! - the encoder path stays readable enough to map directly onto the paper
+//! - reviewed encoder traces become public material only through [`PublicEncoderTrace`]
 
 pub mod architecture;
 pub mod attention;
@@ -33,8 +34,10 @@ pub use math::{
     VectorIndex, VectorLength,
 };
 pub use transformer::{
-    Encoder, FeedForward, FeedForwardLayer1, FeedForwardLayer2, LayerNorm, PositionalEncodingTable,
-    TransformerEncoderBlock, add_sequences, add_token_embeddings,
+    Encoder, EncoderTrace, EncoderTraceVisibility, FeedForward, FeedForwardLayer1,
+    FeedForwardLayer2, LayerNorm, PositionalEncodingTable, PublicEncoderDecision,
+    PublicEncoderTrace, ReviewedEncoderTrace, TransformerEncoderBlock, add_sequences,
+    add_token_embeddings,
 };
 pub use types::{
     AttentionOutput, AttentionOutputSequence, AttentionScore, AttentionScores, AttentionWeight,

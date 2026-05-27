@@ -98,7 +98,7 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 - [neuron crate](code/neuron/README.md)
 - [mlp crate](code/mlp/README.md)
 - [attention crate](code/attention/README.md)
-- [transformer crate](code/transformer/README.md)
+- [transformer crate](code/transformer/README.md) with public encoder trace review
 - [language-modeling basics crate](code/lm_basics/README.md)
 - [systems crate](code/systems/README.md)
 - [kernels crate](code/kernels/README.md)

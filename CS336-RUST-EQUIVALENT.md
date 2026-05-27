@@ -45,7 +45,7 @@ After this track, the learner should be able to:
 | --- | --- | --- |
 | 1 | Overview, tokenization | build typed `RawText -> TokenSequence -> TokenIds` maps with public text review in [`code/lm_basics`](code/lm_basics/README.md) |
 | 2 | Resource accounting | count FLOPs, bytes moved, arithmetic intensity, and public measurement reports for tiny layers |
-| 3 | Architectures, hyperparameters | model `TransformerConfig` with validated dimensions, head-width checks, and parameter budgets in [`code/transformer`](code/transformer/README.md) |
+| 3 | Architectures, hyperparameters | model `TransformerConfig` with validated dimensions, head-width checks, parameter budgets, and public encoder trace review in [`code/transformer`](code/transformer/README.md) |
 | 4 | Attention alternatives, mixture of experts | compare attention maps and route tokens through typed experts in [`code/transformer`](code/transformer/README.md) |
 | 5 | GPUs, TPUs | model accelerator memory hierarchy as typed byte, bandwidth, memory-tier, transfer-time, and public-report maps in [`code/systems`](code/systems/README.md) |
 | 6 | Kernels and compilation | write tiled CPU kernels, typed resource traces, and public report reviews in [`code/kernels`](code/kernels/README.md) before discussing GPU lowering |
@@ -81,7 +81,7 @@ The current repo already provides the first conceptual bridge:
 - [04 Learning](lessons/04-learning/README.md): feedback loops and epochs
 - [05 MLP](lessons/05-mlp/README.md): hidden representations, shape flow, and public trace review
 - [06 Attention](lessons/06-attention/README.md): query/key/value roles, scores, weights, value mixing, and public trace review
-- [07 Transformer](lessons/07-transformer/README.md): typed encoder architecture
+- [07 Transformer](lessons/07-transformer/README.md): typed encoder architecture and public encoder trace review
 - [code/category_lens](code/category_lens/README.md): executable object/map/composition primer with `rust_ml_category_lens` and public composition-trace review
 - [code/lm_basics](code/lm_basics/README.md): first executable CS336 R1 artifact for text-to-loss language modeling and public text review
 - [code/systems](code/systems/README.md): first executable CS336 R2 artifact for typed resource accounting and public report review

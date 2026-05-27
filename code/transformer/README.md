@@ -19,6 +19,7 @@ It models the encoder-side Transformer path with:
 - semantic model types: `TokenEmbedding`, `Query`, `Key`, `Value`, `TokenSequence`
 - readable `std::ops` arithmetic for typed projection, score, positional, and residual operations
 - expressive `thiserror` diagnostics through `ModelError`
+- public encoder trace review for learner-facing Transformer evidence
 - standard scaled dot-product attention
 - a simplified `LinearAttentionHead` for architecture comparison
 - multi-head attention
@@ -40,7 +41,10 @@ src/
   transformer.rs
   lib.rs
 examples/
+  architecture_config.rs
   encoder_demo.rs
+  expert_routing.rs
+  public_encoder_trace.rs
 ```
 
 ## Learning Ladder
@@ -48,8 +52,9 @@ examples/
 1. `architecture_config` validates a tiny encoder architecture and estimates its repeated-block parameter budget.
 2. `expert_routing` routes one token to the highest-scoring typed expert and applies that expert.
 3. `encoder_demo` builds a tiny typed encoder block.
-4. The unit tests exercise architecture checks, expert routing, vectors, matrices, attention heads, positional encodings, layer normalization, feed-forward maps, and encoder blocks.
-5. The Transformer lessons explain the same path in English, algebra, and Rust.
+4. `public_encoder_trace` records an encoder trace and rejects restricted or private traces before public release.
+5. The unit tests exercise architecture checks, expert routing, vectors, matrices, attention heads, positional encodings, layer normalization, feed-forward maps, encoder blocks, encoder traces, and public trace review.
+6. The Transformer lessons explain the same path in English, algebra, and Rust.
 
 ## Category Lens
 
@@ -67,6 +72,16 @@ The composition rule is `d_model`. Residual addition, attention output,
 normalization, and feed-forward output must all return to the same token object
 shape before the next block can run.
 
+The public release boundary keeps the same distinction at Transformer scale:
+
+```text
+ReviewedEncoderTrace -> PublicEncoderTrace
+```
+
+An `EncoderTrace` says the stack preserved token count and model width through
+each block. A `PublicEncoderTrace` says that evidence was reviewed before it
+entered learner-facing public material.
+
 ## Run
 
 ```bash
@@ -83,6 +98,10 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example archi
 
 ```bash
 cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example expert_routing
+```
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example public_encoder_trace
 ```
 
 ## Scope
@@ -125,6 +144,7 @@ ideas are also implemented with Rust operation traits:
 &DenseMatrix * &DenseVector -> DenseVector
 &DenseVector * &DenseVector -> ModelScalar
 &DenseVector * ModelScalar -> Result<DenseVector, ModelError>
+EncoderTrace + EncoderTraceVisibility -> PublicEncoderTrace
 ```
 
 This makes the Transformer path read closer to the algebra while preserving the

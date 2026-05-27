@@ -345,6 +345,15 @@ pub enum ModelError {
         /// Human-readable explanation of the numerical problem.
         details: ErrorDetails,
     },
+
+    /// Restricted or private Transformer evidence tried to enter learner-facing public material.
+    #[error("invalid public trace in {operation}: {details}")]
+    InvalidPublicTrace {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable explanation of the invalid release attempt.
+        details: ErrorDetails,
+    },
 }
 
 impl ModelError {
@@ -467,6 +476,13 @@ impl ModelError {
 
     pub(crate) fn numerical_issue(operation: &'static str, details: &'static str) -> Self {
         Self::NumericalIssue {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
+        }
+    }
+
+    pub(crate) fn invalid_public_trace(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicTrace {
             operation: OperationName::new(operation),
             details: ErrorDetails::new(details),
         }

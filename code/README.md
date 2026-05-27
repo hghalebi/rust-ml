@@ -168,6 +168,7 @@ Run the advanced Transformer example:
 cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example architecture_config
 cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example expert_routing
 cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encoder_demo
+cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example public_encoder_trace
 ```
 
 ## Topics
@@ -178,7 +179,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encod
 | [neuron](neuron/README.md) | Active crate | The first typed trainable model companion crate with public training-step review. |
 | [mlp](mlp/README.md) | Active crate | Tiny typed hidden-layer companion crate for shape flow, representation flow, and public trace review. |
 | [attention](attention/README.md) | Active crate | Beginner scaled dot-product attention companion crate with typed Q/K/V roles, ops-based newtype arithmetic, and public trace review. |
-| [transformer](transformer/README.md) | Active crate | Real tested encoder-path teaching crate with typed architecture configuration, expert routing, and ops-based positional/residual arithmetic. |
+| [transformer](transformer/README.md) | Active crate | Real tested encoder-path teaching crate with typed architecture configuration, expert routing, ops-based positional/residual arithmetic, and public encoder trace review. |
 | [lm_basics](lm_basics/README.md) | Active crate | First CS336 Rust language-modeling artifact: tokenization, checked IDs, next-token batches, loss, one update, and public text review. |
 | [systems](systems/README.md) | Active crate | First CS336 Rust systems artifact: typed memory, bandwidth, hierarchy, FLOP, timing, arithmetic-intensity estimates, and public report review. |
 | [kernels](kernels/README.md) | Active crate | First CS336 Rust kernels artifact: typed tiling, reductions, matrix-vector traces, resource estimates, and public report review. |

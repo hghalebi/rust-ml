@@ -197,9 +197,11 @@ Read [lessons/07-transformer](lessons/07-transformer/README.md), then run:
 
 ```bash
 cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encoder_demo
+cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example public_encoder_trace
 ```
 
-Goal: see the same type-and-map discipline at Transformer scale.
+Goal: see the same type-and-map discipline at Transformer scale, including the
+public trace review boundary for learner-facing encoder evidence.
 
 ### Step 8: CS336 Rust Equivalent
 
