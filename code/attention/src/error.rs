@@ -229,6 +229,15 @@ pub enum AttentionError {
         len: SequenceLength,
     },
 
+    /// Restricted or private attention evidence tried to enter a learner-facing public trace.
+    #[error("invalid public trace in {operation}: {details}")]
+    InvalidPublicTrace {
+        /// The operation that failed.
+        operation: OperationName,
+        /// Human-readable explanation.
+        details: ErrorDetails,
+    },
+
     /// A numerical issue prevented a stable computation.
     #[error("numerical issue in {operation}: {details}")]
     NumericalIssue {
@@ -299,6 +308,13 @@ impl AttentionError {
             operation: OperationName::new(operation),
             index: RequestedTokenIndex::new(index),
             len: SequenceLength::new(len),
+        }
+    }
+
+    pub(crate) fn invalid_public_trace(operation: &'static str, details: &'static str) -> Self {
+        Self::InvalidPublicTrace {
+            operation: OperationName::new(operation),
+            details: ErrorDetails::new(details),
         }
     }
 

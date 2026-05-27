@@ -18,6 +18,7 @@ It teaches one scaled dot-product attention head before the full Transformer mod
 - readable typed arithmetic through `std::ops` for projection products, score contributions, and weighted value mixing
 - stable softmax and weighted-sum helpers
 - learner-visible attention traces
+- public trace review boundary for learner-facing attention evidence
 - no multi-head claim; this crate teaches the single-head mechanism first
 
 ## Layout
@@ -31,6 +32,7 @@ examples/
   02_softmax_focus.rs
   03_weighted_sum.rs
   04_attention_trace.rs
+  05_public_trace.rs
 ```
 
 ## Learning Ladder
@@ -39,6 +41,7 @@ examples/
 2. `02_softmax_focus` turns raw scores into normalized focus weights.
 3. `03_weighted_sum` mixes value vectors.
 4. `04_attention_trace` prints the whole score-to-output path for one query token.
+5. `05_public_trace` shows how a reviewed trace becomes publishable learner-facing material.
 
 Each example follows the same discipline:
 
@@ -61,6 +64,7 @@ TokenEmbedding -> Value
 Query * Key -> AttentionScore
 AttentionScores -> AttentionWeights
 AttentionWeights * ValueSequence -> AttentionOutput
+ReviewedAttentionTrace -> PublicAttentionTrace
 ```
 
 The composition rule is role agreement. Queries compare with keys, weights mix
@@ -77,6 +81,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 01_scor
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 02_softmax_focus
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 03_weighted_sum
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 04_attention_trace
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 05_public_trace
 ```
 
 ## Scope
@@ -92,6 +97,7 @@ TokenEmbedding -> Value
 Query * Key -> AttentionScore
 AttentionScores -> AttentionWeights
 AttentionWeights * Values -> AttentionOutput
+ReviewedAttentionTrace -> PublicAttentionTrace
 ```
 
 ## Typed Operation Model
@@ -111,8 +117,13 @@ AttentionScore + ScoreContribution -> AttentionScore
 AttentionWeight * ValueComponent -> WeightedValueComponent
 AttentionOutputComponent + WeightedValueComponent -> AttentionOutputComponent
 &AttentionWeights * &ValueSequence -> AttentionOutput
+ReviewedAttentionTrace -> PublicAttentionTrace
 ```
 
 This keeps the category intuition concrete: attention is a composition of small
 maps between meaningful objects, not a bag of interchangeable floating point
 arrays.
+
+The public trace boundary keeps that same discipline at the publication edge:
+an `AttentionTrace` is evidence, while a `PublicAttentionTrace` is evidence that
+has been explicitly reviewed for learner-facing release.

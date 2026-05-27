@@ -242,16 +242,18 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 01_scor
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 02_softmax_focus
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 03_weighted_sum
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 04_attention_trace
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 05_public_trace
 ```
 
 The attention crate covers:
 
-- semantic token, query, key, value, score, weight, and output roles
+- semantic token, query, key, value, score, weight, output, and public trace roles
 - explicit `TryFrom` adapters for raw learner literals
 - typed arithmetic with `std::ops` for projection products, score contributions, and weighted value mixing
 - stable softmax over attention scores
 - weighted sums over value vectors
 - learner-visible attention traces for one query token
+- `PublicAttentionTrace` review boundaries that keep restricted or private traces out of public material
 - shape and range errors for invalid sequences, projections, and weights
 
 Run the first CS336 Rust language-modeling artifact:

@@ -160,6 +160,7 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 01_scor
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 02_softmax_focus
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 03_weighted_sum
 cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 04_attention_trace
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 05_public_trace
 ```
 
 Goal: understand token-to-token information mixing through:
@@ -167,6 +168,7 @@ Goal: understand token-to-token information mixing through:
 - attention scores
 - query, key, and value roles
 - sequence-to-sequence shape flow
+- public trace review before learner-facing release
 
 ### Step 7: Transformer
 

@@ -7,7 +7,17 @@
 //! Raw learner literals enter through explicit `TryFrom` adapters. Public
 //! teaching APIs then move through semantic values such as [`TokenComponent`],
 //! [`QueryComponent`], [`KeyComponent`], [`ValueComponent`], [`AttentionScore`],
-//! [`AttentionWeight`], [`VectorWidth`], and [`TokenIndex`].
+//! [`AttentionWeight`], [`VectorWidth`], [`TokenIndex`], and
+//! [`PublicAttentionTrace`].
+//!
+//! ```text
+//! TokenEmbedding -> Query
+//! TokenEmbedding -> Key
+//! Query * Key -> AttentionScore
+//! AttentionScores -> AttentionWeights
+//! AttentionWeights * ValueSequence -> AttentionOutput
+//! ReviewedAttentionTrace -> PublicAttentionTrace
+//! ```
 
 pub mod error;
 
@@ -1160,6 +1170,118 @@ impl AttentionTrace {
     }
 }
 
+/// Publication class attached to an attention trace before public release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttentionTraceVisibility {
+    /// Safe to include in learner-facing public attention material.
+    Public,
+    /// Useful for restricted study, but not public learner-facing material.
+    ResearchRestricted,
+    /// Must stay out of public learner-facing material.
+    Private,
+}
+
+impl fmt::Display for AttentionTraceVisibility {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Public => "public",
+            Self::ResearchRestricted => "research-restricted",
+            Self::Private => "private",
+        };
+        formatter.write_str(label)
+    }
+}
+
+/// Typed decision at the attention-trace publication boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicAttentionDecision {
+    /// The trace can appear in public learner-facing material.
+    Publishable,
+    /// The trace must stay out of public learner-facing material.
+    Blocked,
+}
+
+/// Attention trace plus explicit publication review evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedAttentionTrace {
+    trace: AttentionTrace,
+    visibility: AttentionTraceVisibility,
+}
+
+impl ReviewedAttentionTrace {
+    /// Creates a reviewed attention trace.
+    pub fn new(trace: AttentionTrace, visibility: AttentionTraceVisibility) -> Self {
+        Self { trace, visibility }
+    }
+
+    /// Returns the reviewed attention trace.
+    pub fn trace(&self) -> &AttentionTrace {
+        &self.trace
+    }
+
+    /// Returns the publication class.
+    pub fn visibility(&self) -> AttentionTraceVisibility {
+        self.visibility
+    }
+
+    /// Classifies whether this trace can enter public learner-facing material.
+    pub fn release_decision(&self) -> PublicAttentionDecision {
+        match self.visibility {
+            AttentionTraceVisibility::Public => PublicAttentionDecision::Publishable,
+            AttentionTraceVisibility::ResearchRestricted | AttentionTraceVisibility::Private => {
+                PublicAttentionDecision::Blocked
+            }
+        }
+    }
+
+    fn into_trace(self) -> AttentionTrace {
+        self.trace
+    }
+}
+
+/// Attention trace checked for learner-facing public release.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublicAttentionTrace(AttentionTrace);
+
+impl PublicAttentionTrace {
+    /// Builds a public attention trace only from a reviewed public trace.
+    pub fn from_reviewed_trace(reviewed: ReviewedAttentionTrace) -> Result<Self, AttentionError> {
+        if reviewed.release_decision() == PublicAttentionDecision::Blocked {
+            return Err(AttentionError::invalid_public_trace(
+                "PublicAttentionTrace::from_reviewed_trace",
+                "public attention traces cannot include restricted or private sequence evidence",
+            ));
+        }
+
+        Ok(Self(reviewed.into_trace()))
+    }
+
+    /// Returns the checked attention trace.
+    pub fn trace(&self) -> &AttentionTrace {
+        &self.0
+    }
+
+    /// Returns the public query token index.
+    pub fn query_index(&self) -> TokenIndex {
+        self.0.query_index()
+    }
+
+    /// Returns the public attention scores.
+    pub fn scores(&self) -> &AttentionScores {
+        self.0.scores()
+    }
+
+    /// Returns the public normalized attention weights.
+    pub fn weights(&self) -> &AttentionWeights {
+        self.0.weights()
+    }
+
+    /// Returns the public mixed value vector.
+    pub fn output(&self) -> &AttentionOutput {
+        self.0.output()
+    }
+}
+
 /// One scaled dot-product attention head.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AttentionHead {
@@ -1292,11 +1414,11 @@ impl AttentionHead {
 mod tests {
     use super::{
         AttentionError, AttentionHead, AttentionOutputComponent, AttentionScore, AttentionScores,
-        AttentionWeight, AttentionWeights, Key, KeyComponent, KeyLayer, KeyProjection,
-        ProjectionBias, ProjectionBiasValue, ProjectionRow, ProjectionWeight, Query,
-        QueryComponent, QueryLayer, QueryProjection, TokenComponent, TokenEmbedding, TokenIndex,
-        TokenSequence, Value, ValueComponent, ValueLayer, ValueProjection, ValueSequence,
-        VectorWidth, softmax,
+        AttentionTraceVisibility, AttentionWeight, AttentionWeights, Key, KeyComponent, KeyLayer,
+        KeyProjection, ProjectionBias, ProjectionBiasValue, ProjectionRow, ProjectionWeight,
+        PublicAttentionTrace, Query, QueryComponent, QueryLayer, QueryProjection,
+        ReviewedAttentionTrace, TokenComponent, TokenEmbedding, TokenIndex, TokenSequence, Value,
+        ValueComponent, ValueLayer, ValueProjection, ValueSequence, VectorWidth, softmax,
     };
 
     fn assert_close_score(
@@ -1345,6 +1467,11 @@ mod tests {
                 TokenComponent::try_from(1.0)?,
             )?,
         ])
+    }
+
+    fn trace() -> Result<super::AttentionTrace, AttentionError> {
+        AttentionHead::identity(VectorWidth::try_from(2)?)?
+            .trace_token(&sequence()?, TokenIndex::try_from(0)?)
     }
 
     #[test]
@@ -1497,6 +1624,40 @@ mod tests {
         assert!(matches!(
             error,
             Err(AttentionError::InvalidTokenIndex { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn public_attention_trace_accepts_public_reviewed_trace() -> Result<(), AttentionError> {
+        let public_trace = PublicAttentionTrace::from_reviewed_trace(ReviewedAttentionTrace::new(
+            trace()?,
+            AttentionTraceVisibility::Public,
+        ))?;
+
+        assert_eq!(public_trace.query_index(), TokenIndex::try_from(0)?);
+        assert_eq!(public_trace.weights().len(), sequence()?.len());
+        Ok(())
+    }
+
+    #[test]
+    fn public_attention_trace_blocks_restricted_and_private_traces() -> Result<(), AttentionError> {
+        let restricted = PublicAttentionTrace::from_reviewed_trace(ReviewedAttentionTrace::new(
+            trace()?,
+            AttentionTraceVisibility::ResearchRestricted,
+        ));
+        let private = PublicAttentionTrace::from_reviewed_trace(ReviewedAttentionTrace::new(
+            trace()?,
+            AttentionTraceVisibility::Private,
+        ));
+
+        assert!(matches!(
+            restricted.err(),
+            Some(AttentionError::InvalidPublicTrace { .. })
+        ));
+        assert!(matches!(
+            private.err(),
+            Some(AttentionError::InvalidPublicTrace { .. })
         ));
         Ok(())
     }
