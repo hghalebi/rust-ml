@@ -30,8 +30,8 @@ The current public offering is Spring 2026.
 | --- | --- | --- |
 | 1 | Overview, tokenization | typed text, tokens, vocabulary IDs, and BPE-style merges |
 | 2 | PyTorch and resource accounting | Rust tensor loops, FLOPs, memory traffic, and arithmetic intensity |
-| 3 | Architectures and hyperparameters | typed Transformer configuration and parameter budgets |
-| 4 | Attention alternatives and mixture of experts | attention variants and enum-based expert routing |
+| 3 | Architectures and hyperparameters | typed Transformer configuration and parameter budgets in [`code/transformer`](../../code/transformer/README.md) |
+| 4 | Attention alternatives and mixture of experts | attention variants and typed expert routing in [`code/transformer`](../../code/transformer/README.md) |
 | 5 | GPUs and TPUs | accelerator mental models, memory hierarchy, and kernel boundaries |
 | 6 | Kernels, Triton | Rust kernel interfaces, tiling intuition, and typed lowering boundaries in [`code/kernels`](../../code/kernels/README.md) |
 | 7 | Parallelism | data, tensor, and pipeline parallelism as ownership and partitioning problems in [`code/parallelism`](../../code/parallelism/README.md) |

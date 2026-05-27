@@ -18,7 +18,7 @@ These are different roles, even when they are all vectors.
 - connect projections to role-specific maps
 - explain why query and key widths must match
 - explain why value width controls the output width
-- read attention as typed composition rather than raw vector arithmetic
+- read attention as typed composition rather than untyped vector arithmetic
 
 ## Plain-English Explanation
 

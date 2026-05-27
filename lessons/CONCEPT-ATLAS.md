@@ -33,6 +33,8 @@ name for the object.
 | Learning path | `PredictionError`, `Gradient`, `Adjustment`, `LearningRate` | positive learning rate, checked update arithmetic | [`lessons/04-learning`](04-learning/README.md) |
 | Hidden representation | `HiddenActivation`, `OutputLogit`, `MatrixShape` | layer widths agree before composition | [`code/mlp`](../code/mlp/README.md) |
 | Sequence attention | `TokenEmbedding`, `Query`, `Key`, `Value` | shared model width and role-specific vectors | [`code/attention`](../code/attention/README.md) |
+| Architecture choices | `TransformerConfig`, `LayerCount`, `HeadCount`, `FeedForwardWidth` | model width divides evenly into attention heads | [`code/transformer`](../code/transformer/README.md) |
+| Expert routing | `ExpertScores`, `ExpertChoice`, `ExpertRoute`, `ExpertBank` | one score per expert, then an existing expert applies the token map | [`code/transformer`](../code/transformer/README.md) |
 | Transformer encoder | `PositionEncoding`, `TokenSequence`, `AttentionOutputSequence` | same sequence length and `d_model` for residual maps | [`code/transformer`](../code/transformer/README.md) |
 | Language modeling | `RawText`, `Token`, `TokenId`, `NextTokenBatch` | known vocabulary, aligned input and target lengths | [`code/lm_basics`](../code/lm_basics/README.md) |
 | Systems evidence | `Bytes`, `Flops`, `ElapsedNanos`, `ArithmeticIntensity` | units stay separate during arithmetic | [`code/systems`](../code/systems/README.md) |
@@ -56,6 +58,8 @@ The course repeatedly asks you to name the map before trusting the code.
 | `InputVector -> HiddenActivation -> Prediction` | build a representation before the final judgment | `rust_ml_mlp --example 03_forward_trace` |
 | `Query * Key -> AttentionScore -> AttentionWeight` | decide which token should influence this token | `rust_ml_attention --example 02_softmax_focus` |
 | `AttentionWeight * Value -> AttentionOutput` | mix value vectors according to the attention distribution | `rust_ml_attention --example 03_weighted_sum` |
+| `VectorLength / HeadCount -> VectorLength` | make each attention head's width a checked value | `rust_ml_transformer --example architecture_config` |
+| `ExpertScores -> ExpertChoice -> ExpertRoute -> TokenEmbedding` | route one token to one selected expert, then apply that expert map | `rust_ml_transformer --example expert_routing` |
 | `TokenEmbedding + PositionEncoding -> TokenEmbedding` | add position without changing token width | `rust_ml_transformer --example encoder_demo` |
 | `RawText -> TokenTextSequence -> TokenIdSequence` | turn text into checked language-model input | `rust_ml_lm_basics --example 01_tokenize_and_encode` |
 | `NextTokenBatch -> Logits -> Loss -> Update` | make the smallest complete language-model training loop | `rust_ml_lm_basics --example 04_training_step` |

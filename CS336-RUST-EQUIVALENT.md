@@ -44,8 +44,8 @@ After this track, the learner should be able to:
 | --- | --- | --- |
 | 1 | Overview, tokenization | build typed `RawText -> TokenSequence -> TokenIds` maps |
 | 2 | Resource accounting | count FLOPs, bytes moved, and arithmetic intensity for tiny layers |
-| 3 | Architectures, hyperparameters | model `TransformerConfig` with validated dimensions and budgets |
-| 4 | Attention alternatives, mixture of experts | compare attention maps and route tokens through typed experts |
+| 3 | Architectures, hyperparameters | model `TransformerConfig` with validated dimensions, head-width checks, and parameter budgets in [`code/transformer`](code/transformer/README.md) |
+| 4 | Attention alternatives, mixture of experts | compare attention maps and route tokens through typed experts in [`code/transformer`](code/transformer/README.md) |
 | 5 | GPUs, TPUs | explain accelerator memory hierarchy with CPU-first Rust measurements |
 | 6 | Kernels and compilation | write tiled CPU kernels and typed resource traces in [`code/kernels`](code/kernels/README.md) before discussing GPU lowering |
 | 7 | Parallelism I | split batches and parameters while preserving ownership and shape contracts in [`code/parallelism`](code/parallelism/README.md) |

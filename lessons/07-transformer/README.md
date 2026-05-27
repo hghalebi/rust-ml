@@ -27,6 +27,8 @@ After this module, you should be able to:
 - trace one encoder block from token sequence to contextualized output
 - explain why semantic newtypes help attention code stay readable
 - explain where linear attention fits without confusing it with the 2017 paper
+- validate core architecture hyperparameters before they become model code
+- describe top-1 expert routing as a typed token-to-expert map
 
 ## Code Artifact
 
@@ -62,6 +64,8 @@ The current authored material covers:
 - the motivation for attention-first sequence modeling
 - the encoder-side math from query/key/value through residuals and normalization
 - a semantic-newtype Rust crate with expressive shape errors
+- a typed `TransformerConfig` that checks head width and estimates encoder parameters
+- a typed `TopExpertRouter` that routes token scores to expert choices
 - a runnable encoder demo
 - a chunked study path for low-cognitive-load review
 
@@ -73,3 +77,5 @@ You are ready to leave this preview module when you can:
 - describe the roles of query, key, and value without collapsing them into one generic vector
 - read the scaled dot-product attention equation and point to the matching Rust code shape
 - explain why positional encodings are required once recurrence is removed
+- explain why `d_model / head_count` must be validated before multi-head attention is built
+- explain why a router must receive one score for every available expert

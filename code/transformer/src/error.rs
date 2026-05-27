@@ -148,7 +148,7 @@ impl fmt::Display for MatrixColumnCount {
     }
 }
 
-/// Raw storage length observed while validating matrix data.
+/// Scalar data length observed while validating matrix data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MatrixStorageLength(usize);
 
@@ -260,7 +260,7 @@ pub enum ModelError {
         rows: MatrixRowCount,
         /// Requested matrix column count.
         cols: MatrixColumnCount,
-        /// Actual raw element count.
+        /// Actual scalar element count.
         data_len: MatrixStorageLength,
     },
 
