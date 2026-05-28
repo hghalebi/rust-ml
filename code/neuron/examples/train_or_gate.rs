@@ -1,31 +1,64 @@
 use rust_ml_neuron::{
-    Bias, Dataset, LearningRate, Neuron, Sgd, Weight, average_loss, train_epochs,
+    Bias, Dataset, FeatureVector, InputValue, LearningRate, Target, TinyNeuron, TrainingExample,
+    Weight, WeightVector,
 };
 
-fn main() {
-    let dataset = Dataset::or_gate();
-    let mut neuron = Neuron::new(Weight(0.0), Weight(0.0), Bias(0.0));
-    let optimizer = Sgd::new(LearningRate(0.8));
+fn or_dataset() -> Result<Dataset, rust_ml_neuron::Error> {
+    Dataset::from_examples([
+        TrainingExample::new(
+            FeatureVector::two(InputValue::try_from(0.0)?, InputValue::try_from(0.0)?),
+            Target::try_from(0.0)?,
+        ),
+        TrainingExample::new(
+            FeatureVector::two(InputValue::try_from(0.0)?, InputValue::try_from(1.0)?),
+            Target::try_from(1.0)?,
+        ),
+        TrainingExample::new(
+            FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(0.0)?),
+            Target::try_from(1.0)?,
+        ),
+        TrainingExample::new(
+            FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(1.0)?),
+            Target::try_from(1.0)?,
+        ),
+    ])
+}
 
-    let before = f64::from(average_loss(&neuron, &dataset));
-    let metrics = train_epochs(&mut neuron, &dataset, optimizer, 500);
-    let after = f64::from(average_loss(&neuron, &dataset));
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let dataset = or_dataset()?;
+    let mut neuron = TinyNeuron::new(
+        WeightVector::two(Weight::try_from(0.0)?, Weight::try_from(0.0)?),
+        Bias::try_from(0.0)?,
+    );
+    let rate = LearningRate::try_from(0.8)?;
+
+    let before = neuron.average_loss(&dataset)?;
+
+    for _ in 0..500 {
+        neuron.train_epoch(&dataset, rate)?;
+    }
+
+    let after = neuron.average_loss(&dataset)?;
 
     println!("average loss: before={before:.4}, after={after:.4}");
 
-    for example in dataset.iter() {
-        let prediction = f64::from(neuron.predict(example.x1, example.x2));
+    for example in dataset.examples() {
+        let prediction = neuron.predict(example.features())?;
+        let mut values = example.features().values();
+        let x1 = values
+            .next()
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "0".to_string());
+        let x2 = values
+            .next()
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "0".to_string());
+
         println!(
-            "x=({:.0}, {:.0}) target={:.0} prediction={prediction:.4}",
-            example.x1.0, example.x2.0, example.target.0
+            "x1={x1}, x2={x2}, target={:.4}, prediction={prediction:.4}",
+            example.target()
         );
     }
 
-    if let Some(last_epoch) = metrics.last() {
-        println!(
-            "last epoch={} average_loss={:.4}",
-            last_epoch.epoch,
-            f64::from(last_epoch.average_loss)
-        );
-    }
+    Ok(())
 }

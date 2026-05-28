@@ -34,6 +34,9 @@ examples/
   03_one_step_training.rs
   04_and_gate_epoch.rs
   05_public_training_step.rs
+  token_targets.rs
+  train_bigram_cycle.rs
+  train_or_gate.rs
 ```
 
 ## Learning Ladder
@@ -43,6 +46,9 @@ examples/
 3. `03_one_step_training` exposes `blame -> trace -> adjust` for one labeled example.
 4. `04_and_gate_epoch` repeats updates across a tiny AND dataset so learners can watch average loss move.
 5. `05_public_training_step` shows how reviewed update evidence becomes publishable learner-facing material.
+6. `token_targets` derives token-level probabilities and gradients for cross-entropy intuition.
+7. `train_bigram_cycle` shows self-contained bigram-style training with a compact two-step language loop.
+8. `train_or_gate` trains the tiny neuron on OR truth-table data for several epochs and prints predictions.
 
 ## Category Lens
 
@@ -73,6 +79,9 @@ cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
 cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 05_public_training_step
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example token_targets
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example train_bigram_cycle
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example train_or_gate
 ```
 
 ## Scope
