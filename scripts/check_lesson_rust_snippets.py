@@ -11,6 +11,22 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+RAW_HELPER_SIGNATURE_RE = re.compile(
+    r"("
+    r"\bVec\s*<"
+    r"|&\s*\["
+    r"|&\s*str\b"
+    r"|&\s*'static\s+str\b"
+    r"|\bf32\b"
+    r"|\bf64\b"
+    r"|\busize\b"
+    r"|\bu64\b"
+    r"|\bu128\b"
+    r"|\bi64\b"
+    r"|\bbool\b"
+    r")"
+)
+FUNCTION_START_RE = re.compile(r"^\s*fn\s+(\w+)\s*[<(]")
 
 
 def common_f64() -> str:
@@ -114,7 +130,7 @@ def prelude_vector() -> str:
                 Vector::new(self.data.iter().copied().map(f).collect())
             }
 
-            pub fn as_slice(&self) -> &[f32] {
+            pub fn components(&self) -> &[f32] {
                 &self.data
             }
         }
@@ -160,7 +176,7 @@ def prelude_vector_matrix() -> str:
                 for (r, slot) in out.iter_mut().enumerate() {
                     let mut sum = 0.0;
                     for c in 0..self.cols {
-                        sum += self.get(r, c) * x.as_slice()[c];
+                        sum += self.get(r, c) * x.components()[c];
                     }
                     *slot = sum;
                 }
@@ -276,9 +292,9 @@ def prelude_transformer() -> str:
 
         pub fn layer_norm(x: &Vector) -> Vector {
             let n = x.len() as f32;
-            let mean: f32 = x.as_slice().iter().sum::<f32>() / n;
+            let mean: f32 = x.components().iter().sum::<f32>() / n;
             let var: f32 = x
-                .as_slice()
+                .components()
                 .iter()
                 .map(|v| {
                     let d = v - mean;
@@ -289,7 +305,7 @@ def prelude_transformer() -> str:
 
             let eps = 1e-5;
             Vector::new(
-                x.as_slice()
+                x.components()
                     .iter()
                     .map(|v| (v - mean) / (var + eps).sqrt())
                     .collect(),
@@ -792,9 +808,84 @@ def combine(parts: dict[str, str], *names: str) -> str:
     return "".join(out)
 
 
-def extract_blocks(markdown_file: Path) -> list[str]:
+def collect_function_signatures(lines: list[str]) -> list[tuple[int, str, str]]:
+    signatures: list[tuple[int, str, str]] = []
+    collecting = False
+    start_line = 0
+    function_name = ""
+    current: list[str] = []
+    paren_depth = 0
+
+    for line_number, line in enumerate(lines, start=1):
+        if not collecting:
+            function = FUNCTION_START_RE.search(line)
+            if function is None:
+                continue
+
+            collecting = True
+            start_line = line_number
+            function_name = function.group(1)
+            current = []
+            paren_depth = 0
+
+        current.append(line.strip())
+        paren_depth += line.count("(") - line.count(")")
+
+        if paren_depth <= 0 and ("{" in line or ";" in line):
+            signatures.append((start_line, function_name, " ".join(current)))
+            collecting = False
+
+    return signatures
+
+
+def extract_blocks_with_lines(markdown_file: Path) -> list[tuple[str, int]]:
     text = markdown_file.read_text(encoding="utf-8")
-    return [block.strip() for block in re.findall(r"```rust\n(.*?)```", text, re.S)]
+    return [
+        (match.group(1).strip(), text.count("\n", 0, match.start()) + 2)
+        for match in re.finditer(r"```rust\n(.*?)```", text, re.S)
+    ]
+
+
+def extract_blocks(markdown_file: Path) -> list[str]:
+    return [block for block, _start_line in extract_blocks_with_lines(markdown_file)]
+
+
+def check_typed_crate_helper_signatures(
+    rel_path: Path,
+    block_index: int,
+    block_start_line: int,
+    block: str,
+    crate_label: str,
+) -> list[str]:
+    errors: list[str] = []
+
+    for line_number, function_name, signature in collect_function_signatures(block.splitlines()):
+        if function_name == "main":
+            continue
+
+        if RAW_HELPER_SIGNATURE_RE.search(signature):
+            errors.append(
+                f"ERROR: {rel_path}:{block_start_line + line_number - 1} "
+                f"block {block_index} helper `{function_name}` has a raw primitive/container signature; "
+                f"{crate_label} lesson snippets should validate raw literals inline with TryFrom and keep helpers typed"
+            )
+
+    return errors
+
+
+def check_transformer_helper_signatures(
+    rel_path: Path,
+    block_index: int,
+    block_start_line: int,
+    block: str,
+) -> list[str]:
+    return check_typed_crate_helper_signatures(
+        rel_path,
+        block_index,
+        block_start_line,
+        block,
+        "Transformer",
+    )
 
 
 def wrap_known_block(path: str, idx: int, block: str) -> str:
@@ -886,11 +977,23 @@ def wrap_known_block(path: str, idx: int, block: str) -> str:
         return block + "\n"
     if key == "lessons/03-neuron/02-neuron-as-a-chain-of-functions.md:2":
         return block + "\n"
-    if key == "lessons/04-learning/01-one-training-step-end-to-end.md:1":
+    if key == "lessons/04-learning/01-training-step-as-feedback.md:1":
         return block + "\n"
-    if key == "lessons/04-learning/02-backpropagation-as-local-gradient-bookkeeping.md:1":
+    if key == "lessons/04-learning/02-epochs-and-loss-traces.md:1":
         return block + "\n"
-    if key == "lessons/04-learning/03-datasets-epochs-and-token-targets.md:1":
+    if key == "lessons/05-mlp/01-hidden-layers-as-representations.md:1":
+        return block + "\n"
+    if key == "lessons/05-mlp/02-shape-flow-through-an-mlp.md:1":
+        return block + "\n"
+    if key == "lessons/05-mlp/exercises.md:1":
+        return block + "\n"
+    if key == "lessons/05-mlp/solutions.md:1":
+        return block + "\n"
+    if key == "lessons/06-attention/01-tokens-as-vectors-in-a-sequence.md:1":
+        return block + "\n"
+    if key == "lessons/06-attention/02-query-key-value-roles.md:1":
+        return block + "\n"
+    if key == "lessons/06-attention/03-scores-weights-and-value-mixing.md:1":
         return block + "\n"
     if key == "lessons/07-transformer/01-tiny-transformer-from-first-principles.md:1":
         return common_f64() + (
@@ -915,7 +1018,7 @@ def wrap_known_block(path: str, idx: int, block: str) -> str:
             + "\nfn main() { let block = TransformerBlock { attention: SelfAttention, ff: FeedForward { w1: vec![], w2: vec![] } }; let x = vec![vec![1.0, 2.0], vec![3.0, 4.0]]; let _ = block.forward(&x); }\n"
         )
     if key == "lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md:1":
-        return block + "\nfn main() { let v = Vector::new(vec![1.0, 2.0]); let u = Vector::new(vec![3.0, 4.0]); let mut m = Matrix::new(2, 2, vec![1.0, 2.0, 3.0, 4.0]); let _ = (v.len(), v.dot(&u), v.add(&u), v.map(|x| x), v.as_slice(), m.get(0, 0), m.mul_vec(&u)); m.set(0, 1, 5.0); }\n"
+        return block + "\nfn main() { let v = Vector::new(vec![1.0, 2.0]); let u = Vector::new(vec![3.0, 4.0]); let mut m = Matrix::new(2, 2, vec![1.0, 2.0, 3.0, 4.0]); let _ = (v.len(), v.dot(&u), v.add(&u), v.map(|x| x), v.components(), m.get(0, 0), m.mul_vec(&u)); m.set(0, 1, 5.0); }\n"
     if key == "lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md:2":
         return prelude_vector_matrix() + block + "\nfn main() { let layer = Linear { weight: Matrix::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]), bias: Vector::new(vec![0.5, 0.5]) }; let x = Vector::new(vec![2.0, -3.0]); let _ = (layer.forward(&x), relu(&x)); }\n"
     if key == "lessons/07-transformer/02-typed-rust-transformer-with-linear-attention.md:3":
@@ -941,24 +1044,13 @@ def wrap_known_block(path: str, idx: int, block: str) -> str:
 
 def compile_general_snippets(temp_dir: Path) -> int:
     authored_paths = [
-        Path("lessons/01-foundations/01-core-idea.md"),
-        Path("lessons/01-foundations/02-reading-algebra-like-a-programmer.md"),
-        Path("lessons/01-foundations/03-rust-syntax-for-ml.md"),
-        Path("lessons/01-foundations/solutions.md"),
-        Path("lessons/02-vectors/01-scalars-vectors-matrices.md"),
-        Path("lessons/02-vectors/02-sum-dot-product-and-mat-vec.md"),
-        Path("lessons/02-vectors/03-sigmoid-loss-and-gradient-descent.md"),
-        Path("lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md"),
-        Path("lessons/03-neuron/02-neuron-as-a-chain-of-functions.md"),
-        Path("lessons/04-learning/01-one-training-step-end-to-end.md"),
-        Path("lessons/04-learning/02-backpropagation-as-local-gradient-bookkeeping.md"),
-        Path("lessons/04-learning/03-datasets-epochs-and-token-targets.md"),
         Path("lessons/02-vectors/exercises.md"),
-        Path("lessons/02-vectors/solutions.md"),
         Path("lessons/03-neuron/exercises.md"),
         Path("lessons/03-neuron/solutions.md"),
         Path("lessons/04-learning/exercises.md"),
         Path("lessons/04-learning/solutions.md"),
+        Path("lessons/05-mlp/exercises.md"),
+        Path("lessons/05-mlp/solutions.md"),
     ]
 
     failures: list[str] = []
@@ -986,7 +1078,701 @@ def compile_general_snippets(temp_dir: Path) -> int:
         return 1
 
     print(
-        f"Compiled {count} Rust snippets from the authored foundations, vectors, neuron, and learning lessons."
+        f"Compiled {count} Rust snippets from the authored vectors, neuron practice, learning, and MLP practice lessons."
+    )
+    return 0
+
+
+def compile_learning_lens_snippets(temp_dir: Path) -> int:
+    rel_path = Path("lessons/00-learning-lens.md")
+    full_path = ROOT / rel_path
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "learning-lens-snippet-target"
+    crate_path = (ROOT / "code/category_lens").resolve()
+
+    for idx, (block, block_start_line) in enumerate(
+        extract_blocks_with_lines(full_path), start=1
+    ):
+        failures.extend(
+            check_typed_crate_helper_signatures(
+                rel_path,
+                idx,
+                block_start_line,
+                block,
+                "Learning lens",
+            )
+        )
+
+        snippet_dir = temp_dir / f"learning_lens_{count:03d}"
+        src_dir = snippet_dir / "src"
+        src_dir.mkdir(parents=True, exist_ok=True)
+        (snippet_dir / "Cargo.toml").write_text(
+            textwrap.dedent(
+                f"""
+                [package]
+                name = "learning_lens_snippet_{count:03d}"
+                version = "0.1.0"
+                edition = "2024"
+
+                [dependencies]
+                rust_ml_category_lens = {{ path = "{crate_path}" }}
+                """
+            ).strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        source = block + "\n"
+        if "fn main" not in block:
+            source += "fn main() {}\n"
+        (src_dir / "main.rs").write_text(source, encoding="utf-8")
+
+        env = dict(os.environ)
+        env["CARGO_TARGET_DIR"] = str(target_dir)
+        env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+        result = subprocess.run(
+            [
+                "cargo",
+                "check",
+                "--quiet",
+                "--manifest-path",
+                str(snippet_dir / "Cargo.toml"),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+        )
+        if result.returncode != 0:
+            failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+        count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the Learning Lens against the local crate.")
+    return 0
+
+
+def compile_neuron_crate_snippets(temp_dir: Path) -> int:
+    neuron_paths = [
+        Path("lessons/03-neuron/01-rust-essentials-for-a-tiny-neuron.md"),
+        Path("lessons/03-neuron/02-neuron-as-a-chain-of-functions.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "neuron-snippet-target"
+    crate_path = (ROOT / "code/neuron").resolve()
+
+    for rel_path in neuron_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "Neuron",
+                )
+            )
+
+            snippet_dir = temp_dir / f"neuron_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "neuron_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_neuron = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the Neuron module against the local crate.")
+    return 0
+
+
+def compile_intro_crate_snippets(temp_dir: Path) -> int:
+    intro_paths = [
+        Path("lessons/01-foundations/01-core-idea.md"),
+        Path("lessons/01-foundations/02-reading-algebra-like-a-programmer.md"),
+        Path("lessons/01-foundations/03-rust-syntax-for-ml.md"),
+        Path("lessons/01-foundations/solutions.md"),
+        Path("lessons/02-vectors/01-scalars-vectors-matrices.md"),
+        Path("lessons/02-vectors/02-sum-dot-product-and-mat-vec.md"),
+        Path("lessons/02-vectors/03-sigmoid-loss-and-gradient-descent.md"),
+        Path("lessons/02-vectors/solutions.md"),
+        Path("lessons/04-learning/01-training-step-as-feedback.md"),
+        Path("lessons/04-learning/02-epochs-and-loss-traces.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "intro-snippet-target"
+    neuron_path = (ROOT / "code/neuron").resolve()
+    transformer_path = (ROOT / "code/transformer").resolve()
+
+    for rel_path in intro_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "Intro",
+                )
+            )
+
+            snippet_dir = temp_dir / f"intro_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "intro_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_neuron = {{ path = "{neuron_path}" }}
+                    rust_ml_transformer = {{ path = "{transformer_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the intro modules against local crates.")
+    return 0
+
+
+def compile_mlp_crate_snippets(temp_dir: Path) -> int:
+    mlp_paths = [
+        Path("lessons/05-mlp/01-hidden-layers-as-representations.md"),
+        Path("lessons/05-mlp/02-shape-flow-through-an-mlp.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "mlp-snippet-target"
+    crate_path = (ROOT / "code/mlp").resolve()
+
+    for rel_path in mlp_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "MLP",
+                )
+            )
+
+            snippet_dir = temp_dir / f"mlp_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "mlp_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_mlp = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the MLP module against the local crate.")
+    return 0
+
+
+def compile_attention_crate_snippets(temp_dir: Path) -> int:
+    attention_paths = [
+        Path("lessons/06-attention/01-tokens-as-vectors-in-a-sequence.md"),
+        Path("lessons/06-attention/02-query-key-value-roles.md"),
+        Path("lessons/06-attention/03-scores-weights-and-value-mixing.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "attention-snippet-target"
+    crate_path = (ROOT / "code/attention").resolve()
+
+    for rel_path in attention_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "Attention",
+                )
+            )
+
+            snippet_dir = temp_dir / f"attention_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "attention_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_attention = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the Attention module against the local crate.")
+    return 0
+
+
+def compile_lm_basics_crate_snippets(temp_dir: Path) -> int:
+    lm_basics_paths = [
+        Path("lessons/08-language-modeling/01-text-to-token-ids.md"),
+        Path("lessons/08-language-modeling/02-next-token-batches-loss-and-update.md"),
+        Path("lessons/08-language-modeling/03-public-text-boundary.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "lm-basics-snippet-target"
+    crate_path = (ROOT / "code/lm_basics").resolve()
+
+    for rel_path in lm_basics_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "Language-modeling basics",
+                )
+            )
+
+            snippet_dir = temp_dir / f"lm_basics_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "lm_basics_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_lm_basics = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(
+        f"Compiled {count} Rust snippets from the Language Modeling module against the local crate."
+    )
+    return 0
+
+
+def compile_systems_crate_snippets(temp_dir: Path) -> int:
+    systems_paths = [
+        Path("lessons/09-systems/01-shapes-elements-bytes-and-flops.md"),
+        Path("lessons/09-systems/02-timing-intensity-and-memory-hierarchy.md"),
+        Path("lessons/09-systems/03-public-systems-report-boundary.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "systems-snippet-target"
+    crate_path = (ROOT / "code/systems").resolve()
+
+    for rel_path in systems_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "Systems",
+                )
+            )
+
+            snippet_dir = temp_dir / f"systems_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "systems_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_systems = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the Systems module against the local crate.")
+    return 0
+
+
+def compile_kernels_crate_snippets(temp_dir: Path) -> int:
+    kernels_paths = [
+        Path("lessons/10-kernels/01-elementwise-maps-and-reductions.md"),
+        Path("lessons/10-kernels/02-tiling-a-matrix-vector-kernel.md"),
+        Path("lessons/10-kernels/03-public-kernel-report-boundary.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "kernels-snippet-target"
+    crate_path = (ROOT / "code/kernels").resolve()
+
+    for rel_path in kernels_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "Kernels",
+                )
+            )
+
+            snippet_dir = temp_dir / f"kernels_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "kernels_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_kernels = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(f"Compiled {count} Rust snippets from the Kernels module against the local crate.")
+    return 0
+
+
+def compile_inference_crate_snippets(temp_dir: Path) -> int:
+    inference_paths = [
+        Path("lessons/11-inference/01-autoregressive-decoding-state-trace.md"),
+        Path("lessons/11-inference/02-public-decode-boundary-and-latency.md"),
+        Path("lessons/11-inference/exercises.md"),
+        Path("lessons/11-inference/solutions.md"),
+    ]
+
+    failures: list[str] = []
+    count = 0
+    target_dir = temp_dir / "inference-snippet-target"
+    crate_path = (ROOT / "code/inference").resolve()
+
+    for rel_path in inference_paths:
+        full_path = ROOT / rel_path
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_typed_crate_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                    "Inference",
+                )
+            )
+
+            snippet_dir = temp_dir / f"inference_{count:03d}"
+            src_dir = snippet_dir / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (snippet_dir / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""
+                    [package]
+                    name = "inference_snippet_{count:03d}"
+                    version = "0.1.0"
+                    edition = "2024"
+
+                    [dependencies]
+                    rust_ml_inference = {{ path = "{crate_path}" }}
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (src_dir / "main.rs").write_text(block + "\n", encoding="utf-8")
+
+            env = dict(os.environ)
+            env["CARGO_TARGET_DIR"] = str(target_dir)
+            env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
+
+            result = subprocess.run(
+                [
+                    "cargo",
+                    "check",
+                    "--quiet",
+                    "--manifest-path",
+                    str(snippet_dir / "Cargo.toml"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failures.append(f"--- {rel_path} block {idx} ---\n{result.stderr}")
+            count += 1
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+
+    print(
+        "Compiled "
+        f"{count} Rust snippets from the Inference module against the local crate."
     )
     return 0
 
@@ -1006,7 +1792,18 @@ def compile_chunked_transformer_snippets(temp_dir: Path) -> int:
 
     for rel_path in transformer_paths:
         full_path = ROOT / rel_path
-        for idx, block in enumerate(extract_blocks(full_path), start=1):
+        for idx, (block, block_start_line) in enumerate(
+            extract_blocks_with_lines(full_path), start=1
+        ):
+            failures.extend(
+                check_transformer_helper_signatures(
+                    rel_path,
+                    idx,
+                    block_start_line,
+                    block,
+                )
+            )
+
             snippet_dir = temp_dir / f"transformer_{count:03d}"
             src_dir = snippet_dir / "src"
             src_dir.mkdir(parents=True, exist_ok=True)
@@ -1060,8 +1857,29 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="rust-ml-snippets-") as temp_dir_name:
         temp_dir = Path(temp_dir_name)
         general = compile_general_snippets(temp_dir)
+        learning_lens = compile_learning_lens_snippets(temp_dir)
+        neuron = compile_neuron_crate_snippets(temp_dir)
+        intro = compile_intro_crate_snippets(temp_dir)
+        mlp = compile_mlp_crate_snippets(temp_dir)
+        attention = compile_attention_crate_snippets(temp_dir)
+        lm_basics = compile_lm_basics_crate_snippets(temp_dir)
+        systems = compile_systems_crate_snippets(temp_dir)
+        kernels = compile_kernels_crate_snippets(temp_dir)
+        inference = compile_inference_crate_snippets(temp_dir)
         chunked = compile_chunked_transformer_snippets(temp_dir)
-        if general or chunked:
+        if (
+            general
+            or learning_lens
+            or neuron
+            or intro
+            or mlp
+            or attention
+            or lm_basics
+            or systems
+            or kernels
+            or inference
+            or chunked
+        ):
             return 1
     print("All authored Rust lesson snippets compiled successfully.")
     return 0

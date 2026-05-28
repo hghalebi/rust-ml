@@ -16,7 +16,7 @@ Suppose algebra says:
 x = [x_1, x_2, x_3]
 ```
 
-Write Rust that stores those values in a vector and reads the first and third entries.
+Write typed Rust that stores those values in a `FeatureVector`, then explain which semantic feature is first and which is third.
 
 ## Exercise 3: Read the notation
 
@@ -29,7 +29,7 @@ Explain each expression in one short English sentence:
 
 ## Exercise 4: Write a dot product
 
-Write a Rust function signature and loop body for:
+Write typed Rust that computes this map with `FeatureVector`, `WeightVector`, and `weighted_sum`:
 
 ```math
 w \cdot x = \sum_i w_i x_i
@@ -37,8 +37,22 @@ w \cdot x = \sum_i w_i x_i
 
 ## Exercise 5: Model as a struct
 
-Write a `Neuron` struct with fields `w1`, `w2`, and `b`, and add a `forward` method that computes:
+Build a `TinyNeuron` with two weights and a bias, then call the method that computes:
 
 ```math
 z = w_1 x_1 + w_2 x_2 + b
 ```
+
+## Failure Signals
+
+- You can write the Rust expression but cannot say which algebra symbol each field represents.
+- You treat `x_1` as Rust index `1` instead of remembering that Rust vectors start at index `0`.
+- Your dot-product loop adds weights or inputs separately instead of adding pairwise products.
+- Your struct stores values but does not expose the map from inputs to score.
+
+## Debugging Hints
+
+- Label every value before calculating: input, weight, bias, or score.
+- Translate one symbol at a time instead of translating the whole formula at once.
+- For indexing, write the algebra position and the Rust index side by side.
+- Read your `forward` method aloud as a sentence: "take inputs, multiply by weights, add bias, return score."

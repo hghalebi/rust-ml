@@ -48,11 +48,11 @@ That is already enough to start.
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, ModelError};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let input = DenseVector::new(vec![1.0, 2.0, 3.0])?;
-    println!("{:?}", input.as_slice());
+    let input = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
+    println!("{:?}", input.scalar_values());
     Ok(())
 }
 ```
@@ -74,12 +74,12 @@ x = [x_1, x_2, \ldots, x_n]
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, ModelError};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let x = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+    let x = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
     println!("len = {}", x.len());
-    println!("{:?}", x.as_slice());
+    println!("{:?}", x.scalar_values());
     Ok(())
 }
 ```
@@ -105,11 +105,11 @@ even if each object lives in some vector space.
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, ModelError, Query, TokenEmbedding};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError, Query, TokenEmbedding};
 
 fn main() -> Result<(), ModelError> {
-    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
-    let query = Query(DenseVector::new(vec![0.2, 0.5])?);
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?);
+    let query = Query::from_vector(DenseVector::new([ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.5)?])?);
 
     println!("token width = {}", token.len());
     println!("query width = {}", query.len());
@@ -136,11 +136,11 @@ a \cdot b = \sum_i a_i b_i
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, ModelError};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let a = DenseVector::new(vec![1.0, 2.0, 3.0])?;
-    let b = DenseVector::new(vec![4.0, 5.0, 6.0])?;
+    let a = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
+    let b = DenseVector::new([ModelScalar::try_from(4.0)?, ModelScalar::try_from(5.0)?, ModelScalar::try_from(6.0)?])?;
 
     println!("{}", a.dot(&b)?);
     Ok(())
@@ -164,12 +164,12 @@ y = Wx
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseMatrix, ModelError};
+use rust_ml_transformer::{ModelScalar, DenseMatrix, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let matrix = DenseMatrix::from_rows(vec![
-        vec![1.0, 2.0, 3.0],
-        vec![4.0, 5.0, 6.0],
+    let matrix = DenseMatrix::from_rows([
+        [ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?],
+        [ModelScalar::try_from(4.0)?, ModelScalar::try_from(5.0)?, ModelScalar::try_from(6.0)?],
     ])?;
 
     println!("rows = {}", matrix.rows());
@@ -193,17 +193,17 @@ y_r = \sum_c W_{r,c} x_c
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseMatrix, DenseVector, ModelError};
+use rust_ml_transformer::{ModelScalar, DenseMatrix, DenseVector, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let matrix = DenseMatrix::from_rows(vec![
-        vec![1.0, 0.0, 2.0],
-        vec![0.0, 1.0, 3.0],
+    let matrix = DenseMatrix::from_rows([
+        [ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(2.0)?],
+        [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(3.0)?],
     ])?;
-    let vector = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+    let vector = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
 
-    let output = matrix.mul_vec(&vector)?;
-    println!("{:?}", output.as_slice());
+    let output = (&matrix * &vector)?;
+    println!("{:?}", output.scalar_values());
     Ok(())
 }
 ```
@@ -225,13 +225,13 @@ X \in \mathbb{R}^{n \times d_{model}}
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, ModelError, TokenEmbedding, TokenSequence};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError, TokenEmbedding, TokenSequence};
 
 fn main() -> Result<(), ModelError> {
     let seq = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![1.0, 1.0, 0.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
     ])?;
 
     println!("tokens = {}", seq.len());
@@ -262,22 +262,23 @@ v = W_V x + b_V
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     DenseMatrix, DenseVector, ModelError, ProjectionBias, QueryLayer, QueryProjection,
     TokenEmbedding,
 };
 
 fn main() -> Result<(), ModelError> {
     let layer = QueryLayer::new(
-        QueryProjection(DenseMatrix::from_rows(vec![
-            vec![0.2, 0.1, 0.0, 0.3],
-            vec![0.0, 0.4, 0.1, 0.2],
+        QueryProjection::from_matrix(DenseMatrix::from_rows([
+            [ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.3)?],
+            [ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.4)?, ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.2)?],
         ])?),
-        ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
+        ProjectionBias::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?),
     )?;
 
-    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?);
     let query = layer.forward(&token)?;
-    println!("{:?}", query.as_slice());
+    println!("{:?}", query.scalar_values());
     Ok(())
 }
 ```
@@ -299,13 +300,13 @@ Higher score means stronger match.
 ### Rust
 
 ```rust
-use rust_ml_transformer::{scaled_attention_score, DenseVector, Key, ModelError, Query};
+use rust_ml_transformer::{ModelScalar, DenseVector, Key, ModelError, Query};
 
 fn main() -> Result<(), ModelError> {
-    let query = Query(DenseVector::new(vec![1.0, 2.0])?);
-    let key = Key(DenseVector::new(vec![3.0, 4.0])?);
+    let query = Query::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?])?);
+    let key = Key::from_vector(DenseVector::new([ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?])?);
 
-    println!("{}", scaled_attention_score(&query, &key)?);
+    println!("{}", (&query * &key)?);
     Ok(())
 }
 ```
@@ -330,13 +331,17 @@ Softmax turns them into weights that:
 ### Rust
 
 ```rust
-use rust_ml_transformer::{softmax, AttentionScores, ModelError};
+use rust_ml_transformer::{softmax, AttentionScore, AttentionScores, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let scores = AttentionScores(vec![2.0, 1.0, 0.1]);
+    let scores = AttentionScores::from_scores([
+        AttentionScore::try_from(2.0)?,
+        AttentionScore::try_from(1.0)?,
+        AttentionScore::try_from(0.1)?,
+    ])?;
     let weights = softmax(&scores)?;
 
-    println!("{:?}", weights.0);
+    println!("{:?}", weights.values().collect::<Vec<_>>());
     Ok(())
 }
 ```
@@ -359,18 +364,22 @@ This creates the new contextualized representation for one token.
 
 ```rust
 use rust_ml_transformer::{
-    weighted_sum, AttentionWeights, DenseVector, ModelError, Value,
+    ModelScalar,
+    AttentionWeight, AttentionWeights, DenseVector, ModelError, Value, ValueSequence,
 };
 
 fn main() -> Result<(), ModelError> {
-    let weights = AttentionWeights(vec![0.25, 0.75]);
-    let values = vec![
-        Value(DenseVector::new(vec![1.0, 0.0])?),
-        Value(DenseVector::new(vec![0.0, 2.0])?),
-    ];
+    let weights = AttentionWeights::from_weights([
+        AttentionWeight::try_from(0.25)?,
+        AttentionWeight::try_from(0.75)?,
+    ])?;
+    let values = ValueSequence::from_values([
+        Value::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        Value::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(2.0)?])?),
+    ])?;
 
-    let output = weighted_sum(&weights, &values)?;
-    println!("{:?}", output.as_slice());
+    let output = (&weights * &values)?;
+    println!("{:?}", output.scalar_values());
     Ok(())
 }
 ```
@@ -398,41 +407,35 @@ That is self-attention.
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     AttentionHead, DenseMatrix, DenseVector, KeyLayer, KeyProjection, ModelError,
     ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
-    ValueProjection,
+    TokenIndex, ValueProjection, VectorLength,
 };
 
-fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
-    DenseMatrix::from_rows(
-        (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect(),
-    )
+fn identity_projection() -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?], [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?]])
 }
 
-fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn main() -> Result<(), ModelError> {
+    let width = VectorLength::try_from(2)?;
     let head = AttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
 
     let seq = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
 
     let outputs = head.forward(&seq)?;
-    println!("{:?}", outputs[0].as_slice());
+    println!("{:?}", outputs.output(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -458,56 +461,51 @@ Then the head outputs are concatenated and projected back.
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     AttentionHead, DenseMatrix, DenseVector, KeyLayer, KeyProjection, ModelError,
     MultiHeadAttention, OutputLayer, OutputProjection, ProjectionBias, QueryLayer,
-    QueryProjection, TokenEmbedding, TokenSequence, ValueLayer, ValueProjection,
+    QueryProjection, TokenEmbedding, TokenIndex, TokenSequence, ValueLayer, ValueProjection,
+    VectorLength,
 };
 
-fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
-    DenseMatrix::from_rows(
-        (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect(),
-    )
+fn identity_projection() -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?], [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?]])
 }
 
-fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn main() -> Result<(), ModelError> {
+    let width = VectorLength::try_from(2)?;
     let head_a = AttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
     let head_b = AttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
     let mha = MultiHeadAttention::new(
         vec![head_a, head_b],
         OutputLayer::new(
-            OutputProjection(DenseMatrix::from_rows(vec![
-                vec![1.0, 0.0, 0.0, 0.0],
-                vec![0.0, 1.0, 0.0, 0.0],
+            OutputProjection::from_matrix(DenseMatrix::from_rows([
+                [ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?],
+                [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?],
             ])?),
-            bias(2)?,
+            zero_bias(width)?,
         )?,
     )?;
 
     let seq = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
 
     let output = mha.forward(&seq)?;
-    println!("{:?}", output.token(0).as_slice());
+    println!("{:?}", output.token(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -530,18 +528,19 @@ x_{\mathrm{with\ position}} = x_{\mathrm{token}} + x_{\mathrm{position}}
 
 ```rust
 use rust_ml_transformer::{
-    DenseVector, ModelError, PositionalEncodingTable, TokenEmbedding, TokenSequence,
+    ModelScalar,
+    DenseVector, ModelError, PositionalEncodingTable, TokenEmbedding, TokenIndex, TokenSequence,
 };
 
 fn main() -> Result<(), ModelError> {
     let seq = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
-    let positions = PositionalEncodingTable::new(4)?;
+    let positions = PositionalEncodingTable::new(rust_ml_transformer::VectorLength::try_from(4)?);
 
     let with_position = positions.add_to_sequence(&seq)?;
-    println!("{:?}", with_position.token(0).as_slice());
+    println!("{:?}", with_position.token(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -565,16 +564,14 @@ That gives the model an easy path to preserve earlier information.
 ### Rust
 
 ```rust
-use rust_ml_transformer::{
-    add_sequences, DenseVector, ModelError, TokenEmbedding, TokenSequence,
-};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError, TokenEmbedding, TokenIndex, TokenSequence};
 
 fn main() -> Result<(), ModelError> {
-    let left = TokenSequence::new(vec![TokenEmbedding(DenseVector::new(vec![1.0, 2.0])?)])?;
-    let right = TokenSequence::new(vec![TokenEmbedding(DenseVector::new(vec![0.5, -1.0])?)])?;
+    let left = TokenSequence::new(vec![TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?])?)])?;
+    let right = TokenSequence::new(vec![TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.5)?, ModelScalar::try_from(-1.0)?])?)])?;
 
-    let sum = add_sequences(&left, &right)?;
-    println!("{:?}", sum.token(0).as_slice());
+    let sum = (&left + &right)?;
+    println!("{:?}", sum.token(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -597,14 +594,14 @@ Layer normalization rescales each token so the model behaves more predictably.
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, LayerNorm, ModelError, TokenEmbedding};
+use rust_ml_transformer::{ModelScalar, DenseVector, LayerNorm, ModelError, TokenEmbedding};
 
 fn main() -> Result<(), ModelError> {
-    let norm = LayerNorm::new(3)?;
-    let token = TokenEmbedding(DenseVector::new(vec![1.0, 2.0, 3.0])?);
+    let norm = LayerNorm::new(rust_ml_transformer::VectorLength::try_from(3)?)?;
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?);
 
     let normalized = norm.forward_token(&token)?;
-    println!("{:?}", normalized.as_slice());
+    println!("{:?}", normalized.scalar_values());
     Ok(())
 }
 ```
@@ -629,6 +626,7 @@ That division is one of the core architectural ideas.
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     DenseMatrix, DenseVector, FeedForward, FeedForwardLayer1, FeedForwardLayer2,
     FeedForwardProjection1, FeedForwardProjection2, ModelError, ProjectionBias, TokenEmbedding,
 };
@@ -636,25 +634,25 @@ use rust_ml_transformer::{
 fn main() -> Result<(), ModelError> {
     let feed_forward = FeedForward::new(
         FeedForwardLayer1::new(
-            FeedForwardProjection1(DenseMatrix::from_rows(vec![
-                vec![1.0, 0.0],
-                vec![0.0, 1.0],
-                vec![1.0, 1.0],
+            FeedForwardProjection1::from_matrix(DenseMatrix::from_rows([
+                [ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?],
+                [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?],
+                [ModelScalar::try_from(1.0)?, ModelScalar::try_from(1.0)?],
             ])?),
-            ProjectionBias(DenseVector::new(vec![0.0, 0.0, 0.0])?),
+            ProjectionBias::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?),
         )?,
         FeedForwardLayer2::new(
-            FeedForwardProjection2(DenseMatrix::from_rows(vec![
-                vec![1.0, 0.0, 0.0],
-                vec![0.0, 1.0, 0.0],
+            FeedForwardProjection2::from_matrix(DenseMatrix::from_rows([
+                [ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?],
+                [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?],
             ])?),
-            ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
+            ProjectionBias::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?),
         )?,
     )?;
 
-    let token = TokenEmbedding(DenseVector::new(vec![1.0, -2.0])?);
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(-2.0)?])?);
     let output = feed_forward.forward_token(&token)?;
-    println!("{:?}", output.as_slice());
+    println!("{:?}", output.scalar_values());
     Ok(())
 }
 ```
@@ -688,70 +686,64 @@ Y = \mathrm{LayerNorm}(A + \mathrm{FFN}(A))
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     AttentionHead, DenseMatrix, DenseVector, FeedForward, FeedForwardLayer1, FeedForwardLayer2,
     FeedForwardProjection1, FeedForwardProjection2, KeyLayer, KeyProjection, LayerNorm,
     ModelError, MultiHeadAttention, OutputLayer, OutputProjection, ProjectionBias, QueryLayer,
-    QueryProjection, TokenEmbedding, TokenSequence, TransformerEncoderBlock, ValueLayer,
-    ValueProjection,
+    QueryProjection, TokenEmbedding, TokenIndex, TokenSequence, TransformerEncoderBlock, ValueLayer,
+    ValueProjection, VectorLength,
 };
 
-fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
-    DenseMatrix::from_rows(
-        (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect(),
-    )
+fn identity_projection() -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?], [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?]])
 }
 
-fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn main() -> Result<(), ModelError> {
+    let width = VectorLength::try_from(2)?;
     let head = AttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
     let attention = MultiHeadAttention::new(
         vec![head],
-        OutputLayer::new(OutputProjection(eye(2)?), bias(2)?)?,
+        OutputLayer::new(OutputProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
     let feed_forward = FeedForward::new(
         FeedForwardLayer1::new(
-            FeedForwardProjection1(DenseMatrix::from_rows(vec![
-                vec![1.0, 0.0],
-                vec![0.0, 1.0],
-                vec![1.0, 1.0],
+            FeedForwardProjection1::from_matrix(DenseMatrix::from_rows([
+                [ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?],
+                [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?],
+                [ModelScalar::try_from(1.0)?, ModelScalar::try_from(1.0)?],
             ])?),
-            ProjectionBias(DenseVector::new(vec![0.0, 0.0, 0.0])?),
+            ProjectionBias::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?),
         )?,
         FeedForwardLayer2::new(
-            FeedForwardProjection2(DenseMatrix::from_rows(vec![
-                vec![1.0, 0.0, 0.0],
-                vec![0.0, 1.0, 0.0],
+            FeedForwardProjection2::from_matrix(DenseMatrix::from_rows([
+                [ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?],
+                [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?],
             ])?),
-            ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
+            ProjectionBias::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?),
         )?,
     )?;
     let block = TransformerEncoderBlock::new(
         attention,
-        LayerNorm::new(2)?,
+        LayerNorm::new(width)?,
         feed_forward,
-        LayerNorm::new(2)?,
+        LayerNorm::new(width)?,
     )?;
 
     let seq = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
 
     let output = block.forward(&seq)?;
-    println!("{:?}", output.token(0).as_slice());
+    println!("{:?}", output.token(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -795,44 +787,46 @@ Later variant:
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     DenseMatrix, DenseVector, KeyLayer, KeyProjection, LinearAttentionHead, ModelError,
-    ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
-    ValueProjection,
+    ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenIndex, TokenSequence, ValueLayer,
+    ValueProjection, VectorLength,
 };
 
-fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
-    DenseMatrix::from_rows(
-        (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect(),
-    )
+fn identity_projection() -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?], [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?]])
 }
 
-fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn main() -> Result<(), ModelError> {
+    let width = VectorLength::try_from(2)?;
     let head = LinearAttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
 
     let seq = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
 
     let outputs = head.forward(&seq)?;
-    println!("{:?}", outputs[0].as_slice());
+    println!("{:?}", outputs.output(TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
+
+## Concept Trace
+
+- **Object/newtype:** `ModelScalar`, `DenseVector`, `TokenEmbedding`, `TokenSequence`, `AttentionHead`, and `Encoder`.
+- **Invariant:** each chunk preserves the role needed by the next chunk before composing.
+- **Map:** small typed chunks -> attention head -> multi-head attention -> encoder block -> encoder.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example encoder_demo`.
+- **Failure signal:** you can follow one chunk in isolation but cannot explain how its output object becomes the next chunk's input object.
 
 ## Final memory card
 

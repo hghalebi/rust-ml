@@ -54,14 +54,27 @@ W = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}
 ## Rust Form
 
 ```rust
-let x: f64 = 2.5;
+use rust_ml_transformer::{DenseMatrix, DenseVector, ModelError, ModelScalar};
 
-let v: Vec<f64> = vec![1.0, 2.0, 3.0];
+fn main() -> Result<(), ModelError> {
+    let x = ModelScalar::try_from(2.5)?;
 
-let w: Vec<Vec<f64>> = vec![
-    vec![1.0, 2.0],
-    vec![3.0, 4.0],
-];
+    let v = DenseVector::new([
+        ModelScalar::try_from(1.0)?,
+        ModelScalar::try_from(2.0)?,
+        ModelScalar::try_from(3.0)?,
+    ])?;
+
+    let w = DenseMatrix::from_rows([
+        [ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?],
+        [ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?],
+    ])?;
+
+    println!("scalar = {x}");
+    println!("vector width = {}", v.len());
+    println!("matrix shape = {} x {}", w.rows(), w.cols());
+    Ok(())
+}
 ```
 
 ## Why This Matters
@@ -76,14 +89,22 @@ If you know:
 
 then you can predict what an operation is allowed to do.
 
+## Concept Trace
+
+- **Object/newtype:** later crates name shapes with types such as `VectorWidth`, `RowCount`, `ColumnCount`, and `MatrixShape`.
+- **Invariant:** vector lengths and matrix dimensions must be known before composition.
+- **Map:** shape description -> allowed operation.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 02_shape_flow`.
+- **Failure signal:** you calculate with numbers before naming whether the value is a scalar, vector, or matrix.
+
 ## Short Practice
 
 1. Is `[1.0, 2.0, 3.0]` a scalar, vector, or matrix?
 2. How many rows and columns does this matrix have?
 
-```rust
-let w = vec![
-    vec![0.1, 0.2, 0.3],
-    vec![0.4, 0.5, 0.6],
-];
+```text
+DenseMatrix::from_rows([
+    [ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.3)?],
+    [ModelScalar::try_from(0.4)?, ModelScalar::try_from(0.5)?, ModelScalar::try_from(0.6)?],
+])?
 ```

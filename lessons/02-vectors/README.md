@@ -32,7 +32,8 @@ After this module, you should be able to:
 
 ## Code Artifact
 
-- No dedicated crate yet. The code snippets in this module are intentionally small and compile-checked through the lesson harness.
+- The code snippets in this module are intentionally small and compile-checked through the lesson harness.
+- The next module's [`code/neuron`](../../code/neuron/README.md) crate turns dot product and sigmoid into the first runnable model.
 
 ## Prerequisite
 

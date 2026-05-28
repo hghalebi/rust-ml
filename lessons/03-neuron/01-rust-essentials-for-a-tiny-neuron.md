@@ -6,10 +6,10 @@ This lesson gives you just enough Rust to read the neuron code as a real system 
 
 ## Learning Goals
 
-- explain why `f64`, functions, structs, and loops are enough for a first neuron
+- explain how raw numeric literals become typed neuron values at the boundary
 - use the newtype pattern to distinguish inputs from weights and targets
 - explain when to overload operators instead of peeling values out with `.0`
-- read `mut`, `&`, `*`, `Vec`, and `impl` without stopping the lesson flow
+- read `mut`, `&`, `*`, and `impl` without stopping the lesson flow
 - know where to go in the official Rust documentation when you want more depth
 
 ## Plain-English Explanation
@@ -20,15 +20,15 @@ For this module, Rust is a strict way to write down math as code.
 
 That means:
 
-- numbers become `f64`
+- raw numeric literals are validated into semantic types
 - formulas become functions
 - model parameters become struct fields
-- training data becomes a `Vec`
+- training data becomes a `Dataset`
 - repeated updates become a loop
 
 ### Newtypes are labels, not decoration
 
-The neuron uses small tuple structs such as `Input(f64)` and `Weight(f64)`.
+The neuron uses semantic values such as `InputValue`, `Weight`, and `Target`.
 
 That is the newtype pattern.
 
@@ -36,7 +36,8 @@ It matters because a prediction and a target may both be floating-point numbers,
 
 ### Better than `value.0` everywhere
 
-You can always reach the inner number with `.0`, but that gets noisy fast.
+Inside a newtype implementation, you can always reach the inner number. In
+public learner code, that storage detail should stay hidden.
 
 For this kind of teaching code, the better move is usually:
 
@@ -46,7 +47,7 @@ For this kind of teaching code, the better move is usually:
 
 That lets the code read like:
 
-- `x1 * w1`
+- `&features * &weights`
 - `prediction - target`
 - `self.w1 = self.w1 - lr * gradient`
 
@@ -60,7 +61,7 @@ without erasing the meaning of the types.
 - `mut` makes change explicit
 - `&` borrows a value instead of copying it
 - `*` reads the value behind a reference when needed
-- `Vec` stores datasets and dynamic sequences of examples
+- `Dataset` stores a checked sequence of examples
 
 ### Official Rust references that actually matter for this module
 
@@ -104,79 +105,36 @@ That is the real translation exercise.
 ## Rust Form
 
 ```rust
-use std::ops::{Add, Mul};
+use rust_ml_neuron::{Bias, FeatureVector, InputValue, Weight, WeightVector};
 
-#[derive(Debug, Clone, Copy)]
-struct Input(f64);
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let features = FeatureVector::two(InputValue::try_from(1.0)?, InputValue::try_from(0.5)?);
+    let weights = WeightVector::two(Weight::try_from(0.8)?, Weight::try_from(-0.4)?);
+    let bias = Bias::try_from(0.1)?;
 
-#[derive(Debug, Clone, Copy)]
-struct Weight(f64);
+    let weighted_evidence = (&features * &weights)?;
+    let z = (weighted_evidence + bias)?;
 
-#[derive(Debug, Clone, Copy)]
-struct Bias(f64);
-
-#[derive(Debug, Clone, Copy)]
-struct Neuron {
-    w1: Weight,
-    w2: Weight,
-    b: Bias,
-}
-
-impl Mul<Weight> for Input {
-    type Output = f64;
-
-    fn mul(self, rhs: Weight) -> Self::Output {
-        self.0 * rhs.0
-    }
-}
-
-impl Add<Bias> for f64 {
-    type Output = f64;
-
-    fn add(self, rhs: Bias) -> Self::Output {
-        self + rhs.0
-    }
-}
-
-fn pre_activation(x1: Input, x2: Input, w1: Weight, w2: Weight, b: Bias) -> f64 {
-    x1 * w1 + x2 * w2 + b
-}
-
-impl Neuron {
-    fn raw_score(&self, x1: Input, x2: Input) -> f64 {
-        pre_activation(x1, x2, self.w1, self.w2, self.b)
-    }
-}
-
-fn main() {
-    let neuron = Neuron {
-        w1: Weight(0.8),
-        w2: Weight(-0.4),
-        b: Bias(0.1),
-    };
-
-    let z = neuron.raw_score(Input(1.0), Input(0.5));
-    println!("raw score z = {:.3}", z);
+    println!("raw score z = {z:.3}");
+    Ok(())
 }
 ```
 
 ```rust
-#[derive(Debug, Clone, Copy)]
-struct Input(f64);
+use rust_ml_neuron::Dataset;
 
-fn main() {
-    let dataset = vec![
-        (Input(0.0), Input(0.0), 0.0_f64),
-        (Input(0.0), Input(1.0), 0.0_f64),
-        (Input(1.0), Input(0.0), 0.0_f64),
-        (Input(1.0), Input(1.0), 1.0_f64),
-    ];
+fn main() -> Result<(), rust_ml_neuron::Error> {
+    let dataset = Dataset::and_gate()?;
 
-    for (x1, x2, target) in &dataset {
-        let Input(left) = *x1;
-        let Input(right) = *x2;
-        println!("x1={left:.1}, x2={right:.1}, target={target:.1}");
+    for example in dataset.examples() {
+        print!("features:");
+        for value in example.features().values() {
+            print!(" {value}");
+        }
+        println!(" -> target {}", example.target());
     }
+
+    Ok(())
 }
 ```
 
@@ -190,6 +148,14 @@ This is the same architectural instinct you use in larger systems:
 - give values meaningful types
 - make mutation explicit
 - let the structure explain the behavior
+
+## Concept Trace
+
+- **Object/newtype:** `InputValue`, `Weight`, `Bias`, `Target`, and `LearningRate`.
+- **Invariant:** each role has a different meaning even when the stored representation is numeric.
+- **Map:** typed fields and inputs -> checked forward-pass values.
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighted_sum`.
+- **Failure signal:** you remove the newtypes and the compiler can no longer help distinguish inputs, weights, and targets.
 
 ## Short Practice
 

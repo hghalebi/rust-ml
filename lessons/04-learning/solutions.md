@@ -1,81 +1,52 @@
-# Learning Module Solutions
+# Learning Solutions
 
-## Solution 1: Name the four stages
+## Solution 1: Read the update rule
 
-The four stages are:
+The update rule means:
 
-1. forward pass
-2. loss
-3. backward pass
-4. optimizer update
+> Replace the old weight with the old weight minus a learning-rate-sized step in the gradient direction.
 
-New information at each stage:
+If the gradient is positive, subtracting it lowers the weight. If the gradient is negative, subtracting it raises the weight.
 
-- forward pass: the model produces a prediction
-- loss: the prediction is compared to the target and scored
-- backward pass: the complaint is distributed back into parameter gradients
-- optimizer update: the parameters are actually moved
+## Solution 2: Separate the roles
 
-## Solution 2: One backward pass by hand
+1. `Weight`: parameter
+2. `Gradient`: feedback about how a parameter affects loss
+3. `LearningRate`: step-size control
+4. `Adjustment`: the actual amount applied to a parameter
+5. `Loss`: feedback about prediction error
 
-Raw score:
+## Solution 3: Run one step
 
-```math
-z = 0.8 \cdot 1 + (-0.4) \cdot 0 + 0.1 = 0.9
+A healthy run should show the loss after the update lower than the loss before the update for that same example.
+
+The exact numbers may change if the example seed changes, but the interpretation should not:
+
+```text
+prediction before -> loss before -> gradient -> update -> prediction after -> loss after
 ```
 
-Prediction:
+## Solution 4: Read an epoch trace
 
-```math
-\hat{y} = \sigma(0.9) \approx 0.7109
+Average loss is the mean loss across the dataset at a checkpoint.
+
+If the printed average loss moves downward over epochs, the repeated updates are helping the model fit the tiny dataset better.
+
+The important word is average. One example can briefly get worse while the total dataset average improves.
+
+## Solution 5: Use the category-theory lens
+
+The completed mapping is:
+
+```text
+FeatureVector -> PreActivation -> Prediction -> Loss
 ```
 
-Loss:
+Training changes the parameterized map from `FeatureVector` to `PreActivation`, because the weights and bias live inside that transformation.
 
-```math
-L = (\hat{y} - 1)^2 \approx (0.7109 - 1)^2 \approx 0.0836
-```
+## Self-Check
 
-Why `dL/dw2 = 0` here:
-
-- the local derivative `dz/dw2` is `x2`
-- in this example `x2 = 0`
-- so the full chain for `w2` is multiplied by zero
-
-## Solution 3: Upstream versus local
-
-For `w1`:
-
-```math
-\frac{dL}{dw_1}
-=
-\frac{dL}{d\hat{y}}
-\cdot
-\frac{d\hat{y}}{dz}
-\cdot
-\frac{dz}{dw_1}
-```
-
-Role labels:
-
-1. judge room: `dL/d\hat{y}`
-2. shaping room: `d\hat{y}/dz`
-3. mixing room: `dz/dw1`
-
-## Solution 4: Read the optimizer rule
-
-Plain English:
-
-> Replace the parameter vector with its old value minus a scaled step in the direction the loss says is uphill.
-
-If `\eta` is far too large, the update can overshoot and training may bounce around or even make the loss worse.
-
-## Solution 5: Dataset loop reasoning
-
-1. Each example is seen 50 times.
-2. If the average loss falls and then flattens, the model may be approaching the limit of what that architecture and learning-rate setting can improve.
-
-## Solution 6: Token targets
-
-1. The target is an index because the model is choosing among many vocabulary options, not only producing one binary-style scalar output.
-2. The local training rule is still gradients plus updates, but the output space, target structure, and amount of computation are much larger.
+- You can separate parameters, feedback values, and step-size controls.
+- You can say whether one update reduced loss on the same example.
+- You can explain an epoch average without hiding individual-example behavior.
+- You can say that learning changes the parameterized map, not the meaning of the input.

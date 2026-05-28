@@ -1,41 +1,55 @@
 # 05 MLP
 
-Status: planned.
+Status: active.
 
 This folder maps to course Module 4.
 
-This module will scale the neuron story into layers, hidden activations, and shape flow through a small network.
+This module scales the neuron story into layers, hidden activations, and shape flow through a small network.
 
-## Role In The Course
+## Outcomes
 
-This planned module will connect the single trainable neuron from Modules 2 and 3 to a small network made from layers. It is the missing conceptual bridge between manual scalar gradients and the richer shape flow used later by attention and Transformers.
+After this module, you should be able to:
 
-## Goal
+- explain why a hidden layer can represent intermediate features
+- trace `InputVector -> HiddenActivation -> OutputLogit -> Prediction`
+- read a small MLP as a composition of typed maps
+- read typed operations such as `InputValue * WeightValue` and `WeightedSum + BiasValue`
+- explain why shape checks belong at layer boundaries
+- run the companion MLP examples and predict the printed trace
 
-Move from one neuron to a small multi-layer perceptron.
+## Lessons
 
-## Planned Lesson Ladder
+1. [Hidden Layers as Representations](01-hidden-layers-as-representations.md)
+2. [Shape Flow Through an MLP](02-shape-flow-through-an-mlp.md)
 
-1. from one neuron to one hidden layer
-2. activations, layer outputs, and shape flow
-3. backpropagation through a two-layer network
-4. why depth changes what the model can represent
+## Practice
 
-## Planned Practice
-
-- trace the output shape through each layer
-- compare a single neuron to a tiny hidden-layer model
-- explain hidden activations in plain English
-- identify which gradients belong to each layer
+- [MLP exercises](exercises.md)
+- [MLP solutions](solutions.md)
 
 ## Code Artifact
 
-- Future crate: [`code/mlp`](../../code/mlp/README.md)
+- Active crate: [`code/mlp`](../../code/mlp/README.md)
+
+Run the examples:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 01_hidden_features
+cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 02_shape_flow
+cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 03_forward_trace
+cargo run --manifest-path code/Cargo.toml -p rust_ml_mlp --example 04_xor_table
+```
 
 ## Prerequisite
 
 - Complete [04 Learning](../04-learning/README.md)
 
-## Planned Outcome
+## Before You Move On
 
-Be able to reason about layers, hidden activations, shape flow, and layer-local gradients through a tiny network.
+You are ready for attention when you can explain this sentence without guessing:
+
+```text
+The hidden layer changes the representation space before the output layer makes the final decision.
+```
+
+The companion crate now keeps raw numbers at explicit `TryFrom` boundaries, then uses semantic newtypes and `std::ops` implementations for the actual MLP operations.

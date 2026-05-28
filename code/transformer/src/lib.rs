@@ -1,30 +1,48 @@
 //! A small, typed Transformer teaching crate.
 //!
 //! The crate is intentionally explicit:
-//! - raw math uses [`DenseVector`] and [`DenseMatrix`]
+//! - checked dense math uses [`DenseVector`] and [`DenseMatrix`]
 //! - model roles use semantic newtypes such as [`TokenEmbedding`], [`Query`], and [`Value`]
+//! - architecture choices use checked types such as [`TransformerConfig`] and [`HeadCount`]
 //! - fallible operations return [`ModelError`] with shape-aware diagnostics
 //! - the encoder path stays readable enough to map directly onto the paper
+//! - reviewed encoder traces become public material only through [`PublicEncoderTrace`]
 
+pub mod architecture;
 pub mod attention;
 pub mod error;
+pub mod experts;
 pub mod math;
 pub mod transformer;
 pub mod types;
 
+pub use architecture::{
+    FeedForwardWidth, HeadCount, LayerCount, ParameterCount, TransformerConfig,
+};
 pub use attention::{
     AttentionHead, KeyLayer, LinearAttentionHead, MultiHeadAttention, OutputLayer, QueryLayer,
     ValueLayer, concat_attention_outputs, scaled_attention_score, softmax, weighted_sum,
 };
 pub use error::ModelError;
-pub use math::{DenseMatrix, DenseVector};
+pub use experts::{
+    ExpertBank, ExpertCapacity, ExpertChoice, ExpertCount, ExpertIndex, ExpertLoad,
+    ExpertLoadReport, ExpertLoadStatus, ExpertRoute, ExpertScore, ExpertScores, FeedForwardExpert,
+    TopExpertRouter,
+};
+pub use math::{
+    ColumnIndex, DenseMatrix, DenseVector, MatrixShape, ModelScalar, RowIndex, ScalarValues,
+    VectorIndex, VectorLength,
+};
 pub use transformer::{
-    Encoder, FeedForward, FeedForwardLayer1, FeedForwardLayer2, LayerNorm, PositionalEncodingTable,
-    TransformerEncoderBlock, add_sequences, add_token_embeddings,
+    Encoder, EncoderTrace, EncoderTraceVisibility, FeedForward, FeedForwardLayer1,
+    FeedForwardLayer2, LayerNorm, PositionalEncodingTable, PublicEncoderDecision,
+    PublicEncoderTrace, ReviewedEncoderTrace, TransformerEncoderBlock, add_sequences,
+    add_token_embeddings,
 };
 pub use types::{
-    AttentionOutput, AttentionScores, AttentionWeights, ConcatenatedHeadOutput,
-    FeedForwardProjection1, FeedForwardProjection2, HiddenActivation, Key, KeyProjection,
-    NormScale, NormShift, OutputProjection, PositionEncoding, ProjectionBias, Query,
-    QueryProjection, TokenEmbedding, TokenSequence, Value, ValueProjection,
+    AttentionOutput, AttentionOutputSequence, AttentionScore, AttentionScores, AttentionWeight,
+    AttentionWeights, ConcatenatedHeadOutput, FeedForwardProjection1, FeedForwardProjection2,
+    HiddenActivation, HiddenPreActivation, Key, KeyProjection, NormScale, NormShift,
+    OutputProjection, PositionEncoding, ProjectionBias, Query, QueryProjection, TokenCount,
+    TokenEmbedding, TokenIndex, TokenSequence, Value, ValueProjection, ValueSequence,
 };

@@ -15,14 +15,22 @@
 Rust:
 
 ```rust
-fn dot(a: &[f64], b: &[f64]) -> f64 {
-    let mut sum = 0.0;
+use rust_ml_transformer::{DenseVector, ModelError, ModelScalar};
 
-    for i in 0..a.len() {
-        sum += a[i] * b[i];
-    }
+fn main() -> Result<(), ModelError> {
+    let a = DenseVector::new([
+        ModelScalar::try_from(1.0)?,
+        ModelScalar::try_from(2.0)?,
+        ModelScalar::try_from(3.0)?,
+    ])?;
+    let b = DenseVector::new([
+        ModelScalar::try_from(4.0)?,
+        ModelScalar::try_from(5.0)?,
+        ModelScalar::try_from(6.0)?,
+    ])?;
 
-    sum
+    println!("{}", (&a * &b)?);
+    Ok(())
 }
 ```
 
@@ -49,3 +57,10 @@ Ordinary English:
 > Replace `w` with its old value minus a small step in the direction of the loss gradient.
 
 That is what "move opposite the gradient" means in code.
+
+## Self-Check
+
+- You can name the shape before calculating with a value.
+- You can compute a dot product as pairwise products followed by one sum.
+- You can compute matrix-vector multiplication one row at a time.
+- You can read the update rule as parameter, step size, feedback, and new parameter.

@@ -4,7 +4,11 @@ Status: active.
 
 This folder maps to course Module 0.
 
-The job of this module is narrow and important: teach the smallest set of notation and Rust syntax needed to read beginner machine-learning material without panic.
+The job of this module is narrow and important: teach the smallest set of notation and Rust syntax needed to read beginner machine-learning material with confidence.
+
+## Role In The Course
+
+This module is the orientation layer. It teaches the notation and Rust surface area that all later modules reuse.
 
 ## Role In The Course
 

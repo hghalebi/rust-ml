@@ -16,7 +16,7 @@ Understand what the Transformer is solving, how the encoder math works, and how 
 
 ## Role In The Course
 
-This module is the current advanced preview. It is fully authored even though the MLP and Attention bridge modules are still planned.
+This module is the current capstone after the attention bridge. It applies the same newtype-and-map discipline at Transformer encoder scale.
 
 ## Outcomes
 
@@ -27,6 +27,9 @@ After this module, you should be able to:
 - trace one encoder block from token sequence to contextualized output
 - explain why semantic newtypes help attention code stay readable
 - explain where linear attention fits without confusing it with the 2017 paper
+- validate core architecture hyperparameters before they become model code
+- describe top-1 expert routing as a typed token-to-expert map
+- explain why `EncoderTrace` and `PublicEncoderTrace` are different objects
 
 ## Code Artifact
 
@@ -43,10 +46,6 @@ After this module, you should be able to:
 ## Prerequisite
 
 - Complete [06 Attention](../06-attention/README.md)
-
-## Current Working Prerequisite
-
-- Until [05 MLP](../05-mlp/README.md) and [06 Attention](../06-attention/README.md) are authored, complete [02 Vectors](../02-vectors/README.md), [03 Neuron](../03-neuron/README.md), and [04 Learning](../04-learning/README.md), then treat this module as an advanced preview.
 
 ## Lessons
 
@@ -66,25 +65,12 @@ The current authored material covers:
 - the motivation for attention-first sequence modeling
 - the encoder-side math from query/key/value through residuals and normalization
 - a semantic-newtype Rust crate with expressive shape errors
+- a typed `TransformerConfig` that checks head width and estimates encoder parameters
+- a typed `TopExpertRouter` that routes token scores to expert choices
+- a public encoder-trace boundary that keeps restricted or private encoder evidence out of learner-facing material
 - a runnable encoder demo
+- a runnable public encoder-trace demo
 - a chunked study path for low-cognitive-load review
-- a forward-only architecture view, while full end-to-end training remains a later step
-
-## Training Preview
-
-The next major educational jump after this preview is not a new attention
-equation. It is a training-system jump.
-
-In a fully trainable Transformer, gradients must flow through:
-
-- token embeddings
-- position embeddings
-- query, key, and value projections
-- feed-forward layers
-- the final language-model head
-
-That is the point where autograd becomes more attractive than hand-derived
-parameter-by-parameter update code.
 
 ## Before You Move On
 
@@ -94,4 +80,6 @@ You are ready to leave this preview module when you can:
 - describe the roles of query, key, and value without collapsing them into one generic vector
 - read the scaled dot-product attention equation and point to the matching Rust code shape
 - explain why positional encodings are required once recurrence is removed
-- explain why full Transformer training is a stronger fit for autograd than for hand-written local update rules
+- explain why `d_model / head_count` must be validated before multi-head attention is built
+- explain why a router must receive one score for every available expert
+- explain why a valid encoder trace still needs review before it becomes public learner-facing evidence

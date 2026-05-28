@@ -100,3 +100,36 @@ Standard attention forms the exact scaled dot-product interaction pattern.
 Linear attention rewrites the computation through feature-map-based summaries.
 
 That is why linear attention is best understood as a later efficient attention family, not as the definition of the original Transformer paper.
+
+## Solution 8: Review an encoder trace for public release
+
+The public encoder-trace example proves three structural facts:
+
+- the trace contains one recorded encoder block output
+- the output still has two tokens
+- the output still has model width two
+
+Those facts show that the encoder path preserved the sequence object shape:
+
+```text
+TokenSequence -> EncoderTrace
+```
+
+The private trace fails later, at the publication boundary:
+
+```text
+ReviewedEncoderTrace -> PublicEncoderTrace
+```
+
+That failure is correct. A trace can be mathematically valid and still not be
+allowed in learner-facing public material. The public wrapper exists so the
+release decision is part of the type path, not a forgotten comment or an
+informal publishing habit.
+
+## Self-Check
+
+- You can read a shape error as an object/map mismatch.
+- You can build `TokenSequence` only when token widths agree.
+- You can explain why positional encoding and residual addition preserve `d_model`.
+- You can distinguish the original attention definition from efficiency variants.
+- You can explain why `EncoderTrace` proves computation structure while `PublicEncoderTrace` proves learner-facing release eligibility.

@@ -17,13 +17,13 @@ Now that the encoder shape is on the table, this lesson focuses on the engineeri
 - explain where `LinearAttentionHead` fits relative to standard multi-head attention
 - understand the crate layout that backs the written lessons
 
-## 1. One raw math layer, many semantic model roles
+## 1. One checked math layer, many semantic model roles
 
 ### English
 
-At the bottom, the model is still made of numbers.
+At the bottom, the model is still made of scalar values.
 
-So the crate keeps one raw math layer:
+So the crate keeps one checked dense-math layer:
 
 - `DenseVector`
 - `DenseMatrix`
@@ -37,10 +37,12 @@ Then it wraps important model roles in newtypes:
 - `AttentionOutput`
 
 That way Rust can tell the difference between concepts that happen to share the same storage.
+Raw learner literals still enter at the edge through `ModelScalar::try_from(...)`.
+After that boundary, the lesson names the object, the invariant, and the map.
 
 ### Algebra
 
-The raw storage might all live in:
+The checked dense values might all live in:
 
 ```math
 \mathbb{R}^n
@@ -58,24 +60,25 @@ even when each one is represented by a vector.
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     DenseVector, Key, ModelError, Query, TokenEmbedding, Value,
 };
 
 fn main() -> Result<(), ModelError> {
-    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
-    let query = Query(DenseVector::new(vec![0.2, 0.5])?);
-    let key = Key(DenseVector::new(vec![0.1, 0.4])?);
-    let value = Value(DenseVector::new(vec![2.0, -1.0])?);
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?);
+    let query = Query::from_vector(DenseVector::new([ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.5)?])?);
+    let key = Key::from_vector(DenseVector::new([ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.4)?])?);
+    let value = Value::from_vector(DenseVector::new([ModelScalar::try_from(2.0)?, ModelScalar::try_from(-1.0)?])?);
 
-    println!("{:?}", token.as_slice());
-    println!("{:?}", query.as_slice());
-    println!("{:?}", key.as_slice());
-    println!("{:?}", value.as_slice());
+    println!("{:?}", token.scalar_values());
+    println!("{:?}", query.scalar_values());
+    println!("{:?}", key.scalar_values());
+    println!("{:?}", value.scalar_values());
     Ok(())
 }
 ```
 
-## 2. Use `thiserror`, not panic soup
+## 2. Use `thiserror`, not panic-heavy shortcuts
 
 ### English
 
@@ -106,13 +109,13 @@ If they do not, the operation is invalid.
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseMatrix, DenseVector, ModelError};
+use rust_ml_transformer::{ModelScalar, DenseMatrix, DenseVector, ModelError};
 
 fn main() -> Result<(), ModelError> {
-    let matrix = DenseMatrix::from_rows(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
-    let vector = DenseVector::new(vec![1.0, 2.0, 3.0])?;
+    let matrix = DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?], [ModelScalar::try_from(3.0)?, ModelScalar::try_from(4.0)?]])?;
+    let vector = DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(2.0)?, ModelScalar::try_from(3.0)?])?;
 
-    match matrix.mul_vec(&vector) {
+    match &matrix * &vector {
         Ok(_) => println!("unexpected success"),
         Err(error) => println!("{error}"),
     }
@@ -148,13 +151,13 @@ d_{model}
 ### Rust
 
 ```rust
-use rust_ml_transformer::{DenseVector, ModelError, TokenEmbedding, TokenSequence};
+use rust_ml_transformer::{ModelScalar, DenseVector, ModelError, TokenEmbedding, TokenSequence};
 
 fn main() -> Result<(), ModelError> {
     let sequence = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![1.0, 1.0, 0.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
     ])?;
 
     println!("tokens = {}", sequence.len());
@@ -176,6 +179,10 @@ Instead of a single generic `Linear` that can mean anything, the crate uses type
 
 That makes the function signature teach the architecture.
 
+The underlying newtypes also implement Rust operation traits. The expression
+`&projection * &token` is not generic matrix arithmetic: its output type is
+`Query`. Adding a `ProjectionBias` keeps the same semantic role.
+
 ### Algebra
 
 For one token embedding `x`:
@@ -196,23 +203,22 @@ v = W_V x + b_V
 
 ```rust
 use rust_ml_transformer::{
-    DenseMatrix, DenseVector, ModelError, ProjectionBias, QueryLayer, QueryProjection,
-    TokenEmbedding,
+    ModelScalar,
+    DenseMatrix, DenseVector, ModelError, ProjectionBias, QueryProjection, TokenEmbedding,
 };
 
 fn main() -> Result<(), ModelError> {
-    let layer = QueryLayer::new(
-        QueryProjection(DenseMatrix::from_rows(vec![
-            vec![0.2, 0.1, 0.0, 0.3],
-            vec![0.0, 0.4, 0.1, 0.2],
-        ])?),
-        ProjectionBias(DenseVector::new(vec![0.0, 0.0])?),
-    )?;
+    let projection = QueryProjection::from_matrix(DenseMatrix::from_rows([
+        [ModelScalar::try_from(0.2)?, ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.3)?],
+        [ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.4)?, ModelScalar::try_from(0.1)?, ModelScalar::try_from(0.2)?],
+    ])?);
+    let bias = ProjectionBias::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(0.0)?])?);
+    let token = TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?);
 
-    let token = TokenEmbedding(DenseVector::new(vec![1.0, 0.0, 1.0, 0.0])?);
-    let query = layer.forward(&token)?;
+    let projected = (&projection * &token)?;
+    let query = (&projected + &bias)?;
 
-    println!("{:?}", query.as_slice());
+    println!("{:?}", query.scalar_values());
     Ok(())
 }
 ```
@@ -246,41 +252,35 @@ Q = XW_Q,\quad K = XW_K,\quad V = XW_V
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     AttentionHead, DenseMatrix, DenseVector, KeyLayer, KeyProjection, ModelError,
     ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
-    ValueProjection,
+    ValueProjection, VectorLength,
 };
 
-fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
-    DenseMatrix::from_rows(
-        (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect(),
-    )
+fn identity_projection() -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?], [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?]])
 }
 
-fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn main() -> Result<(), ModelError> {
+    let width = VectorLength::try_from(2)?;
     let head = AttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
 
     let sequence = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
 
     let outputs = head.forward(&sequence)?;
-    println!("{:?}", outputs[0].as_slice());
+    println!("{:?}", outputs.output(rust_ml_transformer::TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -318,41 +318,35 @@ with a matching normalizer.
 
 ```rust
 use rust_ml_transformer::{
+    ModelScalar,
     DenseMatrix, DenseVector, KeyLayer, KeyProjection, LinearAttentionHead, ModelError,
     ProjectionBias, QueryLayer, QueryProjection, TokenEmbedding, TokenSequence, ValueLayer,
-    ValueProjection,
+    ValueProjection, VectorLength,
 };
 
-fn eye(dim: usize) -> Result<DenseMatrix, ModelError> {
-    DenseMatrix::from_rows(
-        (0..dim)
-            .map(|row| {
-                (0..dim)
-                    .map(|col| if row == col { 1.0 } else { 0.0 })
-                    .collect::<Vec<_>>()
-            })
-            .collect(),
-    )
+fn identity_projection() -> Result<DenseMatrix, ModelError> {
+    DenseMatrix::from_rows([[ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?], [ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?]])
 }
 
-fn bias(dim: usize) -> Result<ProjectionBias, ModelError> {
-    Ok(ProjectionBias(DenseVector::new(vec![0.0; dim])?))
+fn zero_bias(width: VectorLength) -> Result<ProjectionBias, ModelError> {
+    Ok(ProjectionBias::from_vector(DenseVector::zeros(width)?))
 }
 
 fn main() -> Result<(), ModelError> {
+    let width = VectorLength::try_from(2)?;
     let head = LinearAttentionHead::new(
-        QueryLayer::new(QueryProjection(eye(2)?), bias(2)?)?,
-        KeyLayer::new(KeyProjection(eye(2)?), bias(2)?)?,
-        ValueLayer::new(ValueProjection(eye(2)?), bias(2)?)?,
+        QueryLayer::new(QueryProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        KeyLayer::new(KeyProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
+        ValueLayer::new(ValueProjection::from_matrix(identity_projection()?), zero_bias(width)?)?,
     )?;
 
     let sequence = TokenSequence::new(vec![
-        TokenEmbedding(DenseVector::new(vec![1.0, 0.0])?),
-        TokenEmbedding(DenseVector::new(vec![0.0, 1.0])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(1.0)?, ModelScalar::try_from(0.0)?])?),
+        TokenEmbedding::from_vector(DenseVector::new([ModelScalar::try_from(0.0)?, ModelScalar::try_from(1.0)?])?),
     ])?;
 
     let outputs = head.forward(&sequence)?;
-    println!("{:?}", outputs[0].as_slice());
+    println!("{:?}", outputs.output(rust_ml_transformer::TokenIndex::try_from(0)?)?.scalar_values());
     Ok(())
 }
 ```
@@ -415,8 +409,118 @@ That separation is deliberate:
 - `attention.rs` owns attention-specific logic
 - `transformer.rs` owns encoder-side assembly
 
+## 9. Public encoder traces separate evidence from publication
+
+### English
+
+An encoder output tells you what the model computed.
+
+An encoder trace tells you more: it records the input sequence and the output
+after each encoder block. That is useful teaching evidence because a learner can
+see that the stack preserves token count and `d_model` while changing the token
+representations.
+
+But valid evidence is not automatically public evidence. A trace might come from
+a private prompt, a restricted experiment, or an internal benchmark. The public
+resource needs one more checked map:
+
+```text
+EncoderTrace -> ReviewedEncoderTrace -> PublicEncoderTrace
+```
+
+That extra step is not bureaucracy. It is the same invariant the repo uses for
+language-modeling text, attention traces, evaluation examples, systems reports,
+and alignment workflows: learner-facing material must cross an explicit public
+review boundary.
+
+### Algebra
+
+The encoder stack preserves the object shape:
+
+```math
+X_0 \in \mathbb{R}^{n \times d_{model}}
+```
+
+```math
+X_i = \mathrm{EncoderBlock}_i(X_{i-1})
+```
+
+```math
+X_i \in \mathbb{R}^{n \times d_{model}}
+```
+
+The publication boundary is not another matrix operation. It is a typed
+permission map:
+
+```text
+valid trace + public visibility -> public trace
+```
+
+Restricted or private visibility has no arrow into `PublicEncoderTrace`.
+
+### Rust
+
+Run the checked proof:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example public_encoder_trace
+```
+
+Expected shape:
+
+```text
+public encoder blocks = 1
+public token count    = 2
+public model width    = 2
+blocked from public Transformer trace: invalid public trace in PublicEncoderTrace::from_reviewed_trace: public Transformer traces cannot include restricted or private encoder evidence
+```
+
+Read the output as a type story:
+
+- `EncoderTrace` proves the encoder path preserved token count and model width.
+- `ReviewedEncoderTrace` attaches the release classification.
+- `PublicEncoderTrace` exists only for reviewed public traces.
+
+### Category-Theory Lens
+
+The computation map is:
+
+```text
+TokenSequence -> EncoderTrace
+```
+
+The public-release map is:
+
+```text
+ReviewedEncoderTrace -> PublicEncoderTrace
+```
+
+Those maps answer different questions. The first asks, "Did the Transformer
+path compose correctly?" The second asks, "May this evidence appear in the
+public learning surface?"
+
+### Checkpoint
+
+If you can explain why `EncoderTrace` is not enough for publication, you have
+understood the repo's public-content boundary at Transformer scale.
+
+## Concept Trace
+
+- **Object/newtype:** `DenseVector` is the checked dense-math object, while `Query`, `Key`, `Value`, and `AttentionOutput` are semantic model roles.
+- **Invariant:** shared storage does not imply shared meaning; role wrappers prevent architectural swaps, and public trace wrappers prevent private evidence from entering learner-facing material.
+- **Map:** checked vector -> semantic projection role -> attention output -> encoder trace -> public encoder trace.
+- **Runnable proof:** `cargo test --manifest-path code/Cargo.toml -p rust_ml_transformer --all-targets` and `cargo run --manifest-path code/Cargo.toml -p rust_ml_transformer --example public_encoder_trace`.
+- **Failure signal:** you treat `Query`, `Key`, and `Value` as interchangeable because they all contain vectors, or you treat a valid internal trace as automatically publishable.
+
 ## Short Practice
 
 1. Why is `Query` a different type from `Value` even though both wrap a `DenseVector`?
 2. What kind of bug becomes easier to diagnose once the crate returns `ModelError` instead of panicking everywhere?
 3. Why is `LinearAttentionHead` a different concept from the original paper even if it occupies the same architectural slot?
+4. Why does `PublicEncoderTrace::from_reviewed_trace` reject restricted and private traces even when the encoder computation itself was valid?
+
+## Retrieval Practice
+
+- **Recall:** name the three objects in `EncoderTrace -> ReviewedEncoderTrace -> PublicEncoderTrace`.
+- **Explain:** why does public release need its own type instead of a comment in the README?
+- **Apply:** when adding a new trace to another crate, decide which invariant belongs to the trace and which invariant belongs to the public wrapper.

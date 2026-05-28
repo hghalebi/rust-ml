@@ -4,7 +4,7 @@ Status: active.
 
 This folder maps to course Module 2.
 
-This module turns the vector and loss intuition from Module 1 into the smallest trainable model: one typed neuron with a forward pass, a loss, and a backward-pass story that does not hide behind variable soup.
+This module turns the vector and loss intuition from Module 1 into the smallest trainable model: one typed neuron with a forward pass, a loss, and a backward-pass story that does not hide behind unlabeled variables.
 
 ## Role In The Course
 
@@ -16,6 +16,7 @@ After this module, you should be able to:
 
 - explain a neuron as a chain of functions instead of a bag of symbols
 - map `Input`, `Weight`, `Bias`, `Prediction`, and `Target` to Rust newtypes
+- read typed arithmetic such as `InputValue * Weight` and `WeightedSum + Bias` as maps between meaningful spaces
 - trace one forward pass from weighted sum to sigmoid output to loss
 - explain backpropagation as structured blame assignment through a function chain
 - read `dz/dw1 = x1` and explain why it is true
@@ -32,7 +33,14 @@ After this module, you should be able to:
 
 ## Code Artifact
 
-- Runnable companion crate shared with Module 3: [`code/neuron`](../../code/neuron/README.md)
+- Active companion crate: [`code/neuron`](../../code/neuron/README.md)
+- Run the examples in order after the two lessons:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 01_weighted_sum
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 02_forward_pass
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
+```
 
 ## Prerequisite
 
@@ -53,4 +61,6 @@ The authored material in this module is deliberately narrow:
 
 - enough Rust syntax to read the neuron code honestly
 - a typed single-neuron model with semantic newtypes
+- explicit edge conversion from raw numbers into typed values
+- `std::ops` implementations that keep the typed arithmetic readable
 - one full training-step walkthrough as a preview of the dedicated learning module

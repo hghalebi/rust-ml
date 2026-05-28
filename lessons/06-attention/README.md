@@ -1,36 +1,69 @@
 # 06 Attention
 
-Status: planned.
+Status: active.
 
 This folder maps to course Module 5.
 
-This module will build the conceptual bridge from vector-space models to token-to-token interaction.
+This module builds the conceptual bridge from vector-space models to token-to-token interaction.
 
-## Role In The Course
+## Outcomes
 
-This planned module will connect the MLP shape-flow story to token interaction. It should make the Transformer preview feel like a continuation rather than a jump.
+After this module, you should be able to:
 
-## Goal
-
-Introduce token representations, projections, masks, attention scores, normalized weights, and weighted sums.
-
-## Planned Lesson Ladder
-
-1. tokens as vectors in a sequence
-2. query, key, and value projections
-3. causal masks and why future tokens are hidden during next-token training
-4. attention scores, weights, and weighted sums
-
-## Planned Practice
-
-- compute one attention score by hand
+- explain attention as a typed information-mixing map
+- distinguish query, key, and value without collapsing them into one generic vector
+- compute one scaled dot-product score by hand
 - explain softmax as normalized focus
-- explain why a causal mask blocks future positions
-- trace how one token mixes information from other tokens
+- trace `scores -> weights -> weighted value mixture`
+- explain why a valid `AttentionTrace` still needs review before it becomes a `PublicAttentionTrace`
+- explain why raw numbers enter through `TryFrom` adapters before becoming attention roles
+- read the crate's `std::ops` arithmetic as typed composition between newtypes
+- run the companion attention examples and predict their outputs
+
+## Lessons
+
+1. [Tokens as Vectors in a Sequence](01-tokens-as-vectors-in-a-sequence.md)
+2. [Query, Key, and Value Roles](02-query-key-value-roles.md)
+3. [Scores, Weights, and Value Mixing](03-scores-weights-and-value-mixing.md)
+
+## Practice
+
+- [Attention exercises](exercises.md)
+- [Attention solutions](solutions.md)
 
 ## Code Artifact
 
-- Future crate: [`code/attention`](../../code/attention/README.md)
+- Active crate: [`code/attention`](../../code/attention/README.md)
+
+Run the examples:
+
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 01_score_one_pair
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 02_softmax_focus
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 03_weighted_sum
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 04_attention_trace
+cargo run --manifest-path code/Cargo.toml -p rust_ml_attention --example 05_public_trace
+```
+
+While reading the examples, keep the same mental translation in view:
+
+```text
+learner literal -> checked newtype -> typed operation -> next semantic object
+```
+
+For example, `QueryComponent * KeyComponent` creates a score contribution, and
+`AttentionWeight * ValueComponent` creates one weighted value contribution. The
+names are part of the lesson: they prevent attention from looking like untyped
+array arithmetic.
+
+The public teaching trace adds one more typed boundary:
+
+```text
+AttentionTrace -> ReviewedAttentionTrace -> PublicAttentionTrace
+```
+
+That boundary separates "the computation is valid" from "this evidence is safe
+to publish in learner-facing material".
 
 ## Reference Material
 
@@ -44,6 +77,16 @@ Introduce token representations, projections, masks, attention scores, normalize
 
 - Complete [05 MLP](../05-mlp/README.md)
 
-## Planned Outcome
+## Before You Move On
 
-Be able to explain query, key, value, masks, attention weights, and weighted sums in plain English and as Rust loops.
+You are ready for the Transformer module when you can explain this chain without treating it as magic:
+
+```text
+Query * Keys -> AttentionScores -> AttentionWeights
+AttentionWeights * Values -> AttentionOutput
+AttentionTrace -> ReviewedAttentionTrace -> PublicAttentionTrace
+```
+
+You should also be able to say why the last line is not attention math. It is a
+public-content boundary: the trace may be mathematically correct while still not
+belonging in public teaching material.

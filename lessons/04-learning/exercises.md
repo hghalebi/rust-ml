@@ -1,54 +1,78 @@
-# Learning Module Exercises
+# Learning Exercises
 
-## Exercise 1: Name the four stages
+## Exercise 1: Read the update rule
 
-Write the four stages of one training step in order.
-
-Then explain, in one short sentence each, what new information appears at every stage.
-
-## Exercise 2: One backward pass by hand
-
-Given:
+Explain this sentence in your own words:
 
 ```math
-x_1 = 1,\quad x_2 = 0,\quad w_1 = 0.8,\quad w_2 = -0.4,\quad b = 0.1,\quad y = 1
+w := w - \eta \frac{dL}{dw}
 ```
 
-1. Compute `z`
-2. Compute `\hat{y}`
-3. Compute the squared-error loss
-4. Explain why `dL/dw2 = 0` in this case
+Use the words:
 
-## Exercise 3: Upstream versus local
+- old weight
+- learning rate
+- gradient
+- new weight
 
-For `dL/dw1`, label which factor belongs to:
+## Exercise 2: Separate the roles
 
-1. the judge room
-2. the shaping room
-3. the mixing room
+For each value, say whether it is a parameter, feedback, or a step-size control:
 
-Use the chain-rule form, not only words.
+1. `Weight`
+2. `Gradient`
+3. `LearningRate`
+4. `Adjustment`
+5. `Loss`
 
-## Exercise 4: Read the optimizer rule
+## Exercise 3: Run one step
 
-Explain this sentence in plain English:
+Run:
 
-```math
-\theta := \theta - \eta \nabla_\theta L
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training
 ```
 
-Then say what would happen if `\eta` were far too large.
+Write down:
 
-## Exercise 5: Dataset loop reasoning
+1. prediction before
+2. loss before
+3. bias gradient
+4. prediction after
+5. loss after
 
-Suppose a dataset has 8 examples and you train for 50 epochs.
+Then answer: did this one update help on the same example?
 
-1. How many times does the model see each example?
-2. What does it mean if the average loss falls at first, then stops changing much?
+## Exercise 4: Read an epoch trace
 
-## Exercise 6: Token targets
+Run:
 
-A model outputs one logit per vocabulary token.
+```bash
+cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 04_and_gate_epoch
+```
 
-1. Why is the target now an index instead of one scalar value like `0` or `1`?
-2. Why does this make training feel like a larger system, even though gradients still drive it?
+Explain what the printed average loss means.
+
+## Exercise 5: Use the category-theory lens
+
+Complete this mapping:
+
+```text
+FeatureVector -> ______ -> Prediction -> ______
+```
+
+Then explain which part training changes.
+
+## Failure Signals
+
+- You explain learning as replacing the example instead of changing parameters.
+- You treat `LearningRate` and `Gradient` as interchangeable because both affect the update.
+- You report that loss changed without saying whether it went up or down.
+- You cannot identify which map is fixed during one forward pass and which values are updated after feedback.
+
+## Debugging Hints
+
+- Separate data, parameters, feedback, and step-size control before writing the update.
+- When reading an epoch trace, compare trend and individual examples separately.
+- If the loss moved the wrong way, inspect the sign of the gradient and the learning rate.
+- Use the category lens: training changes the parameterized map, not the type of the input or target.

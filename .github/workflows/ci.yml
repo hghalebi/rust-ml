@@ -27,10 +27,23 @@ jobs:
           python3 -m py_compile \
             scripts/check_course_content.py \
             scripts/check_lesson_rust_snippets.py \
+            scripts/check_rust_teaching_contract.py \
+            scripts/check_teaching_examples.py \
+            scripts/check_teaching_crates.py \
+            scripts/check_public_content.py \
             scripts/gemini_review_markdown.py
 
       - name: Validate lesson structure and local links
         run: python3 scripts/check_course_content.py
+
+      - name: Validate public learner content boundary
+        run: python3 scripts/check_public_content.py
+
+      - name: Validate Rust teaching contracts
+        run: python3 scripts/check_rust_teaching_contract.py
+
+      - name: Validate active teaching crate structure
+        run: python3 scripts/check_teaching_crates.py
 
   lesson-snippets:
     name: Lesson Rust Snippets
@@ -51,13 +64,18 @@ jobs:
       - name: Compile-check Rust snippets embedded in lessons
         run: python3 scripts/check_lesson_rust_snippets.py
 
-  transformer-crate:
-    name: Transformer Crate
+  teaching-crates:
+    name: Teaching Crates
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -65,32 +83,13 @@ jobs:
           components: rustfmt, clippy
 
       - name: cargo fmt --check
-        run: cargo fmt --manifest-path code/transformer/Cargo.toml --check
+        run: cargo fmt --manifest-path code/Cargo.toml --all --check
 
       - name: cargo clippy
-        run: cargo clippy --manifest-path code/transformer/Cargo.toml --all-targets --all-features
+        run: cargo clippy --manifest-path code/Cargo.toml --workspace --all-targets --all-features
 
       - name: cargo test
-        run: cargo test --manifest-path code/transformer/Cargo.toml
+        run: cargo test --manifest-path code/Cargo.toml --workspace --all-targets
 
-  neuron-crate:
-    name: Neuron Crate
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: cargo fmt --check
-        run: cargo fmt --manifest-path code/neuron/Cargo.toml --check
-
-      - name: cargo clippy
-        run: cargo clippy --manifest-path code/neuron/Cargo.toml --all-targets --all-features
-
-      - name: cargo test
-        run: cargo test --manifest-path code/neuron/Cargo.toml
+      - name: Run teaching examples
+        run: python3 scripts/check_teaching_examples.py

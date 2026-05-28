@@ -4,7 +4,7 @@ This file is the canonical structure guide for the course.
 
 The repo teaches machine learning as a translation exercise:
 
-`plain English <-> algebra <-> Rust`
+`plain English <-> algebra <-> Rust newtypes <-> composable maps`
 
 Everything in `lessons/` should support that goal.
 
@@ -21,40 +21,105 @@ That means:
 - explain the idea in ordinary language first
 - show the compact mathematical form second
 - show the runnable or at least compilable Rust form third
+- name the Rust roles with semantic types where meaning matters
+- identify the map or composition when it clarifies the structure
 
 The order matters. Beginners should not have to decode symbolic syntax before they know what the idea is for.
+
+## Newtype And Category-Theory Spine
+
+This repo uses newtypes and category-theory intuition as teaching tools.
+
+Use newtypes when a value has a domain role, invariant, unit, lifecycle, or boundary meaning.
+
+Use the category-theory lens gently:
+
+- types are spaces of meaningful values
+- functions are maps between those spaces
+- models are compositions of maps
+- learning changes parameters inside maps so loss becomes smaller
+
+Do not use category theory as decoration. Use it only when it makes the learner's mental model clearer.
+
+## Concept Atlas Contract
+
+`lessons/CONCEPT-ATLAS.md` is the maintained cross-module map.
+
+It should connect:
+
+- ML concepts
+- semantic Rust types
+- protected invariants
+- composable maps
+- runnable examples or tests
+
+The atlas should stay learner-facing. It should not contain maintainer notes,
+private context, deployment details, or unverified claims.
+
+## Strict Rust Teaching Contract
+
+Learner-facing Rust should make meaning visible in the type system.
+
+The public API of active teaching crates must not expose raw domain primitives for meaningful values. Use semantic types such as `RawText`, `Token`, `TokenId`, `VocabularySize`, `ContextLength`, `Logit`, `Loss`, and `LearningRate`.
+
+Raw literals may enter only at explicit edge adapters such as `TryFrom<&str>`, `TryFrom<usize>`, or `TryFrom<f64>`. After that boundary, pass the semantic type. This keeps the mental model simple:
+
+```text
+untrusted literal -> validating adapter -> meaningful value -> typed map
+```
+
+Rust teaching code must also follow these rules:
+
+- no `.unwrap()` or `.expect()`
+- no panic-style macros such as `panic!()`, `todo!()`, `unimplemented!()`, or `unreachable!()` in teaching implementations or tests
+- no `Result<_, String>` error surfaces
+- all crate error enums use `thiserror`
+- public tuple fields stay private unless a type is intentionally transparent and has no invariant
+- public enum variants carry semantic payload types, not raw primitives or raw containers
+- associated type assignments use semantic types, not raw primitives or raw containers
+- public `TryFrom` adapters should validate one raw semantic value at a time, not hide raw `Vec<_>` or slice containers behind a domain type
+- public accessor names should teach semantic meaning, so avoid raw-style names such as `as_slice()` on learner-facing APIs
+- public Rust snippets follow the same rule: typed errors instead of `unwrap`, `expect`, panic-style macros, or `Result<_, String>`
+- diagnostic errors may report the rejected raw value, but the domain path should still use semantic types
+
+Run the guard with:
+
+```bash
+python3 scripts/check_rust_teaching_contract.py
+```
 
 ## Current Learning Paths
 
 The repo currently supports two realistic paths:
 
-## Course Phases
-
-| Phase | Course modules | Repo folders | Status |
-| --- | --- | --- | --- |
-| Orientation | Modules 0-1 | `01-foundations`, `02-vectors` | Active |
-| First trainable system | Modules 2-3 | `03-neuron`, `04-learning` | Active |
-| Bridge to architecture | Modules 4-5 | `05-mlp`, `06-attention` | Planned |
-| Architecture preview | Module 6 | `07-transformer` | Active preview |
-
 ### Core Path
 
 This is the recommended order for most learners right now:
 
+0. `00-learning-lens.md` -> orientation lens
 1. `01-foundations` -> course Module 0
 2. `02-vectors` -> course Module 1
 3. `03-neuron` -> course Module 2
 4. `04-learning` -> course Module 3
+5. `05-mlp` -> course Module 4
+6. `06-attention` -> course Module 5
+7. `07-transformer` -> course Module 6
+8. `08-language-modeling` -> course Module 7
+9. `09-systems` -> course Module 8
+10. `10-kernels` -> course Module 9
+11. `11-inference` -> course Module 10
 
-### Advanced Preview Path
+### CS336 Bridge Path
 
-The Transformer module is already authored even though the MLP and Attention bridge modules are still planned.
+The language-modeling, systems, kernels, and inference modules are the first
+repo-native bridge from the core path into the CS336 Rust equivalent assignments:
 
-Use it as an advanced preview after the core path:
-
-5. `07-transformer` -> course Module 6 preview
-
-Modules `05-mlp` and `06-attention` remain the planned bridge that will eventually make the path fully continuous.
+1. `07-transformer` -> course Module 6
+2. `08-language-modeling` -> course Module 7
+3. `09-systems` -> course Module 8
+4. `10-kernels` -> course Module 9
+5. `11-inference` -> course Module 10
+6. `assignments/cs336-rust` -> R1 through R5 project ladder
 
 ## Naming Rules
 
@@ -69,6 +134,10 @@ Examples:
 - `01-foundations` -> course Module 0
 - `03-neuron` -> course Module 2
 - `07-transformer` -> course Module 6
+- `08-language-modeling` -> course Module 7
+- `09-systems` -> course Module 8
+- `10-kernels` -> course Module 9
+- `11-inference` -> course Module 10
 
 ### Lesson files
 
@@ -123,9 +192,26 @@ Each authored lesson must include:
 - `## Algebra Form`
 - `## Rust Form`
 - `## Why This Matters`
+- `## Concept Trace`
 - `## Short Practice`
 
-Module `07-transformer` is allowed to use the chunked `English -> Algebra -> Rust` pattern, but it still needs a clear overview and learning goals at the top.
+The concept trace must include:
+
+- `Object/newtype`
+- `Invariant`
+- `Map`
+- `Runnable proof`
+- `Failure signal`
+
+The runnable proof must name one checked command. Use one of these forms:
+
+- ``cargo run --manifest-path code/Cargo.toml -p <package> --example <example>``
+- ``cargo test --manifest-path code/Cargo.toml -p <package> --all-targets``
+- ``python3 scripts/<local-check>.py``
+
+The course-content checker verifies that referenced packages, examples, and scripts exist.
+
+Module `07-transformer` is allowed to use the chunked `English -> Algebra -> Rust` pattern, but it still needs a clear overview, learning goals, and concept trace.
 
 ## Practice Contract
 
@@ -136,11 +222,24 @@ Each authored module must contain:
 
 The exercise file should ask the learner to reason, compute, explain, or translate.
 
+The exercise file must include:
+
+- `## Failure Signals`
+- `## Debugging Hints`
+
+Failure signals should name the kind of misunderstanding the learner should
+notice. Debugging hints should help the learner recover without copying the
+solution.
+
 The solution file should:
 
 - show the answer
 - explain the reasoning
 - keep the answer concise enough for self-checking
+- include `## Self-Check`
+
+Solution files should use `## Solution N: ...` headings for individual answers.
+Do not label solution sections as exercises.
 
 ## Code Contract
 
@@ -148,6 +247,8 @@ The solution file should:
 
 - Placeholder topic directories may exist before a real crate is ready
 - Once a topic earns executable material, it should become a real Cargo crate
+- Active topic crates should be members of `code/Cargo.toml`
+- Runnable examples should map to lesson concepts in increasing difficulty
 - The code README should state whether the topic is active or still planned
 - `lessons/` stays the canonical teaching surface even when a companion crate exists
 
@@ -158,6 +259,9 @@ The solution file should:
 - Use metaphor only when it reduces confusion, not when it replaces the real mechanism
 - Keep examples small enough to inspect without scrolling through noise
 - Use semantic Rust types when they improve readability and meaning
+- Explain the invariant protected by each newtype when introducing it
+- Use the words object, map, and composition only when the concrete type/function relationship is visible
+- Keep public learner-facing prose free of maintainer-only context
 - Do not treat advanced modules as prerequisites for beginner modules
 
 ## Review Checklist
