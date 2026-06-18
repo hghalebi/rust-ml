@@ -17,10 +17,15 @@ It exists to preserve provenance and to keep raw source material separate from t
 ## External Repositories
 
 - [Sebastian Raschka: LLMs From Scratch](repos/llms-from-scratch.md)
+- [Category Theory for Tiny ML in Rust](repos/category-theory-transformer-rs.md)
 
 ## Course Maps
 
 - [CS336 Language Modeling From Scratch source map](courses/cs336-language-modeling-from-scratch.md)
+
+## Websites
+
+- [rust-ml.com content source map](websites/rust-ml-com.md)
 
 ## Usage
 

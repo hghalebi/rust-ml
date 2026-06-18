@@ -174,6 +174,14 @@ distribution."
 The mechanism is still learning by gradients. The first size jump is a tiny
 embedding-plus-head model. The next jump is a full trainable Transformer.
 
+## Concept Trace
+
+- **Object/newtype:** `Dataset`, `BigramDataset`, `TokenId`, `LearningRate`, `BigramEpochMetrics`
+- **Invariant:** every target token must be inside the vocabulary before loss is computed
+- **Map:** `Token stream -> next-token examples -> logits -> cross-entropy loss -> epoch metrics`
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example train_bigram_cycle`
+- **Failure signal:** dataset loss is averaged over examples whose token targets were never checked
+
 ## Short Practice
 
 1. In one sentence, what does an epoch count?

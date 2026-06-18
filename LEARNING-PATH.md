@@ -8,6 +8,11 @@ plain English <-> algebra <-> Rust newtypes <-> composable maps
 
 The goal is not to learn isolated formulas. The goal is to build a mental model strong enough that intuition, notation, and code reinforce each other.
 
+For the short hands-on route, use the
+[Hands-On Rust ML Workshop](workshops/README.md). It compresses the same
+curriculum into a self-serve sequence of readings, runnable proofs, modification
+tasks, and public-boundary checks.
+
 ## Audience
 
 This repo is for learners who want to understand ML by implementing it.
@@ -84,6 +89,12 @@ learning changes maps so loss becomes smaller
 No heavy abstraction is required at the start.
 
 ## Recommended Route
+
+The live public website [rust-ml.com](https://rust-ml.com/) uses four learner
+categories: `start-here`, `tiny-ml`, `transformers`, and `production`. This
+repository keeps the durable version of that route in the files below, with the
+current website mapping and workshop citations recorded in
+[references/websites/rust-ml-com.md](references/websites/rust-ml-com.md).
 
 ### Step 0: Learn The Lens
 

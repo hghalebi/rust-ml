@@ -138,6 +138,14 @@ systems stop looking like symbol soup.
 That is the mental move that survives all the way from one neuron to next-token
 prediction in sequence models.
 
+## Concept Trace
+
+- **Object/newtype:** `PredictionError`, `Gradient`, `NeuronGradients`, `Adjustment`
+- **Invariant:** each gradient factor must belong to the local map that produced it
+- **Map:** `Loss blame -> local derivative -> upstream gradient -> parameter gradient`
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training`
+- **Failure signal:** a gradient appears without a named local derivative or upstream path
+
 ## Short Practice
 
 1. Which local derivative comes from the activation stage?

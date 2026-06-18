@@ -1,35 +1,83 @@
 use std::fmt;
-use std::num::TryFromIntError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TokenId(usize);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ClassCount(usize);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TokenContext {
+    tokens: Vec<TokenId>,
+}
+
+impl TokenContext {
+    fn two_tokens(first: TokenId, second: TokenId) -> Self {
+        Self {
+            tokens: vec![first, second],
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct NextTokenExample {
-    context: Vec<TokenId>,
+    context: TokenContext,
     target: TokenId,
 }
 
 impl NextTokenExample {
-    fn new(context: Vec<TokenId>, target: TokenId) -> Self {
+    fn from_context(context: TokenContext, target: TokenId) -> Self {
         Self { context, target }
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct Logits {
+    values: Vec<f64>,
+}
+
+impl Logits {
+    fn lesson_scores() -> Self {
+        Self {
+            values: vec![0.8, -0.1, 1.6],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Probabilities {
+    values: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Gradient {
+    values: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+struct Loss(f64);
+
 #[derive(Debug)]
 enum Error {
     EmptyLogits,
-    TargetOutOfRange { target: usize, classes: usize },
+    TargetOutOfRange {
+        target: TokenId,
+        class_count: ClassCount,
+    },
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyLogits => write!(formatter, "logits must not be empty"),
-            Self::TargetOutOfRange { target, classes } => {
+            Self::TargetOutOfRange {
+                target,
+                class_count,
+            } => {
                 write!(
                     formatter,
-                    "target token index {target} is out of range for {classes} logits"
+                    "target token index {} is out of range for {} logits",
+                    target.0, class_count.0
                 )
             }
         }
@@ -37,8 +85,11 @@ impl fmt::Display for Error {
 }
 
 fn main() {
-    let example = NextTokenExample::new(vec![TokenId(0), TokenId(1)], TokenId(2));
-    let logits = vec![0.8, -0.1, 1.6];
+    let example = NextTokenExample::from_context(
+        TokenContext::two_tokens(TokenId(0), TokenId(1)),
+        TokenId(2),
+    );
+    let logits = Logits::lesson_scores();
 
     let loss = match cross_entropy_loss(&logits, example.target) {
         Ok(loss) => loss,
@@ -57,51 +108,59 @@ fn main() {
     };
 
     println!(
-        "context_len={} target={} loss={loss:.4} gradient={gradient:?}",
-        example.context.len(),
-        example.target.0
+        "context_len={} target={} loss={:.4} gradient={:?}",
+        example.context.tokens.len(),
+        example.target.0,
+        loss.0,
+        gradient.values
     );
 }
 
-fn softmax(logits: &[f64]) -> Result<Vec<f64>, Error> {
-    if logits.is_empty() {
+fn softmax(logits: &Logits) -> Result<Probabilities, Error> {
+    if logits.values.is_empty() {
         return Err(Error::EmptyLogits);
     }
 
-    let max = logits.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let exponentials: Vec<f64> = logits.iter().map(|logit| (logit - max).exp()).collect();
+    let max = logits
+        .values
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max);
+    let exponentials: Vec<f64> = logits
+        .values
+        .iter()
+        .map(|logit| (logit - max).exp())
+        .collect();
     let sum: f64 = exponentials.iter().sum();
 
-    Ok(exponentials.into_iter().map(|value| value / sum).collect())
+    Ok(Probabilities {
+        values: exponentials.into_iter().map(|value| value / sum).collect(),
+    })
 }
 
-fn cross_entropy_loss(logits: &[f64], target: TokenId) -> Result<f64, Error> {
+fn cross_entropy_loss(logits: &Logits, target: TokenId) -> Result<Loss, Error> {
     let probabilities = softmax(logits)?;
     probabilities
+        .values
         .get(target.0)
-        .map(|probability| -probability.ln())
+        .map(|probability| Loss(-probability.ln()))
         .ok_or(Error::TargetOutOfRange {
-            target: target.0,
-            classes: logits.len(),
+            target,
+            class_count: ClassCount(logits.values.len()),
         })
 }
 
-fn cross_entropy_gradient(logits: &[f64], target: TokenId) -> Result<Vec<f64>, Error> {
+fn cross_entropy_gradient(logits: &Logits, target: TokenId) -> Result<Gradient, Error> {
     let mut probabilities = softmax(logits)?;
     let gradient = probabilities
+        .values
         .get_mut(target.0)
         .ok_or(Error::TargetOutOfRange {
-            target: target.0,
-            classes: logits.len(),
+            target,
+            class_count: ClassCount(logits.values.len()),
         })?;
     *gradient -= 1.0;
-    Ok(probabilities)
-}
-
-impl TryFrom<usize> for TokenId {
-    type Error = TryFromIntError;
-
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        Ok(Self(value))
-    }
+    Ok(Gradient {
+        values: probabilities.values,
+    })
 }

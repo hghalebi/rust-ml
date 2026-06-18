@@ -23,6 +23,7 @@ PUBLIC_DIRS = (
     ROOT / "lessons",
     ROOT / "code",
     ROOT / "references",
+    ROOT / "workshops",
 )
 
 PUBLIC_SUFFIXES = {".md", ".rs", ".toml"}

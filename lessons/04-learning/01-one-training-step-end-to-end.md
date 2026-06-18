@@ -186,6 +186,14 @@ Once one training step is clear, the bigger training loop stops being mystical.
 An epoch is not a fundamentally new idea. It is just this one step repeated
 across many examples.
 
+## Concept Trace
+
+- **Object/newtype:** `TrainingExample`, `Prediction`, `Loss`, `Gradient`, `LearningRate`
+- **Invariant:** one update must keep the target fixed while only parameters move
+- **Map:** `TrainingExample -> Prediction -> Loss -> Gradient -> UpdatedNeuron`
+- **Runnable proof:** `cargo run --manifest-path code/Cargo.toml -p rust_ml_neuron --example 03_one_step_training`
+- **Failure signal:** the loss is computed but no parameter update can be traced back to the example
+
 ## Short Practice
 
 1. In one sentence, what new job does the loss perform that the forward pass does not?

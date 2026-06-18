@@ -10,6 +10,7 @@ The public surface is:
 - [`lessons/`](lessons/README.md)
 - [`assignments/`](assignments/cs336-rust/README.md)
 - [`code/`](code/README.md)
+- [`workshops/`](workshops/README.md)
 - public reference notes under [`references/`](references/README.md)
 
 ## Allowed Public Content

@@ -23,19 +23,20 @@ For the object/map progression across lessons, code, and assignments, see [Conce
 ## Start Here
 
 1. Read [Learning Path](LEARNING-PATH.md).
-2. Read [The Learning Lens](lessons/00-learning-lens.md).
-3. Keep [Concept Atlas](lessons/CONCEPT-ATLAS.md) open as the object/map guide.
-4. Read [01 Foundations](lessons/01-foundations/README.md).
-5. Continue with [02 Vectors](lessons/02-vectors/README.md).
-6. Continue with [03 Neuron](lessons/03-neuron/README.md).
-7. Continue with [04 Learning](lessons/04-learning/README.md).
-8. Continue with [05 MLP](lessons/05-mlp/README.md).
-9. Continue with [06 Attention](lessons/06-attention/README.md).
-10. Continue with [07 Transformer](lessons/07-transformer/README.md).
-11. Continue with [08 Language Modeling](lessons/08-language-modeling/README.md).
-12. Continue with [09 Systems](lessons/09-systems/README.md).
-13. Continue with [10 Kernels](lessons/10-kernels/README.md).
-14. Continue with [11 Inference](lessons/11-inference/README.md).
+2. For the short build-first route, use the [Hands-On Rust ML Workshop](workshops/README.md).
+3. Read [The Learning Lens](lessons/00-learning-lens.md).
+4. Keep [Concept Atlas](lessons/CONCEPT-ATLAS.md) open as the object/map guide.
+5. Read [01 Foundations](lessons/01-foundations/README.md).
+6. Continue with [02 Vectors](lessons/02-vectors/README.md).
+7. Continue with [03 Neuron](lessons/03-neuron/README.md).
+8. Continue with [04 Learning](lessons/04-learning/README.md).
+9. Continue with [05 MLP](lessons/05-mlp/README.md).
+10. Continue with [06 Attention](lessons/06-attention/README.md).
+11. Continue with [07 Transformer](lessons/07-transformer/README.md).
+12. Continue with [08 Language Modeling](lessons/08-language-modeling/README.md).
+13. Continue with [09 Systems](lessons/09-systems/README.md).
+14. Continue with [10 Kernels](lessons/10-kernels/README.md).
+15. Continue with [11 Inference](lessons/11-inference/README.md).
 
 The repo uses sequential folder numbers even though the curriculum starts at Module 0:
 
@@ -59,6 +60,7 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 
 - [Lessons index](lessons/README.md)
 - [Learning Path](LEARNING-PATH.md)
+- [Hands-On Rust ML Workshop](workshops/README.md)
 - [The Learning Lens](lessons/00-learning-lens.md)
 - [Concept Atlas](lessons/CONCEPT-ATLAS.md)
 - [01 Foundations](lessons/01-foundations/README.md)
@@ -166,7 +168,9 @@ The orientation file [lessons/00-learning-lens.md](lessons/00-learning-lens.md) 
 ### Source material and roadmap
 
 - [Reference material](references/README.md)
+- [rust-ml.com content source map](references/websites/rust-ml-com.md)
 - [Public content boundary](PUBLIC_CONTENT.md)
+- [Hands-On Rust ML Workshop](workshops/README.md)
 - [Book note](book/README.md)
 
 ## Repo Map
@@ -176,6 +180,7 @@ rust-ml/
 ├── assignments/ # original Rust assignment tracks
 ├── lessons/    # canonical course content
 ├── references/ # transcripts and papers used as source material
+├── workshops/  # self-serve workshop routes over lessons and examples
 ├── code/       # runnable companion crates
 ├── book/       # non-authoritative note; this is repo-first for now
 └── README.md
@@ -184,6 +189,8 @@ rust-ml/
 ## Working Rules For This Repo
 
 - `lessons/` is the source of truth for written teaching content.
+- `workshops/` is the self-serve workshop surface that composes lessons and
+  runnable examples into hands-on routes.
 - `code/` follows the lesson progression and now includes a real tested `transformer` crate.
 - `code/systems` is the active R2 systems-measurement and public-report bridge for the CS336 Rust equivalent track.
 - `code/kernels` is the active kernels, tiling, and public-report bridge for the CS336 Rust equivalent track.
@@ -254,6 +261,11 @@ Current recommended sequence:
 12. [09 Systems](lessons/09-systems/README.md)
 13. [10 Kernels](lessons/10-kernels/README.md)
 14. [11 Inference](lessons/11-inference/README.md)
+
+The public website [rust-ml.com](https://rust-ml.com/) is a live companion
+surface for this repo. Its current learner categories, workshop surface, and
+course claims are mapped back to repo lessons and runnable examples in the
+[rust-ml.com content source map](references/websites/rust-ml-com.md).
 
 ## Running The Code
 
